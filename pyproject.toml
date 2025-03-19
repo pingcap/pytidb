@@ -1,0 +1,69 @@
+[project]
+name = "pytidb-experimental"
+version = "0.0.1.dev1"
+description = "A experimental Python library for TiDB."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Mini256", email = "minianter@foxmail.com" },
+    { name = "sykp241095", email = "sykp241095@gmail.com" },
+]
+dependencies = [
+    "sqlmodel==0.0.22",
+    "tidb-vector>=0.0.14",
+    "pymysql>=1.1.1",
+]
+
+[project.optional-dependencies]
+pandas = [
+    "pandas"
+]
+models = [
+    "litellm>=1.59.8,<2.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "uv>=0.6.8",
+    "ruff==0.11.0",
+    "pre-commit>=3,<4",
+    "pytest>=7,<8",
+    "pytest-asyncio>=0.23.0,<0.24",
+    "mock>=5,<6",
+    "pandas",
+    "litellm>=1.59.8,<2.0.0",
+    "notebook>=7.3.3",
+    "pip>=25.0.1",
+]
+
+# Test
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+env_files = [".env"]
+
+# Build
+
+[build-system]
+requires = ["hatchling==1.26.3"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+include = ["pytidb"]
+
+[tool.hatch.build.targets.wheel]
+include = ["pytidb"]
+
+[tool.hatch.build]
+exclude = [
+    "/.*",
+    "/dist",
+    "/docs",
+    "/tests",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
