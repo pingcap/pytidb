@@ -5,11 +5,11 @@ from pytidb.embeddings.base import BaseEmbeddingFunction
 
 
 def get_embeddings(
-    api_key: str,
-    api_base: str,
     model_name: str,
     input: List[str],
-    timeout: int = 60,
+    api_key: Optional[str] = None,
+    api_base: Optional[str] = None,
+    timeout: Optional[int] = 60,
     **kwargs: Any,
 ) -> List[List[float]]:
     """

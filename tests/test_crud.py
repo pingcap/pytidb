@@ -57,8 +57,6 @@ def test_table_crud(db):
 
 @pytest.fixture(scope="module")
 def table_for_test_filters(db):
-
-
     table_name = "test_query_data"
     db.drop_table(table_name)
 
@@ -128,4 +126,3 @@ def test_filters(table_for_test_filters, filters: Dict[str, Any], expected: List
 
     actual = [r.text for r in result]
     assert actual == expected
-

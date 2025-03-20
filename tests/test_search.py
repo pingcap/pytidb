@@ -56,5 +56,3 @@ def test_vector_search(db: TiDBClient):
     assert results[0][SIMILARITY_SCORE_LABEL] == 1
     assert results[0]["score"] == 1
     assert results[0]["user_id"] == 2
-
-

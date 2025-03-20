@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 VectorDataType = Union[np.ndarray, List[float]]
 
+
 class TableModel(SQLModel):
     pass
 

@@ -108,10 +108,7 @@ class TiDBClient:
         *,
         schema: Optional[Type[TableModel]] = None,
     ) -> Table:
-        table = Table(
-            schema=schema,
-            db_engine=self._db_engine
-        )
+        table = Table(schema=schema, db_engine=self._db_engine)
         return table
 
     def open_table(self, schema: Type[TableModel]) -> Table:
