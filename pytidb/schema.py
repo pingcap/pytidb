@@ -2,6 +2,7 @@ import enum
 from typing import Optional, TYPE_CHECKING, Union, List
 
 import numpy as np
+from pydantic import BaseModel
 from sqlalchemy import Column
 from sqlmodel import SQLModel, Field
 from tidb_vector.sqlalchemy import VectorType
@@ -63,3 +64,8 @@ class DistanceMetric(enum.Enum):
             return "VEC_COSINE_DISTANCE"
         else:
             raise ValueError("unsupported distance metric")
+
+
+class ColumnInfo(BaseModel):
+    column_name: str
+    column_type: str

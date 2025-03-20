@@ -9,7 +9,7 @@ from tidb_vector.sqlalchemy import VectorAdaptor
 from typing_extensions import Generic
 
 from pytidb.base import Base
-from pytidb.schema import VectorDataType, TableModel, DistanceMetric
+from pytidb.schema import VectorDataType, TableModel, DistanceMetric, ColumnInfo
 from pytidb.search import SearchType, VectorSearchQuery, SearchQuery
 from pytidb.utils import (
     build_filter_clauses,
@@ -190,6 +190,20 @@ class Table(Generic[T]):
         with Session(self._db_engine) as session:
             stmt = text(f"TRUNCATE TABLE {self.table_name}")
             session.execute(stmt)
+
+    def columns(self) -> List[ColumnInfo]:
+        show_columns_sql = text("""
+            SELECT
+                COLUMN_NAME,
+                COLUMN_TYPE
+            FROM information_schema.columns
+            WHERE
+                table_schema = DATABASE()
+                AND table_name = :table_name;
+        """)
+        with Session(self._db_engine) as session:
+            rows = session.execute(show_columns_sql, {"table_name": self.table_name})
+            return [ColumnInfo(column_name=row[0], column_type=row[1]) for row in rows]
 
     def rows(self):
         with Session(self._db_engine) as session:
