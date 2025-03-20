@@ -26,7 +26,9 @@ JSON_FIELD_PATTERN = re.compile(
 )
 
 
-TIDB_SERVERLESS_HOST_PATTERN = re.compile("gateway01\.(.+)\.prod\.aws\.tidbcloud\.com")
+TIDB_SERVERLESS_HOST_PATTERN = re.compile(
+    r"gateway01\.(.+)\.prod\.aws\.tidbcloud\.com"
+)
 
 
 class TiDBDsn(AnyUrl):

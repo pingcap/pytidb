@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Any, Dict, TypeVar, Type, overload
+from typing import Optional, List, Any, Dict, TypeVar, Type, overload, TYPE_CHECKING, Union
 
 import sqlalchemy
 from sqlalchemy import Engine, update, text

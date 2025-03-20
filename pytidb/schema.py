@@ -1,8 +1,7 @@
 import enum
-import typing
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Union, List
 
-import numpy
+import numpy as np
 from sqlalchemy import Column
 from sqlmodel import SQLModel, Field
 from tidb_vector.sqlalchemy import VectorType
@@ -10,8 +9,7 @@ from tidb_vector.sqlalchemy import VectorType
 if TYPE_CHECKING:
     from pytidb.embeddings.base import BaseEmbeddingFunction
 
-VectorDataType = typing.Union[numpy.ndarray, typing.List[float]]
-
+VectorDataType = Union[np.ndarray, List[float]]
 
 class TableModel(SQLModel):
     pass
