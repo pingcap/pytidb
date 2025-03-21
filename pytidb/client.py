@@ -7,6 +7,7 @@ from sqlalchemy import text, Result
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import Session
 
+from pytidb.base import default_registry
 from pytidb.schema import TableModel, Field
 from pytidb.table import Table
 from pytidb.utils import build_tidb_dsn
@@ -103,17 +104,21 @@ class TiDBClient:
     def db_engine(self) -> Engine:
         return self._db_engine
 
-    def create_table(
-        self,
-        *,
-        schema: Optional[Type[TableModel]] = None,
-    ) -> Table:
+    def create_table(self, *, schema: Optional[Type[TableModel]] = None) -> Table:
         table = Table(schema=schema, db_engine=self._db_engine)
         return table
 
-    def open_table(self, schema: Type[TableModel]) -> Table:
+    def get_table_model(self, table_name: str):
+        for m in default_registry.mappers:
+            if m.persist_selectable.name == table_name:
+                return m.class_
+
+    def open_table(self, table_name: str) -> Optional[Table]:
+        table_model = self.get_table_model(table_name)
+        if table_model is None:
+            return None
         return Table(
-            schema=schema,
+            schema=table_model,
             db_engine=self._db_engine,
         )
 

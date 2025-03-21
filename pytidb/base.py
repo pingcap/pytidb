@@ -1,5 +1,3 @@
-from sqlalchemy.orm import registry
-
-default_registry = registry()
+from sqlmodel.main import default_registry
 
 Base = default_registry.generate_base()
