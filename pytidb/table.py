@@ -188,9 +188,10 @@ class Table(Generic[T]):
 
     def truncate(self):
         with Session(self._db_engine) as session:
-            session.execute(
-                text("TRUNCATE TABLE :table_name"), {"table_name": self.table_name}
+            table_name = self._db_engine.dialect.identifier_preparer.quote(
+                self.table_name
             )
+            session.execute(text(f"TRUNCATE TABLE {table_name};"))
 
     def columns(self) -> List[ColumnInfo]:
         show_columns_sql = text("""
@@ -208,10 +209,10 @@ class Table(Generic[T]):
 
     def rows(self):
         with Session(self._db_engine) as session:
-            res = session.execute(
-                text("SELECT COUNT(*) FROM :table_name"),
-                {"table_name": self.table_name},
+            table_name = self._db_engine.dialect.identifier_preparer.quote(
+                self.table_name
             )
+            res = session.execute(text(f"SELECT COUNT(*) FROM {table_name};"))
             return res.scalar()
 
     def query(self, filters: Optional[Dict[str, Any]] = None) -> List[T]:
