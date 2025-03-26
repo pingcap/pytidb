@@ -4,9 +4,9 @@ from typing import Any, Dict, List
 import numpy as np
 import pytest
 
-from pytidb.schema import TableModel, Field, VectorField
+from pytidb.schema import TableModel, Field, VectorField, Column
+from pytidb.datatype import JSON
 from pytidb.base import Base
-from sqlalchemy import JSON, Column
 
 
 logger = logging.getLogger(__name__)

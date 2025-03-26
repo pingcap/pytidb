@@ -1,16 +1,16 @@
 import enum
-from typing import Optional, TYPE_CHECKING, Union, List
+from typing import Optional, TYPE_CHECKING, List
 
-import numpy as np
 from pydantic import BaseModel
 from sqlalchemy import Column
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel.main import FieldInfo, RelationshipInfo
 from tidb_vector.sqlalchemy import VectorType
 
 if TYPE_CHECKING:
     from pytidb.embeddings.base import BaseEmbeddingFunction
 
-VectorDataType = Union[np.ndarray, List[float]]
+VectorDataType = List[float]
 
 
 class TableModel(SQLModel):
@@ -18,6 +18,10 @@ class TableModel(SQLModel):
 
 
 Field = Field
+Relationship = Relationship
+Column = Column
+FieldInfo = FieldInfo
+RelationshipInfo = RelationshipInfo
 
 
 def VectorField(

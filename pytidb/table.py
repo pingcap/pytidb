@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Any, Dict, TypeVar, Type, overload
+from typing import Optional, List, Any, Dict, TypeVar, Type, overload, Union
 
 import sqlalchemy
 from sqlalchemy import Engine, update, text
@@ -232,7 +232,7 @@ class Table(Generic[T]):
 
     def search(
         self,
-        query: VectorDataType | str,
+        query: Union[VectorDataType | str],
         query_type: SearchType = SearchType.VECTOR_SEARCH,
     ) -> SearchQuery:
         if query_type == SearchType.VECTOR_SEARCH:
