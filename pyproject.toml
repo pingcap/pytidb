@@ -1,9 +1,9 @@
 [project]
-name = "pytidb-experimental"
-version = "0.0.1.dev4"
-description = "A experimental Python library for TiDB."
+name = "pytidb"
+version = "0.0.2"
+description = "A Python library for TiDB."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 authors = [
     { name = "Mini256", email = "minianter@foxmail.com" },
     { name = "sykp241095", email = "sykp241095@gmail.com" },
