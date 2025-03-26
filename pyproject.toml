@@ -9,7 +9,7 @@ authors = [
     { name = "sykp241095", email = "sykp241095@gmail.com" },
 ]
 dependencies = [
-    "sqlmodel==0.0.22",
+    "sqlmodel==0.0.24",
     "tidb-vector>=0.0.14",
     "pymysql>=1.1.1",
 ]
