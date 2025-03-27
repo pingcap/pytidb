@@ -1,6 +1,6 @@
 from typing import List, Any, Optional
-from pydantic import Field
 
+from pydantic import Field
 from pytidb.embeddings.base import BaseEmbeddingFunction
 
 

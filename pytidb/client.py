@@ -1,4 +1,3 @@
-import logging
 from typing import List, Optional, Type
 
 from pydantic import PrivateAttr, BaseModel
@@ -11,8 +10,7 @@ from pytidb.base import default_registry
 from pytidb.schema import TableModel, Field
 from pytidb.table import Table
 from pytidb.utils import build_tidb_dsn
-
-logger = logging.getLogger(__name__)
+from pytidb.logger import logger
 
 
 class SQLExecuteResult(BaseModel):
@@ -75,6 +73,7 @@ class TiDBClient:
         password: Optional[str] = "",
         database: Optional[str] = "test",
         enable_ssl: Optional[bool] = None,
+        debug: Optional[bool] = None,
         **kwargs,
     ) -> "TiDBClient":
         if database_url is None:
@@ -89,7 +88,8 @@ class TiDBClient:
                 )
             )
 
-        db_engine = create_engine(database_url, **kwargs)
+        db_engine = create_engine(database_url, echo=debug, **kwargs)
+
         return cls(db_engine)
 
     # Notice: Since the Vector type is not in the type support list of mysql dialect, using the reflection API will cause an error.
