@@ -1,4 +1,3 @@
-import logging
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import (
@@ -178,7 +177,7 @@ class VectorSearchQuery(SearchQuery):
             )
 
         # Inner query for ANN search
-        db_engine = self._table.db_engine
+        # db_engine = self._table.db_engine
         table_model = self._table.table_model
         columns = table_model.__table__.c
         subquery_stmt = (
@@ -217,8 +216,8 @@ class VectorSearchQuery(SearchQuery):
 
         query = query.order_by(desc(SIMILARITY_SCORE_LABEL)).limit(self._limit)
 
-        sql = query.compile(dialect=db_engine.dialect)
-        logging.info(sql)
+        # sql = query.compile(dialect=db_engine.dialect)
+        # logging.info(sql)
 
         return db_session.execute(query)
 

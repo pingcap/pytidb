@@ -1,7 +1,8 @@
 from typing import Any
 
 from pytidb import TiDBClient
-from pytidb.schema import DistanceMetric, TableModel
+from pytidb.schema import DistanceMetric, TableModel, Field, Column
+from pytidb.datatype import Vector
 from pytidb.search import SIMILARITY_SCORE_LABEL
 
 
@@ -9,18 +10,17 @@ from pytidb.search import SIMILARITY_SCORE_LABEL
 
 
 def test_vector_search(db: TiDBClient):
-    from sqlalchemy import Column
-    from tidb_vector.sqlalchemy import VectorType
-    from sqlmodel import Field
-
+    # Create table.
     class Chunk(TableModel, table=True):
         __tablename__ = "test_vector_search"
         id: int = Field(None, primary_key=True)
         text: str = Field(None)
-        text_vec: Any = Field(sa_column=Column(VectorType(3)))
+        text_vec: Any = Field(sa_column=Column(Vector(3)))
         user_id: int = Field(None)
 
     tbl = db.create_table(schema=Chunk)
+
+    # Prepare test data.
     tbl.truncate()
     tbl.bulk_insert(
         [
