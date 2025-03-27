@@ -1,4 +1,3 @@
-import logging
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import (
@@ -13,12 +12,14 @@ from typing import (
     TypeVar,
     Generic,
 )
+
 import numpy as np
 from pydantic import BaseModel, Field
 from sqlalchemy import asc, desc, select, and_, Result
 from sqlalchemy.orm import Session
 from pytidb.schema import DistanceMetric, VectorDataType, TableModel
 from pytidb.utils import build_filter_clauses, check_vector_column
+from pytidb.logger import logger
 
 
 if TYPE_CHECKING:
@@ -113,6 +114,7 @@ class VectorSearchQuery(SearchQuery):
         self._num_candidate = 20
         self._vector_column = table.vector_column
         self._filters = None
+        self._debug = False
 
     def vector_column(self, column_name: str):
         self._vector_column = check_vector_column(self._columns, column_name)
@@ -120,6 +122,12 @@ class VectorSearchQuery(SearchQuery):
 
     def distance_metric(self, metric: DistanceMetric) -> "VectorSearchQuery":
         self._distance_metric = metric
+        return self
+
+    def distance_threshold(
+        self, threshold: Optional[float] = None
+    ) -> "VectorSearchQuery":
+        self._distance_threshold = threshold
         return self
 
     def distance_range(
@@ -139,6 +147,10 @@ class VectorSearchQuery(SearchQuery):
 
     def limit(self, k: int) -> "VectorSearchQuery":
         self._limit = k
+        return self
+
+    def debug(self, flag: bool = True) -> "VectorSearchQuery":
+        self._debug = flag
         return self
 
     def _execute(self, db_session: Session) -> Result:
@@ -161,7 +173,9 @@ class VectorSearchQuery(SearchQuery):
         # Auto embedding
         if isinstance(self._query, str):
             if vector_column.name not in self._table.vector_field_configs:
-                raise ValueError()
+                raise ValueError(
+                    "query should be a vector, because the vector column didn't configure the embed_fn parameter"
+                )
 
             config = self._table.vector_field_configs[vector_column.name]
             self._query = config["embed_fn"].get_query_embedding(self._query)
@@ -178,7 +192,6 @@ class VectorSearchQuery(SearchQuery):
             )
 
         # Inner query for ANN search
-        db_engine = self._table.db_engine
         table_model = self._table.table_model
         columns = table_model.__table__.c
         subquery_stmt = (
@@ -195,7 +208,7 @@ class VectorSearchQuery(SearchQuery):
 
         # Distance threshold.
         if self._distance_threshold:
-            having.append(distance_column >= self._distance_threshold)
+            having.append(distance_column <= self._distance_threshold)
 
         if len(having) > 0:
             subquery_stmt = subquery_stmt.having(and_(*having))
@@ -217,8 +230,14 @@ class VectorSearchQuery(SearchQuery):
 
         query = query.order_by(desc(SIMILARITY_SCORE_LABEL)).limit(self._limit)
 
-        sql = query.compile(dialect=db_engine.dialect)
-        logging.info(sql)
+        if self._debug:
+            db_engine = self._table.db_engine
+            sql = query.compile(
+                dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
+            )
+            logger.info(
+                f"Execute vector search query on table <{self._table.table_name}>:\n{sql}"
+            )
 
         return db_session.execute(query)
 

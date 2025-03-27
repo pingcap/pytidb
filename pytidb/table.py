@@ -1,4 +1,3 @@
-import logging
 from typing import Optional, List, Any, Dict, TypeVar, Type, overload, Union
 
 import sqlalchemy
@@ -16,8 +15,6 @@ from pytidb.utils import (
     check_vector_column,
     filter_vector_columns,
 )
-
-logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=TableModel)
 

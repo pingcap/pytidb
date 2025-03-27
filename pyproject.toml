@@ -1,6 +1,6 @@
 [project]
 name = "pytidb"
-version = "0.0.2.post5"
+version = "0.0.2.post6"
 description = "A Python library for TiDB."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -44,7 +44,6 @@ log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-env_files = [".env"]
 
 # Build
 

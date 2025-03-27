@@ -7,7 +7,7 @@ Python SDK for vector storage and retrieval operations with TiDB.
 - 🎯 Advanced filtering capabilities
 - 📦 Bulk operations support
 
-Documentation: [Jypyter Notebook](docs/quickstart.ipynb)
+Documentation: [Jupyter Notebook](docs/quickstart.ipynb)
 
 ## Installation
 
@@ -15,11 +15,31 @@ Documentation: [Jypyter Notebook](docs/quickstart.ipynb)
 pip install pytidb
 ```
 
+## Connect to TiDB
+
+Go [tidbcloud.com](https://tidbcloud.com/) or using [tiup playground](https://docs.pingcap.com/tidb/stable/tiup-playground/) to create a free TiDB database cluster.
+
+```python
+import os
+from pytidb import TiDBClient
+
+db = TiDBClient.connect(
+    host=os.getenv("TIDB_HOST"),
+    port=int(os.getenv("TIDB_PORT")),
+    username=os.getenv("TIDB_USERNAME"),
+    password=os.getenv("TIDB_PASSWORD"),
+    database=os.getenv("TIDB_DATABASE"),
+)
+```
+
 ## Highlights
 
 ### 🤖 Auto Embedding
 
 ```python
+from pytidb.schema import TableModel, Field
+from pytidb.embeddings import EmbeddingFunction
+
 text_embed = EmbeddingFunction("openai/text-embedding-3-small")
 
 class Chunk(TableModel, table=True):
@@ -28,7 +48,7 @@ class Chunk(TableModel, table=True):
 
     id: int = Field(primary_key=True)
     text: str = Field()
-    text_vec: Optional[Any] = text_embed.VectorField(
+    text_vec: list[float] = text_embed.VectorField(
         source_field="text"
     )  # 👈 Define the vector field.
     user_id: int = Field()
@@ -50,12 +70,12 @@ table.search(
 ### ⛓ Join Structured Data and Unstructured Data
 
 ```python
-from sqlmodel import select, Session
+from pytidb import Session
+from pytidb.sql import select
 
 # Create a table to stored user data:
 class User(TableModel, table=True):
     __tablename__ = "users"
-    __table_args__ = {"extend_existing": True}
 
     id: int = Field(primary_key=True)
     name: str = Field(max_length=20)

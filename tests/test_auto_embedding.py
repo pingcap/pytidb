@@ -1,6 +1,5 @@
 import hashlib
 from typing import Optional, Any
-
 from sqlmodel import Field
 
 from pytidb import TiDBClient
