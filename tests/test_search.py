@@ -1,6 +1,8 @@
 from typing import Any
 
-from pytidb import TiDBClient
+import pytest
+
+from pytidb import TiDBClient, Table
 from pytidb.schema import DistanceMetric, TableModel, Field, Column
 from pytidb.datatype import Vector
 from pytidb.search import SIMILARITY_SCORE_LABEL
@@ -9,8 +11,8 @@ from pytidb.search import SIMILARITY_SCORE_LABEL
 # Vector Search
 
 
-def test_vector_search(db: TiDBClient):
-    # Create table.
+@pytest.fixture(scope="module")
+def vector_table(db: TiDBClient):
     class Chunk(TableModel, table=True):
         __tablename__ = "test_vector_search"
         id: int = Field(None, primary_key=True)
@@ -30,9 +32,13 @@ def test_vector_search(db: TiDBClient):
         ]
     )
 
+    return tbl
+
+
+def test_vector_search(vector_table: Table):
     # to_pydantic()
     results = (
-        tbl.search([1, 2, 3])
+        vector_table.search([1, 2, 3])
         .distance_metric(metric=DistanceMetric.COSINE)
         .num_candidate(20)
         .filter({"user_id": 2})
@@ -46,13 +52,24 @@ def test_vector_search(db: TiDBClient):
     assert results[0].user_id == 2
 
     # to_pandas()
-    results = tbl.search([1, 2, 3]).limit(2).to_pandas()
+    results = vector_table.search([1, 2, 3]).limit(2).to_pandas()
     assert results.size > 0
 
     # to_list()
-    results = tbl.search([1, 2, 3]).limit(2).to_list()
+    results = vector_table.search([1, 2, 3]).limit(2).to_list()
     assert len(results) > 0
     assert results[0]["text"] == "bar"
     assert results[0][SIMILARITY_SCORE_LABEL] == 1
     assert results[0]["score"] == 1
     assert results[0]["user_id"] == 2
+
+
+def test_with_distance_threshold(vector_table: Table):
+    result = (
+        vector_table.search([1, 2, 3])
+        .debug()
+        .distance_threshold(0.01)
+        .limit(10)
+        .to_list()
+    )
+    assert len(result) == 1
