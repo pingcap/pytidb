@@ -110,10 +110,12 @@ with Session(engine) as session:
 
 ### 💻 Execute or Query with Raw SQL
 
+Using `execute()` to execute INSERT / UPDATE / DELETE statement.
 ```python
 db.execute("INSERT INTO chunks(text, user_id) VALUES ('inserted from raw sql', 5)")
 ```
 
+Using `query()` to execute SELECT / SHOW statement.
 ```python
 db.query("SELECT id, text, user_id FROM chunks LIMIT 5").to_pandas()
 ```
