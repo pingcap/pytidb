@@ -13,6 +13,12 @@ Documentation: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/do
 
 ```bash
 pip install pytidb
+
+# If you want to using the built-in embedding function.
+pip install "pytidb[models]"
+
+# If you want to convert to result to pandas DataFrame.
+pip install pandas
 ```
 
 ## Connect to TiDB
