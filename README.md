@@ -67,6 +67,23 @@ table.search(
 .to_pandas()
 ```
 
+#### Advanced Filtering
+TiDB Client supports various filter operators for flexible querying:
+
+| Operator | Description               | Example                                      |
+|----------|---------------------------|----------------------------------------------|
+| `$eq`    | Equal to                  | `{"field": {"$eq": "hello"}}`                |
+| `$gt`    | Greater than              | `{"field": {"$gt": 1}}`                      |
+| `$gte`   | Greater than or equal     | `{"field": {"$gte": 1}}`                     |
+| `$lt`    | Less than                 | `{"field": {"$lt": 1}}`                      |
+| `$lte`   | Less than or equal        | `{"field": {"$lte": 1}}`                     |
+| `$in`    | In array                  | `{"field": {"$in": [1, 2, 3]}}`              |
+| `$nin`   | Not in array              | `{"field": {"$nin": [1, 2, 3]}}`             |
+| `$and`   | Logical AND               | `{"$and": [{"field1": 1}, {"field2": 2}]}`   |
+| `$or`    | Logical OR                | `{"$or": [{"field1": 1}, {"field2": 2}]}`    |
+
+
+
 ### ⛓ Join Structured Data and Unstructured Data
 
 ```python
