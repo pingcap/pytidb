@@ -62,6 +62,7 @@ exclude = [
     "/.*",
     "/dist",
     "/docs",
+    "/examples",
     "/tests",
 ]
 
