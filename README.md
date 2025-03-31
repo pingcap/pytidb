@@ -7,7 +7,7 @@ Python SDK for vector storage and retrieval operations with TiDB.
 - 🎯 Advanced filtering capabilities
 - 📦 Bulk operations support
 
-Documentation: [Jupyter Notebook](docs/quickstart.ipynb)
+Documentation: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
 
 ## Installation
 
