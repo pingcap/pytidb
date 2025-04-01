@@ -95,7 +95,7 @@ TiDB Client supports various filter operators for flexible querying:
 from pytidb import Session
 from pytidb.sql import select
 
-# Create a table to stored user data:
+# Create a table to store user data:
 class User(TableModel, table=True):
     __tablename__ = "users"
 
