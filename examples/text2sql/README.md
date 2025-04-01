@@ -1,6 +1,6 @@
 # Streamlit Examples
 
-* Use autoflow as RAG framework
+* Use `pytidb` to connect to TiDB
 * Use Streamlit as web ui
 
 
@@ -16,7 +16,7 @@
 
 ```bash
 git clone https://github.com/pingcap/pytidb.git
-cd pytidb/;
+cd pytidb/examples/text2sql/;
 ```
 
 **Step1**: Install the required packages
@@ -30,7 +30,7 @@ pip install -r reqs.txt
 **Step2**: Run the Streamlit app
 
 ```bash
-streamlit run examples/text2sql/main.py
+streamlit run main.py
 ```
 
 **Step3**: Open the browser and visit `http://localhost:8501`
