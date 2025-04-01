@@ -50,7 +50,6 @@ text_embed = EmbeddingFunction("openai/text-embedding-3-small")
 
 class Chunk(TableModel, table=True):
     __tablename__ = "chunks"
-    __table_args__ = {"extend_existing": True}
 
     id: int = Field(primary_key=True)
     text: str = Field()
