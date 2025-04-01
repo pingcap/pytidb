@@ -1,0 +1,6 @@
+openai
+pytidb
+pymysql
+streamlit
+httpx[socks]
+python-dotenv
