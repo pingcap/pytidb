@@ -1,15 +1,16 @@
 import os
 
 import dotenv
-dotenv.load_dotenv()
 import litellm
-litellm.drop_params = True
 import streamlit as st
 from typing import Optional, Any
 from pytidb import TiDBClient
 from pytidb.schema import TableModel, Field
 from pytidb.embeddings import EmbeddingFunction
 
+
+dotenv.load_dotenv()
+litellm.drop_params = True
 
 db = TiDBClient.connect(
     host=os.getenv("TIDB_HOST", "localhost"),
@@ -21,7 +22,7 @@ db = TiDBClient.connect(
 # database_url = "mysql://username:password@host:port/database"
 # db = TiDBClient.connect(database_url)
 
-text_embed = EmbeddingFunction('ollama/mxbai-embed-large')
+text_embed = EmbeddingFunction("ollama/mxbai-embed-large")
 
 
 class Chunk(TableModel, table=True):
@@ -33,6 +34,7 @@ class Chunk(TableModel, table=True):
     text_vec: Optional[Any] = text_embed.VectorField(
         source_field="text",
     )
+
 
 sample_chunks = [
     "Llamas are camelids known for their soft fur and use as pack animals.",
@@ -69,9 +71,7 @@ query = st.text_input("Search:", "")
 
 if st.button("Search") and query:
     with st.spinner("Searching for similar chunks..."):
-        res = (
-            table.search(query).limit(query_limit)
-        )
+        res = table.search(query).limit(query_limit)
         if res:
             st.write("### Search results:")
             st.dataframe(res.to_pandas())
