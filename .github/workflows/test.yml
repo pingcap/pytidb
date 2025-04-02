@@ -16,14 +16,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Set up TiDB
-        uses: hoverkraft-tech/compose-action@v2.0.2
-        with:
-          compose-file: docker/tidb/docker-compose.yaml
-          services: |
-            tidb
-            tiflash
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
+          tiup playground v8.5.1
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: True
       - name: Install dependencies
         run: make install_dev
       - name: Run Lint
