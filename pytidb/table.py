@@ -1,4 +1,14 @@
-from typing import Optional, List, Any, Dict, TypeVar, Type, overload, Union
+from typing import (
+    Optional,
+    List,
+    Any,
+    Dict,
+    TypeVar,
+    Type,
+    overload,
+    Union,
+    TYPE_CHECKING,
+)
 
 import sqlalchemy
 from sqlalchemy import Engine, update, text
@@ -16,6 +26,10 @@ from pytidb.utils import (
     filter_vector_columns,
 )
 
+if TYPE_CHECKING:
+    from pytidb import TiDBClient
+
+
 T = TypeVar("T", bound=TableModel)
 
 
@@ -23,13 +37,14 @@ class Table(Generic[T]):
     def __init__(
         self,
         *,
-        db_engine: Engine,
+        client: "TiDBClient",
         schema: Optional[Type[T]] = None,
         vector_column: Optional[str] = None,
         distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
         checkfirst: bool = True,
     ):
-        self._db_engine = db_engine
+        self._client = client
+        self._db_engine = client.db_engine
 
         # Init table model.
         if type(schema) is SQLModelMetaclass:
@@ -85,6 +100,10 @@ class Table(Generic[T]):
         return self._table_model.__tablename__
 
     @property
+    def client(self) -> "TiDBClient":
+        return self._client
+
+    @property
     def db_engine(self) -> Engine:
         return self._db_engine
 
@@ -100,8 +119,8 @@ class Table(Generic[T]):
     def vector_field_configs(self):
         return self._vector_field_configs
 
-    def get(self, id: Any):
-        with Session(self._db_engine) as session:
+    def get(self, id: Any) -> T:
+        with self._client.session() as session:
             return session.get(self._table_model, id)
 
     def insert(self, data: T) -> T:
@@ -118,9 +137,9 @@ class Table(Generic[T]):
             vector_embedding = config["embed_fn"].get_source_embedding(embedding_source)
             setattr(data, field_name, vector_embedding)
 
-        with Session(self._db_engine) as session:
+        with self._client.session() as session:
             session.add(data)
-            session.commit()
+            session.flush()
             session.refresh(data)
             return data
 
@@ -144,14 +163,15 @@ class Table(Generic[T]):
             for item, embedding in zip(items_need_embedding, vector_embeddings):
                 setattr(item, field_name, embedding)
 
-        with Session(self._db_engine) as session:
+        with self._client.session() as session:
             session.add_all(data)
-            session.commit()
+            session.flush()
             for item in data:
                 session.refresh(item)
             return data
 
     def update(self, values: dict, filters: Optional[Dict[str, Any]] = None) -> object:
+        # Auto embedding.
         for field_name, config in self._vector_field_configs.items():
             if field_name in values:
                 # Vector embeddings is provided.
@@ -165,10 +185,9 @@ class Table(Generic[T]):
             values[field_name] = vector_embedding
 
         filter_clauses = build_filter_clauses(filters, self._columns, self._table_model)
-        with Session(self._db_engine) as session:
+        with self._client.session() as session:
             stmt = update(self._table_model).filter(*filter_clauses).values(values)
             session.execute(stmt)
-            session.commit()
 
     def delete(self, filters: Optional[Dict[str, Any]] = None):
         """
@@ -178,13 +197,13 @@ class Table(Generic[T]):
             filters: (Optional[Dict[str, Any]]): The filters to apply to the delete operation.
         """
         filter_clauses = build_filter_clauses(filters, self._columns, self._table_model)
-        with Session(self._db_engine) as session:
+        with self._client.session() as session:
             stmt = sqlalchemy.delete(self._table_model).filter(*filter_clauses)
             session.execute(stmt)
             session.commit()
 
     def truncate(self):
-        with Session(self._db_engine) as session:
+        with self._client.session() as session:
             table_name = self._db_engine.dialect.identifier_preparer.quote(
                 self.table_name
             )
@@ -200,12 +219,12 @@ class Table(Generic[T]):
                 table_schema = DATABASE()
                 AND table_name = :table_name;
         """)
-        with Session(self._db_engine) as session:
+        with self._client.session() as session:
             rows = session.execute(show_columns_sql, {"table_name": self.table_name})
             return [ColumnInfo(column_name=row[0], column_type=row[1]) for row in rows]
 
     def rows(self):
-        with Session(self._db_engine) as session:
+        with self._client.session() as session:
             table_name = self._db_engine.dialect.identifier_preparer.quote(
                 self.table_name
             )

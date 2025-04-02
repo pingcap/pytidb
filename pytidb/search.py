@@ -104,6 +104,7 @@ SCORE_LABEL = "score"
 class VectorSearchQuery(SearchQuery):
     def __init__(self, table: "Table", query: VectorDataType):
         super().__init__(table)
+        self._client = table.client
         if self._limit is None:
             self._limit = 10
         self._query = query
@@ -242,12 +243,12 @@ class VectorSearchQuery(SearchQuery):
         return db_session.execute(query)
 
     def to_rows(self) -> Sequence[Any]:
-        with Session(self._table.db_engine) as db_session:
+        with self._client.session() as db_session:
             result = self._execute(db_session)
             return result.fetchall()
 
     def to_list(self) -> List[dict]:
-        with Session(self._table.db_engine) as db_session:
+        with self._client.session() as db_session:
             res = self._execute(db_session)
             keys = res.keys()
             rows = res.fetchall()
@@ -256,7 +257,7 @@ class VectorSearchQuery(SearchQuery):
     def to_pydantic(self, with_score: Optional[bool] = True) -> List[BaseModel]:
         table_model = self._table.table_model
 
-        with Session(self._table.db_engine) as db_session:
+        with self._client.session() as db_session:
             result = self._execute(db_session)
             rows = result.fetchall()
             results = []
