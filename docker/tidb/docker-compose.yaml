@@ -1,7 +1,6 @@
 services:
   pd0:
     image: pingcap/pd:v8.5.1
-    user: "1001:1001"
     ports:
       - "2379"
     command:
@@ -14,7 +13,6 @@ services:
     restart: on-failure
   tikv:
     image: pingcap/tikv:v8.5.1
-    user: "1001:1001"
     command:
       - --addr=0.0.0.0:20160
       - --advertise-addr=tikv:20160
@@ -25,7 +23,6 @@ services:
     restart: on-failure
   tidb:
     image: pingcap/tidb:v8.5.1
-    user: "1001:1001"
     ports:
        - "4000:4000"
     command:
@@ -37,7 +34,6 @@ services:
     restart: on-failure
   tiflash:
     image: pingcap/tiflash:v8.5.1
-    user: "1001:1001"
     depends_on:
       - "tikv"
       - "tidb"
