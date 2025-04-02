@@ -6,8 +6,8 @@ services:
       - "2379"
     volumes:
       - ./config/pd.toml:/pd.toml:ro
-      - ./volumes/data:/data
-      - ./volumes/logs:/logs
+      - ./data:/data
+      - ./logs:/logs
     command:
       - --name=pd0
       - --client-urls=http://0.0.0.0:2379
@@ -23,8 +23,8 @@ services:
     image: pingcap/tikv:v8.5.1
     user: "1001:1001"
     volumes:
-      - ./volumes/data:/data
-      - ./volumes/logs:/logs
+      - ./data:/data
+      - ./logs:/logs
     command:
       - --addr=0.0.0.0:20160
       - --advertise-addr=tikv:20160
@@ -54,12 +54,12 @@ services:
     image: pingcap/tiflash:v8.5.1
     user: "1001:1001"
     volumes:
-      - ./config/tiflash.toml:/tiflash.toml:ro
-      - ./config/tiflash-learner.toml:/tiflash-learner.toml:ro
-      - ./volumes/data:/data
-      - ./volumes/logs:/logs
+      - ./config/flash.toml:/flash.toml:ro
+      - ./config/flash-learner.toml:/flash-learner.toml:ro
+      - ./data:/data
+      - ./logs:/logs
     command:
-      - --config=/tiflash.toml
+      - --config=/flash.toml
     depends_on:
       - "tikv"
       - "tidb"

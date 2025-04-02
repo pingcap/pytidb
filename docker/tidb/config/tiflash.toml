@@ -1,4 +1,4 @@
-# TiFlash tiflash.toml Configuration File reference:
+# TiFlash flash.toml Configuration File reference:
 # https://docs.pingcap.com/tidb/stable/tiflash-configuration#configure-the-tiflashtoml-file
 
 listen_host = "0.0.0.0"

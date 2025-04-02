@@ -1,4 +1,4 @@
-# TiFlash tiflash-learner.toml Configuration File reference:
+# TiFlash flash-learner.toml Configuration File reference:
 # https://docs.pingcap.com/tidb/stable/tiflash-configuration#configure-the-tiflash-learnertoml-file
 
 log-file = "/logs/tiflash_tikv.log"
