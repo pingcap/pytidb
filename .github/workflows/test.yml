@@ -15,10 +15,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-#      - name: Set up TiDB
-#        run: |
-#          curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
-#          nohup ~/.tiup/bin/tiup playground v8.5.1 --host 0.0.0.0 --without-monitor > tiup.log 2>&1 &
       - name: Set up TiDB
         uses: hoverkraft-tech/compose-action@v2.0.2
         with:
@@ -26,6 +22,14 @@ jobs:
           services: |
             tidb
             tiflash
+      - name: Create directories for Docker volumes
+        run: |
+          mkdir -p ./docker/tidb/volumes/data/pd
+          mkdir -p ./docker/tidb/volumes/data/tikv
+          mkdir -p ./docker/tidb/volumes/logs
+          # Set permissions to allow read/write by all users
+          chmod -R a+rw ./docker/tidb/volumes/data
+          chmod -R a+rw ./docker/tidb/volumes/logs
       - name: Wait tidb server started
         run: sleep 10
       - name: Install uv
