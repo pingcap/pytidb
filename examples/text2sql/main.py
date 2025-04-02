@@ -67,9 +67,7 @@ for item in ["generated", "past"]:
 table_definitions = []
 current_database = db._db_engine.url.database
 for table_name in db.table_names():
-    table_definitions.append(
-        db.query(f"SHOW CREATE TABLE `{table_name}`").to_rows()[0]
-    )
+    table_definitions.append(db.query(f"SHOW CREATE TABLE `{table_name}`").to_rows()[0])
 
 
 def on_submit():
@@ -98,7 +96,7 @@ def on_submit():
         )
         st.session_state.past.append(user_input)
 
-        if 'insert' in response.sql.lower() or 'update' in response.sql.lower():
+        if "insert" in response.sql.lower() or "update" in response.sql.lower():
             st.error(
                 "The generated SQL is not a SELECT statement, please check it carefully before running it."
             )
