@@ -1,4 +1,4 @@
-# TiFlash flash-learner.toml Configuration File reference:
+# TiFlash tiflash-learner.toml Configuration File reference:
 # https://docs.pingcap.com/tidb/stable/tiflash-configuration#configure-the-tiflash-learnertoml-file
 
 log-file = "/logs/tiflash_tikv.log"
@@ -10,4 +10,4 @@ advertise-addr = "tiflash:20280"
 status-addr = "tiflash:20292"
 
 [storage]
-data-dir = "/data/flash"
+data-dir = "/data/tiflash"

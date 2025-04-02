@@ -1,12 +1,10 @@
-# TiFlash flash.toml Configuration File reference:
+# TiFlash tiflash.toml Configuration File reference:
 # https://docs.pingcap.com/tidb/stable/tiflash-configuration#configure-the-tiflashtoml-file
 
 listen_host = "0.0.0.0"
-path = "/data"
 
-[flash]
-tidb_status_addr = "tidb:10080"
-service_addr = "tiflash:4030"
+[storage.main]
+dir = ["/data/tiflash"]
 
 [flash.proxy]
 config = "/tiflash-learner.toml"

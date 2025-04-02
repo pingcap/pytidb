@@ -17,6 +17,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Cache Docker images
+        uses: actions/cache@v4
+        with:
+          path: /var/lib/docker
+          key: ${{ runner.os }}-docker-${{ hashFiles('docker/tidb/.keep', 'docker/tidb/docker-compose.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
       - name: Set up TiDB
         uses: hoverkraft-tech/compose-action@v2.0.2
         with:

@@ -54,12 +54,12 @@ services:
     image: pingcap/tiflash:v8.5.1
     user: "1001:1001"
     volumes:
-      - ./config/flash.toml:/flash.toml:ro
-      - ./config/flash-learner.toml:/flash-learner.toml:ro
+      - ./config/tiflash.toml:/tiflash.toml:ro
+      - ./config/tiflash-learner.toml:/tiflash-learner.toml:ro
       - ./data:/data
       - ./logs:/logs
     command:
-      - --config=/flash.toml
+      - --config=/tiflash.toml
     depends_on:
       - "tikv"
       - "tidb"
