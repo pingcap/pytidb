@@ -6,6 +6,9 @@ install:
 install_dev:
 	@uv sync --all-extras --dev
 
+pre_commit:
+	@uv run pre-commit install
+
 lint:
 	@PYTHONPATH=$(PWD) uv tool run ruff check
 
