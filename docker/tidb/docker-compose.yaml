@@ -1,6 +1,7 @@
 services:
   pd0:
     image: pingcap/pd:v8.5.1
+    user: "1001:1001"
     ports:
       - "2379"
     volumes:
@@ -20,6 +21,7 @@ services:
     restart: on-failure
   tikv:
     image: pingcap/tikv:v8.5.1
+    user: "1001:1001"
     volumes:
       - ./volumes/data:/data
       - ./volumes/logs:/logs
@@ -35,6 +37,7 @@ services:
     restart: on-failure
   tidb:
     image: pingcap/tidb:v8.5.1
+    user: "1001:1001"
     ports:
        - "4000:4000"
     volumes:
@@ -49,6 +52,7 @@ services:
     restart: on-failure
   tiflash:
     image: pingcap/tiflash:v8.5.1
+    user: "1001:1001"
     volumes:
       - ./config/tiflash.toml:/tiflash.toml:ro
       - ./config/tiflash-learner.toml:/tiflash-learner.toml:ro
