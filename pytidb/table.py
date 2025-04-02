@@ -100,7 +100,7 @@ class Table(Generic[T]):
     def vector_field_configs(self):
         return self._vector_field_configs
 
-    def get(self, id: int):
+    def get(self, id: Any):
         with Session(self._db_engine) as session:
             return session.get(self._table_model, id)
 
