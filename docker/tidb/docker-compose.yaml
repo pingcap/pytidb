@@ -5,8 +5,8 @@ services:
       - "2379"
     volumes:
       - ./config/pd.toml:/pd.toml:ro
-      - ./volumes/data:/data
-      - ./volumes/logs:/logs
+#      - ./volumes/data:/data
+#      - ./volumes/logs:/logs
     command:
       - --name=pd0
       - --client-urls=http://0.0.0.0:2379
@@ -14,22 +14,22 @@ services:
       - --advertise-client-urls=http://pd0:2379
       - --advertise-peer-urls=http://pd0:2380
       - --initial-cluster=pd0=http://pd0:2380
-      - --data-dir=/data/pd
+#      - --data-dir=/data/pd
       - --config=/pd.toml
-      - --log-file=/logs/pd.log
+#      - --log-file=/logs/pd.log
     restart: on-failure
   tikv:
     image: pingcap/tikv:v8.5.1
-    volumes:
-      - ./volumes/data:/data
-      - ./volumes/logs:/logs
+#    volumes:
+#      - ./volumes/data:/data
+#      - ./volumes/logs:/logs
     command:
       - --addr=0.0.0.0:20160
       - --advertise-addr=tikv:20160
       - --status-addr=tikv:20180
-      - --data-dir=/data/tikv
+#      - --data-dir=/data/tikv
       - --pd=pd0:2379
-      - --log-file=/logs/tikv.log
+#      - --log-file=/logs/tikv.log
     depends_on:
       - "pd0"
     restart: on-failure
@@ -37,13 +37,13 @@ services:
     image: pingcap/tidb:v8.5.1
     ports:
        - "4000:4000"
-    volumes:
-      - ./volumes/logs:/logs
+#    volumes:
+#      - ./volumes/logs:/logs
     command:
       - --advertise-address=tidb
       - --store=tikv
       - --path=pd0:2379
-      - --log-file=/logs/tidb.log
+#      - --log-file=/logs/tidb.log
     depends_on:
       - "tikv"
     restart: on-failure
@@ -52,8 +52,8 @@ services:
     volumes:
       - ./config/tiflash.toml:/tiflash.toml:ro
       - ./config/tiflash-learner.toml:/tiflash-learner.toml:ro
-      - ./volumes/data:/data
-      - ./volumes/logs:/logs
+#      - ./volumes/data:/data
+#      - ./volumes/logs:/logs
     command:
       - --config=/tiflash.toml
     depends_on:
