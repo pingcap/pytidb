@@ -15,8 +15,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
       - name: Set up TiDB
         uses: hoverkraft-tech/compose-action@v2.0.2
         with:
@@ -24,6 +22,8 @@ jobs:
           services: |
             tidb
             tiflash
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
       - name: Install dependencies
         run: make install_dev
       - name: Run Lint
