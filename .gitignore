@@ -173,7 +173,3 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# Docker
-!docker/tidb/**/.keep
-!docker/tidb/**/docker-compose.yaml
-docker/tidb/**/*
