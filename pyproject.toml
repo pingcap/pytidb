@@ -46,6 +46,8 @@ log_cli_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 # Build
+[tool.setuptools]
+packages = ["pytidb"]
 
 [build-system]
 requires = ["hatchling==1.26.3"]
