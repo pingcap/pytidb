@@ -1,4 +1,6 @@
-from typing import List, Optional, Type
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import List, Optional, Type, Generator
 
 from pydantic import PrivateAttr, BaseModel
 import sqlalchemy
@@ -55,6 +57,9 @@ class SQLQueryResult:
         return [model.model_validate(item) for item in ls]
 
 
+SESSION = ContextVar[Session | None]("session", default=None)
+
+
 class TiDBClient:
     _db_engine: Engine = PrivateAttr()
 
@@ -105,7 +110,7 @@ class TiDBClient:
         return self._db_engine
 
     def create_table(self, *, schema: Optional[Type[TableModel]] = None) -> Table:
-        table = Table(schema=schema, db_engine=self._db_engine)
+        table = Table(schema=schema, client=self)
         return table
 
     def get_table_model(self, table_name: str):
@@ -119,7 +124,7 @@ class TiDBClient:
             return None
         return Table(
             schema=table_model,
-            db_engine=self._db_engine,
+            client=self,
         )
 
     def table_names(self) -> List[str]:
@@ -138,26 +143,56 @@ class TiDBClient:
         params: Optional[dict] = None,
         raise_error: Optional[bool] = False,
     ) -> SQLExecuteResult:
-        with Session(self._db_engine) as session:
-            try:
+        try:
+            with self.session() as session:
                 result: Result = session.execute(text(sql), params or {})
-                session.commit()
                 return SQLExecuteResult(rowcount=result.rowcount, success=True)
-            except Exception as e:
-                session.rollback()
-                if raise_error:
-                    raise e
-                logger.error(f"Failed to execute SQL: {str(e)}")
-                return SQLExecuteResult(rowcount=0, success=False, message=str(e))
+        except Exception as e:
+            if raise_error:
+                raise e
+            logger.error(f"Failed to execute SQL: {str(e)}")
+            return SQLExecuteResult(rowcount=0, success=False, message=str(e))
 
     def query(
         self,
         sql: str,
         params: Optional[dict] = None,
     ) -> SQLQueryResult:
-        with Session(self._db_engine) as session:
+        with self.session() as session:
             result = session.execute(sqlalchemy.text(sql), params)
             return SQLQueryResult(result)
 
     def disconnect(self) -> None:
         self._db_engine.dispose()
+
+    @contextmanager
+    def session(
+        self, *, provided_session: Optional[Session] = None, **kwargs
+    ) -> Generator[Session, None, None]:
+        if provided_session is not None:
+            session = provided_session
+            is_local_session = False
+        elif SESSION.get() is not None:
+            session = SESSION.get()
+            is_local_session = False
+        else:
+            # Since both the TiDB Client and Table API begin a Session within the method, the Session ends when
+            # the method returns. The error: "Parent instance <x> is not bound to a Session;" will show when accessing
+            # the returned object. To prevent it, we set the expire_on_commit parameter to False by default.
+            # Details: https://sqlalche.me/e/20/bhk3
+            kwargs.setdefault("expire_on_commit", False)
+            session = Session(self._db_engine, **kwargs)
+            SESSION.set(session)
+            is_local_session = True
+
+        try:
+            yield session
+            if is_local_session:
+                session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            if is_local_session:
+                session.close()
+                SESSION.set(None)

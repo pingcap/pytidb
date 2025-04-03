@@ -6,6 +6,7 @@ Python SDK for vector storage and retrieval operations with TiDB.
 - 🔍 Vector similarity search
 - 🎯 Advanced filtering capabilities
 - 📦 Bulk operations support
+- 💱 Transaction
 
 Documentation: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
 
@@ -61,6 +62,18 @@ class Chunk(TableModel, table=True):
 table = db.create_table(schema=Chunk)
 ```
 
+### 📦 Bulk operations support
+
+```python
+table.bulk_insert(
+    [
+        Chunk(id=2, text="bar", user_id=2),   # 👈 The text field will be embedded to a vector 
+        Chunk(id=3, text="baz", user_id=3),   # and save to the text_vec field automatically.
+        Chunk(id=4, text="qux", user_id=4),
+    ]
+)
+```
+
 ### 🔍 Vector Search with Filtering
 
 ```python
@@ -73,6 +86,7 @@ table.search(
 ```
 
 #### Advanced Filtering
+
 TiDB Client supports various filter operators for flexible querying:
 
 | Operator | Description               | Example                                      |
@@ -86,7 +100,6 @@ TiDB Client supports various filter operators for flexible querying:
 | `$nin`   | Not in array              | `{"field": {"$nin": [1, 2, 3]}}`             |
 | `$and`   | Logical AND               | `{"$and": [{"field1": 1}, {"field2": 2}]}`   |
 | `$or`    | Logical OR                | `{"$or": [{"field1": 1}, {"field2": 2}]}`    |
-
 
 
 ### ⛓ Join Structured Data and Unstructured Data
@@ -112,17 +125,19 @@ with Session(engine) as session:
 [(c.id, c.text, c.user_id) for c in chunks]
 ```
 
-
-### 💻 Execute or Query with Raw SQL
-
-Using `execute()` to execute INSERT / UPDATE / DELETE statement.
+### 💱Transaction
 
 ```python
-db.execute("INSERT INTO chunks(text, user_id) VALUES ('inserted from raw sql', 5)")
-```
+with db.session() as session:
+    initial_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
 
-Using `query()` to execute SELECT / SHOW statement.
+    # Transfer 10 coins from player 1 to player 2
+    db.execute("UPDATE players SET balance = balance + 10 WHERE id = 1")
+    db.execute("UPDATE players SET balance = balance - 10 WHERE id = 2")
 
-```python
-db.query("SELECT id, text, user_id FROM chunks LIMIT 5").to_pandas()
+    session.commit()
+    # or session.rollback()
+
+    final_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
+    assert final_total_balance == initial_total_balance
 ```
