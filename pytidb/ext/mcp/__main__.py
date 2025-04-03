@@ -1,35 +1,124 @@
 import logging
+import re
 
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional
 from mcp.server.fastmcp import FastMCP, Context
 from dataclasses import dataclass
 
-from pytest import Session
 from pytidb import TiDBClient
+from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN
 
 log = logging.getLogger(__name__)
 
 load_dotenv()
 tidb_client = TiDBClient.connect()
 
+TIDB_SERVELSS_USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$")
+
+
+class TiDBConnector:
+    def __init__(
+        self,
+        database_url: Optional[str] = None,
+        *,
+        host: Optional[str] = "127.0.0.1",
+        port: Optional[int] = 4000,
+        username: Optional[str] = "root",
+        password: Optional[str] = "",
+        database: Optional[str] = "test",
+    ):
+        self.tidb_client = TiDBClient.connect(
+            host=host,
+            port=port,
+            username=username,
+            password=password,
+            database=database,
+        )
+        self.host = host
+        self.port = port
+        self.database = database
+        self.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(host)
+
+    def show_databases(self) -> list[dict]:
+        return self.tidb_client.query("SHOW DATABASES").to_list()
+
+    def switch_database(self, db_name: str) -> None:
+        self.tidb_client = TiDBClient.connect(
+            host=self.host,
+            port=self.port,
+            username=self.username,
+            password=self.password,
+            database=db_name,
+        )
+
+    def show_tables(self, db_name: str) -> list[str]:
+        return self.tidb_client.table_names(db_name)
+
+    def query(self, sql: str) -> list[dict]:
+        return self.tidb_client.query(sql).to_list()
+
+    def execute(self, sql: str | list[str]) -> None:
+        with self.tidb_client.session():
+            if isinstance(sql, str):
+                self.tidb_client.execute(sql)
+            elif isinstance(sql, list):
+                for stmt in sql:
+                    self.tidb_client.execute(stmt)
+
+    def is_tidb_serverless(self) -> bool:
+        return self.tidb_client.ho
+
+    def current_username(self) -> str:
+        return self.tidb_client.query("SELECT CURRENT_USER()").scalar()
+
+    def current_username_prefix(self) -> str:
+        return self.current_username().split(".")[0]
+
+    def create_user(self, username: str, password: str) -> None:
+        if self.is_tidb_serverless:
+            if not TIDB_SERVELSS_USERNAME_PATTERN.match(username):
+                username = f"{self.current_username_prefix()}.{username}"
+
+        self.tidb_client.execute(
+            f"CREATE USER '{username}'@'%' IDENTIFIED BY '{password}'"
+        )
+        return username
+
+    def remove_user(self, username: str) -> None:
+        # Auto append the username prefix for tidb serverless.
+        if self.is_tidb_serverless:
+            if not TIDB_SERVELSS_USERNAME_PATTERN.match(username):
+                username = f"{self.current_username_prefix()}.{username}"
+
+        return self.tidb_client.execute(f"DROP USER '{username}'@'%'")
+
+    def disconnect(self) -> None:
+        self.tidb_client.disconnect()
+
 
 @dataclass
 class AppContext:
-    session: Session
+    tidb: TiDBConnector
 
 
 @asynccontextmanager
 async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
-    with tidb_client.session() as session:
-        yield AppContext(session=session)
+    log.info("Starting TiDB Connector...")
+    tidb = TiDBConnector()
+    try:
+        yield AppContext(tidb=tidb)
+    finally:
+        tidb.disconnect()
 
 
 mcp = FastMCP(
     "tidb",
     instructions="""
-    you are a tidb database expert, you can help me query, create, and execute sql statements in string on the tidb database.
+    You are a tidb database expert, you can help me query, create, and execute sql 
+    statements in string on the tidb database.
+
     Notice:
     - use TiDB instead of MySQL syntax for sql statements
     """,
@@ -37,84 +126,82 @@ mcp = FastMCP(
 )
 
 
+@mcp.tool(description="Show all databases in the tidb cluster")
+def show_databases(ctx: Context) -> list[dict]:
+    tidb = ctx.request_context.lifespan_context.tidb
+    try:
+        return tidb.show_databases()
+    except Exception as e:
+        log.error(f"Failed to show databases: {e}")
+        raise e
+
+
+@mcp.tool(description="Switch to a specific database")
+def switch_database(ctx: Context, db_name: str) -> None:
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
+    try:
+        tidb.switch_database(db_name)
+    except Exception as e:
+        log.error(f"Failed to switch database to {db_name}: {e}")
+        raise e
+
+
 @mcp.tool(description="Show all tables in the database")
-def show_tables(ctx: Context, db_name: str):
-    session: Session = ctx.request_context.lifespan_context.session
+def show_tables(ctx: Context, db_name: str) -> list[str]:
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
     try:
-        with tidb_client.session(provided_session=session):
-            return tidb_client.table_names(db_name)
+        return tidb.show_tables(db_name)
     except Exception as e:
-        log.error(f"Error showing tables: {e}")
+        log.error(f"Failed to show tables for database {db_name}: {e}")
         raise e
 
 
 @mcp.tool(
     description="""
-    query the tidb database via sql, best practices:
-    - sql is always a string
-    - always add LIMIT in the query
-    - always add ORDER BY in the query
-    - use SHOW DATABASES to get the database list
-    """
-)
-def db_query(ctx: Context, sql: str) -> list[dict]:
-    session: Session = ctx.request_context.lifespan_context.session
-    try:
-        with tidb_client.session(provided_session=session):
-            return tidb_client.query(sql).to_list()
-    except Exception as e:
-        log.error(f"Error querying database: {e}")
-        raise e
-
-
-@mcp.tool(
-    description="""
-    show create_table sql for a table
+    Show the create table sql for a table.
     """
 )
 def show_create_table(ctx: Context, table_name: str) -> str:
-    session: Session = ctx.request_context.lifespan_context.session
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
     try:
-        with tidb_client.session(provided_session=session):
-            result = tidb_client.query(f"SHOW CREATE TABLE {table_name}").one()
-            return result[1]
+        return tidb.query(f"SHOW CREATE TABLE {table_name}").one()
     except Exception as e:
-        log.error(f"Error showing create table: {e}")
+        log.error(f"Failed to show create table {table_name}: {e}")
         raise e
 
 
 @mcp.tool(
     description="""
-    execute sql statments on the sepcific database with TiDB, best practices:
-    - sql_stmts is always a string or a list of string
-    - always use transaction to execute sql statements
+    Query the TiDB database via SQL, best practices:
+    - sql is always a SQL statement string
+    - always add LIMIT in the query
+    - always add ORDER BY in the query
+    - The query result of SELECT / SHOW / DESCRIBE / EXPLAIN / ... will be returned as a list of dicts
     """
 )
-def db_execute(ctx: Context, sql_stmts: str | list[str]):
-    session: Session = ctx.request_context.lifespan_context.session
+def db_query(ctx: Context, sql: str) -> list[dict]:
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
     try:
-        with tidb_client.session(provided_session=session):
-            if isinstance(sql_stmts, str):
-                sql = sql_stmts
-                session.execute(sql)
-            elif isinstance(sql_stmts, list):
-                for sql in sql_stmts:
-                    session.execute(sql)
-        return "success"
+        return tidb.query(sql)
     except Exception as e:
-        log.error(f"Error executing database: {e}")
+        log.error(f"Failed to execute query {sql}: {e}")
         raise e
 
 
-def get_current_user_prefix() -> str:
+@mcp.tool(
+    description="""
+    Execute sql statments, best practices:
+    - sql_stmts is always a sql statement string or a list of sql statement strings
+    - The sql statements will be executed in a same transaction
+    """
+)
+def db_execute(ctx: Context, sql_stmts: str | list[str]):
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
     try:
-        username = tidb_client.query("SELECT CURRENT_USER()").one()
-        if "." in username[0]:
-            return username[0].split(".")[0]
-        else:
-            return ""
+        tidb.execute(sql_stmts)
+        return "success"
     except Exception as e:
-        log.error(f"Error getting username prefix: {e}")
+        log.error(f"Failed to execute sql statements: {e}")
         raise e
 
 
@@ -123,51 +210,39 @@ def get_current_user_prefix() -> str:
     create a new database user, will return the username with prefix
     """
 )
-def create_db_user(ctx: Context, username: str, password: str) -> str:
-    session: Session = ctx.request_context.lifespan_context.session
+def db_create_user(ctx: Context, username: str, password: str) -> str:
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
     try:
-        with tidb_client.session(provided_session=session):
-            username_prefix = get_current_user_prefix(ctx)
-            full_username = (
-                f"{username_prefix}.{username}" if username_prefix else username
-            )
-            tidb_client.execute(
-                f"CREATE USER '{full_username}'@'%' IDENTIFIED BY '{password}'"
-            )
-            return f"success, username: {full_username}"
+        fullname = tidb.create_user(username, password)
+        return f"success, username: {fullname}"
     except Exception as e:
+        log.error(f"Failed to create database user {username}: {e}")
         raise e
 
 
 @mcp.tool(
     description="""
-    remove a database user in tidb serverless
+    Remove a database user in TiDB cluster.
     """
 )
-def remove_db_user(ctx: Context, username: str):
-    session: Session = ctx.request_context.lifespan_context.session
-    with tidb_client.session(provided_session=session):
-        # if user provide a full username, use it directly
-        # else get the username prefix and append it to the username
-        if "." in username:
-            full_username = username
-        else:
-            username_prefix = get_current_user_prefix()
-            full_username = f"{username_prefix}.{username}"
-        try:
-            tidb_client.execute(f"DROP USER '{full_username}'@'%'")
-            return f"success, username: {full_username}"
-        except Exception as e:
-            raise e
+def db_remove_user(ctx: Context, username: str):
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
+    try:
+        tidb.remove_user(username)
+        return f"success, deleted user with username {username}"
+    except Exception as e:
+        log.error(f"Failed to remove database user {username}: {e}")
+        raise e
 
 
 @mcp.tool(
     description="""
-    get connection host and port
+    Get current host and port of the TiDB cluster.
     """
 )
-def get_tidb_serverless_address(ctx: Context) -> str:
-    return f"{tidb_client.host}:{tidb_client.port}"
+def db_get_host(ctx: Context) -> str:
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
+    return f"{tidb.host}:{tidb.port}"
 
 
 if __name__ == "__main__":
