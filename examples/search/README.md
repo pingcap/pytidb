@@ -4,6 +4,7 @@
 * Use `ollama` to deploy local embedding model
 * Use Streamlit as web ui
 
+<img width="1382" alt="Image" src="https://github.com/user-attachments/assets/f63302d7-6a79-44cf-b13a-610d7560be82" />
 
 ## Prerequisites
 * Python 3.8+
