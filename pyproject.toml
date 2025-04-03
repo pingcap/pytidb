@@ -3,7 +3,7 @@ name = "pytidb"
 version = "0.0.2.post7"
 description = "A Python library for TiDB."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     { name = "Mini256", email = "minianter@foxmail.com" },
     { name = "sykp241095", email = "sykp241095@gmail.com" },
@@ -15,6 +15,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mcp = [
+    "fastmcp",
+]
 pandas = [
     "pandas"
 ]
@@ -35,6 +38,7 @@ dev = [
     "notebook>=7.3.3",
     "pip>=25.0.1",
     "mypy>=1.15.0",
+    "fastmcp",
 ]
 
 # Test
