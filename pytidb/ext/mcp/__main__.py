@@ -42,8 +42,7 @@ def show_tables(ctx: Context, db_name: str):
     session: Session = ctx.request_context.lifespan_context.session
     try:
         with tidb_client.session(provided_session=session):
-            result = tidb_client.query(f"SHOW TABLES FROM {db_name}").one()
-            return result[0]
+            return tidb_client.table_names(db_name)
     except Exception as e:
         log.error(f"Error showing tables: {e}")
         raise e
@@ -76,7 +75,7 @@ def show_create_table(ctx: Context, table_name: str) -> str:
     session: Session = ctx.request_context.lifespan_context.session
     try:
         with tidb_client.session(provided_session=session):
-            result = session.query(f"SHOW CREATE TABLE {table_name}").one()
+            result = tidb_client.query(f"SHOW CREATE TABLE {table_name}").one()
             return result[1]
     except Exception as e:
         log.error(f"Error showing create table: {e}")
