@@ -54,6 +54,7 @@ def show_tables(ctx: Context, db_name: str):
     - sql is always a string
     - always add LIMIT in the query
     - always add ORDER BY in the query
+    - use SHOW DATABASES to get the database list
     """
 )
 def db_query(ctx: Context, sql: str) -> list[dict]:
