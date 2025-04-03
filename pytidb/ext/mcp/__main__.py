@@ -38,6 +38,8 @@ class TiDBConnector:
         )
         self.host = host
         self.port = port
+        self.username = username
+        self.password = password
         self.database = database
         self.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(host)
 
@@ -45,6 +47,7 @@ class TiDBConnector:
         return self.tidb_client.query("SHOW DATABASES").to_list()
 
     def switch_database(self, db_name: str) -> None:
+        self.database = db_name
         self.tidb_client = TiDBClient.connect(
             host=self.host,
             port=self.port,
@@ -93,6 +96,16 @@ class TiDBConnector:
                 username = f"{self.current_username_prefix()}.{username}"
 
         return self.tidb_client.execute(f"DROP USER '{username}'@'%'")
+
+    def switch_to_user(self, username: str) -> None:
+        self.username = username
+        self.tidb_client = TiDBClient.connect(
+            host=self.host,
+            port=self.port,
+            username=username,
+            password=self.password,
+            database=self.database,
+        )
 
     def disconnect(self) -> None:
         self.tidb_client.disconnect()
@@ -237,9 +250,18 @@ def db_remove_user(ctx: Context, username: str):
 
 @mcp.tool(
     description="""
-    Get current host and port of the TiDB cluster.
+    Switch to a specific database user.
     """
 )
+def db_switch_to_user(ctx: Context, username: str):
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
+    try:
+        tidb.switch_to_user(username)
+    except Exception as e:
+        log.error(f"Failed to switch to user {username}: {e}")
+        raise e
+
+
 def db_get_host(ctx: Context) -> str:
     tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
     return f"{tidb.host}:{tidb.port}"
