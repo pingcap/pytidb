@@ -65,7 +65,7 @@ table = db.create_table(schema=Chunk)
 ### 📦 Bulk operations support
 
 ```python
-tbl.bulk_insert(
+table.bulk_insert(
     [
         Chunk(id=2, text="bar", user_id=2),   # 👈 The text field will be embedded to a vector 
         Chunk(id=3, text="baz", user_id=3),   # and save to the text_vec field automatically.
