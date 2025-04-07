@@ -142,6 +142,38 @@ Notice:
 - use TiDB instead of MySQL syntax for sql statements
 - use switch_database tool only if there's explicit instruction, you can reference different databases 
 via the `<db_name>.<table_name>` syntax.
+
+Differences between TiDB and MySQL SQL syntax:
+
+1. TiDB Support vector data type and functions.
+
+    Example SQLs:
+
+    ```sql
+    # TiDB support create HNSW index for vector column with VEC_COSINE_DISTANCE and VEC_L2_DISTANCE distance functions for now.
+    CREATE TABLE documents (
+        id INT PRIMARY KEY,
+        embedding VECTOR(5),
+        VECTOR INDEX idx_embedding ((VEC_COSINE_DISTANCE(embedding)))
+    );
+    
+    INSERT INTO documents VALUES (1, 'dog', '[1,2,1]');
+    
+    SELECT id, document, VEC_L2_DISTANCE(embedding, '[1,2,3]') AS distance
+    FROM documents
+    ORDER BY distance
+    LIMIT 3;
+    ```
+    
+    Support functions for vector type:
+    
+    - VEC_L2_DISTANCE(vector1, vector2)
+    - VEC_COSINE_DISTANCE(vector1, vector2)
+    - VEC_DIMS(vector)
+    - VEC_NEGATIVE_INNER_PRODUCT(vector1, vector2)
+    - VEC_L1_DISTANCE(vector1, vector2)
+    - VEC_L2_NORM(vector)
+
     """,
     lifespan=app_lifespan,
 )
