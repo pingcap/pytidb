@@ -16,7 +16,8 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = [
-    "fastmcp",
+    "mcp[cli]>=1.6.0",
+    "mcp",
 ]
 pandas = [
     "pandas"
@@ -38,7 +39,8 @@ dev = [
     "notebook>=7.3.3",
     "pip>=25.0.1",
     "mypy>=1.15.0",
-    "fastmcp",
+    "mcp[cli]>=1.6.0",
+    "mcp",
 ]
 
 # Test

@@ -525,23 +525,6 @@ wheels = [
 ]
 
 [[package]]
-name = "fastmcp"
-version = "0.4.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "mcp" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "python-dotenv" },
-    { name = "typer" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6f/84/17b549133263d7ee77141970769bbc401525526bf1af043ea6842bce1a55/fastmcp-0.4.1.tar.gz", hash = "sha256:713ad3b8e4e04841c9e2f3ca022b053adb89a286ceffad0d69ae7b56f31cbe64", size = 785575 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/79/0b/008a340435fe8f0879e9d608f48af2737ad48440e09bd33b83b3fd03798b/fastmcp-0.4.1-py3-none-any.whl", hash = "sha256:664b42c376fb89ec90a50c9433f5a1f4d24f36696d6c41b024b427ae545f9619", size = 35282 },
-]
-
-[[package]]
 name = "filelock"
 version = "3.18.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1308,6 +1291,12 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/95/d2/f587cb965a56e992634bebc8611c5b579af912b74e04eb9164bd49527d21/mcp-1.6.0.tar.gz", hash = "sha256:d9324876de2c5637369f43161cd71eebfd803df5a95e46225cab8d280e366723", size = 200031 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/10/30/20a7f33b0b884a9d14dd3aa94ff1ac9da1479fe2ad66dd9e2736075d2506/mcp-1.6.0-py3-none-any.whl", hash = "sha256:7bd24c6ea042dbec44c754f100984d186620d8b841ec30f1b19eda9b93a634d0", size = 76077 },
+]
+
+[package.optional-dependencies]
+cli = [
+    { name = "python-dotenv" },
+    { name = "typer" },
 ]
 
 [[package]]
@@ -2108,7 +2097,7 @@ dependencies = [
 
 [package.optional-dependencies]
 mcp = [
-    { name = "fastmcp" },
+    { name = "mcp", extra = ["cli"] },
 ]
 models = [
     { name = "litellm" },
@@ -2119,8 +2108,8 @@ pandas = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "fastmcp" },
     { name = "litellm" },
+    { name = "mcp", extra = ["cli"] },
     { name = "mock" },
     { name = "mypy" },
     { name = "notebook" },
@@ -2135,8 +2124,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", marker = "extra == 'mcp'" },
     { name = "litellm", marker = "extra == 'models'", specifier = ">=1.59.8,<2.0.0" },
+    { name = "mcp", marker = "extra == 'mcp'" },
+    { name = "mcp", extras = ["cli"], marker = "extra == 'mcp'", specifier = ">=1.6.0" },
     { name = "pandas", marker = "extra == 'pandas'" },
     { name = "pymysql", specifier = ">=1.1.1" },
     { name = "sqlmodel", specifier = "==0.0.24" },
@@ -2146,8 +2136,9 @@ provides-extras = ["mcp", "pandas", "models"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "fastmcp" },
     { name = "litellm", specifier = ">=1.59.8,<2.0.0" },
+    { name = "mcp" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.6.0" },
     { name = "mock", specifier = ">=5,<6" },
     { name = "mypy", specifier = ">=1.15.0" },
     { name = "notebook", specifier = ">=7.3.3" },

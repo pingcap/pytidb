@@ -13,9 +13,8 @@ from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN
 log = logging.getLogger(__name__)
 
 load_dotenv()
-tidb_client = TiDBClient.connect()
 
-TIDB_SERVELSS_USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$")
+TIDB_SERVERLESS_USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+$")
 
 
 class TiDBConnector:
@@ -46,18 +45,22 @@ class TiDBConnector:
     def show_databases(self) -> list[dict]:
         return self.tidb_client.query("SHOW DATABASES").to_list()
 
-    def switch_database(self, db_name: str) -> None:
-        self.database = db_name
+    def switch_database(
+        self,
+        db_name: str,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+    ) -> None:
         self.tidb_client = TiDBClient.connect(
             host=self.host,
             port=self.port,
-            username=self.username,
-            password=self.password,
-            database=db_name,
+            username=username or self.username,
+            password=password or self.password,
+            database=db_name or self.database,
         )
 
-    def show_tables(self, db_name: str) -> list[str]:
-        return self.tidb_client.table_names(db_name)
+    def show_tables(self) -> list[str]:
+        return self.tidb_client.table_names()
 
     def query(self, sql: str) -> list[dict]:
         return self.tidb_client.query(sql).to_list()
@@ -71,40 +74,44 @@ class TiDBConnector:
                     self.tidb_client.execute(stmt)
 
     def is_tidb_serverless(self) -> bool:
-        return self.tidb_client.ho
+        return TIDB_SERVERLESS_HOST_PATTERN.match(self.host)
 
     def current_username(self) -> str:
         return self.tidb_client.query("SELECT CURRENT_USER()").scalar()
 
     def current_username_prefix(self) -> str:
-        return self.current_username().split(".")[0]
+        current_username = self.current_username()
+        if TIDB_SERVERLESS_USERNAME_PATTERN.match(current_username):
+            return current_username.split(".")[0]
+        else:
+            return current_username
 
-    def create_user(self, username: str, password: str) -> None:
+    def create_user(self, username: str, password: str) -> str:
         if self.is_tidb_serverless:
-            if not TIDB_SERVELSS_USERNAME_PATTERN.match(username):
+            if not TIDB_SERVERLESS_USERNAME_PATTERN.match(username):
                 username = f"{self.current_username_prefix()}.{username}"
 
         self.tidb_client.execute(
-            f"CREATE USER '{username}'@'%' IDENTIFIED BY '{password}'"
+            "CREATE USER :username IDENTIFIED BY :password",
+            {
+                "username": username,
+                "password": password,
+            },
         )
         return username
 
     def remove_user(self, username: str) -> None:
         # Auto append the username prefix for tidb serverless.
         if self.is_tidb_serverless:
-            if not TIDB_SERVELSS_USERNAME_PATTERN.match(username):
+            if not TIDB_SERVERLESS_USERNAME_PATTERN.match(username):
                 username = f"{self.current_username_prefix()}.{username}"
 
-        return self.tidb_client.execute(f"DROP USER '{username}'@'%'")
-
-    def switch_to_user(self, username: str) -> None:
-        self.username = username
-        self.tidb_client = TiDBClient.connect(
-            host=self.host,
-            port=self.port,
-            username=username,
-            password=self.password,
-            database=self.database,
+        self.tidb_client.execute(
+            "DROP USER :username",
+            {
+                "username": username,
+            },
+            raise_error=True,
         )
 
     def disconnect(self) -> None:
@@ -130,10 +137,12 @@ mcp = FastMCP(
     "tidb",
     instructions="""
     You are a tidb database expert, you can help me query, create, and execute sql 
-    statements in string on the tidb database.
+    statements on the connected tidb database.
 
     Notice:
     - use TiDB instead of MySQL syntax for sql statements
+    - If there's no explicit instruction to switch to a specific database, you can reference 
+        tables from different databases using the `<db_name>.<table_name>` syntax.
     """,
     lifespan=app_lifespan,
 )
@@ -149,23 +158,32 @@ def show_databases(ctx: Context) -> list[dict]:
         raise e
 
 
-@mcp.tool(description="Switch to a specific database")
-def switch_database(ctx: Context, db_name: str) -> None:
+@mcp.tool(
+    description="""
+    Switch to a specific database.
+    """
+)
+def switch_database(
+    ctx: Context,
+    db_name: str,
+    username: Optional[str] = None,
+    password: Optional[str] = None,
+) -> None:
     tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
     try:
-        tidb.switch_database(db_name)
+        tidb.switch_database(db_name, username, password)
     except Exception as e:
         log.error(f"Failed to switch database to {db_name}: {e}")
         raise e
 
 
 @mcp.tool(description="Show all tables in the database")
-def show_tables(ctx: Context, db_name: str) -> list[str]:
+def show_tables(ctx: Context) -> list[str]:
     tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
     try:
-        return tidb.show_tables(db_name)
+        return tidb.show_tables()
     except Exception as e:
-        log.error(f"Failed to show tables for database {db_name}: {e}")
+        log.error(f"Failed to show tables for database {tidb.database}: {e}")
         raise e
 
 
@@ -203,7 +221,7 @@ def db_query(ctx: Context, sql: str) -> list[dict]:
 
 @mcp.tool(
     description="""
-    Execute sql statments, best practices:
+    Execute sql statements, best practices:
     - sql_stmts is always a sql statement string or a list of sql statement strings
     - The sql statements will be executed in a same transaction
     """
@@ -248,25 +266,6 @@ def db_remove_user(ctx: Context, username: str):
         raise e
 
 
-@mcp.tool(
-    description="""
-    Switch to a specific database user.
-    """
-)
-def db_switch_to_user(ctx: Context, username: str):
-    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
-    try:
-        tidb.switch_to_user(username)
-    except Exception as e:
-        log.error(f"Failed to switch to user {username}: {e}")
-        raise e
-
-
-def db_get_host(ctx: Context) -> str:
-    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
-    return f"{tidb.host}:{tidb.port}"
-
-
 if __name__ == "__main__":
-    log.info("Starting tidb serverless mcp server...")
+    log.info("Starting tidb mcp server...")
     mcp.run(transport="stdio")
