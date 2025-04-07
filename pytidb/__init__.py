@@ -5,9 +5,10 @@ from .table import Table
 from sqlmodel import Session
 from sqlalchemy import create_engine
 
-os.environ["LITELLM_LOCAL_MODEL_COST_MAP"] = (
-    "True" if os.getenv("LITELLM_LOCAL_MODEL_COST_MAP") is None else None
-)
-os.environ["LITELLM_LOG"] = "WARNING" if os.getenv("LITELLM_LOG") is None else None
+if "LITELLM_LOCAL_MODEL_COST_MAP" not in os.environ:
+    os.environ["LITELLM_LOCAL_MODEL_COST_MAP"] = "True"
+
+if "LITELLM_LOG" not in os.environ:
+    os.environ["LITELLM_LOG"] = "WARNING"
 
 __all__ = ["TiDBClient", "Table", "Session", "create_engine"]
