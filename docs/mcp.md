@@ -66,8 +66,7 @@ Here is an example for `claude_desktop_config.json`:
 
 > **Note**
 >
-> For macOS users, you may need to install the `uv` command globally by command `brew insatll uv`.
-
+> For macOS users, you may need to install the `uv` command globally by command `brew install uv`.
 #### Cursor
 
 For Cursor users, please check the [Model Context Protocol](https://docs.cursor.com/context/model-context-protocol#configuring-mcp-servers) document to learn how to configure the MCP server in Cursor editor.
