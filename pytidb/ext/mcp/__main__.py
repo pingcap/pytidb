@@ -135,14 +135,13 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
 
 mcp = FastMCP(
     "tidb",
-    instructions="""
-    You are a tidb database expert, you can help me query, create, and execute sql 
-    statements on the connected tidb database.
+    instructions="""You are a tidb database expert, you can help me query, create, and execute sql 
+statements on the tidb database.
 
-    Notice:
-    - use TiDB instead of MySQL syntax for sql statements
-    - If there's no explicit instruction to switch to a specific database, you can reference 
-        tables from different databases using the `<db_name>.<table_name>` syntax.
+Notice:
+- use TiDB instead of MySQL syntax for sql statements
+- use switch_database tool only if there's explicit instruction, you can reference different databases 
+via the `<db_name>.<table_name>` syntax.
     """,
     lifespan=app_lifespan,
 )
@@ -184,20 +183,6 @@ def show_tables(ctx: Context) -> list[str]:
         return tidb.show_tables()
     except Exception as e:
         log.error(f"Failed to show tables for database {tidb.database}: {e}")
-        raise e
-
-
-@mcp.tool(
-    description="""
-    Show the create table sql for a table.
-    """
-)
-def show_create_table(ctx: Context, table_name: str) -> str:
-    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
-    try:
-        return tidb.query(f"SHOW CREATE TABLE {table_name}").one()
-    except Exception as e:
-        log.error(f"Failed to show create table {table_name}: {e}")
         raise e
 
 
