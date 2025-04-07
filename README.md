@@ -6,7 +6,8 @@ Python SDK for vector storage and retrieval operations with TiDB.
 - 🔍 Vector similarity search
 - 🎯 Advanced filtering capabilities
 - 📦 Bulk operations support
-- 💱 Transaction
+- 💱 Transaction support
+- 🔌 Model Context Protocol (MCP) support (Quickstart: [How to integrate TiDB with Claude Desktop/Cursor with MCP](https://github.com/pingcap/pytidb/blob/main/docs/mcp.md))
 
 Documentation: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
 
@@ -125,7 +126,7 @@ with Session(engine) as session:
 [(c.id, c.text, c.user_id) for c in chunks]
 ```
 
-### 💱Transaction
+### 💱Transaction support
 
 ```python
 with db.session() as session:
