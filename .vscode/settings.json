@@ -5,7 +5,15 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "cSpell.words": [
+        "aiomysql",
+        "alicloud",
+        "asyncmy",
+        "cymysql",
         "levelname",
-        "sqls"
+        "mysqlconnector",
+        "mysqldb",
+        "primaryjoin",
+        "sqls",
+        "tidbcloud"
     ]
 }

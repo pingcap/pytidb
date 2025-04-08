@@ -22,7 +22,7 @@ def test_static_create_models():
         target_entity_id: int = Field(foreign_key="entities_1111.id")
         target_entity: Entity = SQLRelationship(
             sa_relationship_kwargs={
-                "primaryjoin": "Relation.source_entity_id == Entity.id",
+                "primaryjoin": "Relation.target_entity_id == Entity.id",
                 "lazy": "joined",
             },
         )
