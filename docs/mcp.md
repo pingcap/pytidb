@@ -114,3 +114,17 @@ And then, you can configure the `mcpServers` in the configuration file like:
   }
 }
 ```
+
+### Development Mode
+
+If you want to using MCP CLI to start a development server, you can use the following command:
+
+```bash
+mcp dev pytidb/ext/mcp/server.py
+```
+
+And then, you can use the following command to start the server:
+
+```bash
+mcp run --transport sse pytidb/ext/mcp/server.py
+```
