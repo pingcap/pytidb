@@ -31,7 +31,7 @@ jobs:
         env:
           TIDB_HOST: gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com
           TIDB_PORT: 4000
-          TIDB_USERNAME: ${secrets.TIDB_USERNAME}
-          TIDB_PASSWORD: ${secrets.TIDB_PASSWORD}
+          TIDB_USERNAME: ${{ secrets.TIDB_USERNAME }}
+          TIDB_PASSWORD: ${{ secrets.TIDB_PASSWORD }}
           TIDB_DATABASE: test
-          OPENAI_API_KEY: ${secrets.OPENAI_API_KEY}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
