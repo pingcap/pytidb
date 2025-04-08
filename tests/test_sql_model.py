@@ -19,7 +19,7 @@ def test_static_create_models():
         __tablename__ = "relations_1111"
         id: Optional[int] = Field(default=None, primary_key=True)
         desc: str = Field()
-        target_entity_id: int = Field()
+        target_entity_id: int = Field(foreign_key="entities_1111.id")
         target_entity: Entity = SQLRelationship(
             sa_relationship_kwargs={
                 "primaryjoin": "Relation.source_entity_id == Entity.id",
