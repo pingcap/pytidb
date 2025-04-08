@@ -67,6 +67,7 @@ Here is an example for `claude_desktop_config.json`:
 > **Note**
 >
 > For macOS users, you may need to install the `uv` command globally by command `brew install uv`.
+
 #### Cursor
 
 For Cursor users, please check the [Model Context Protocol](https://docs.cursor.com/context/model-context-protocol#configuring-mcp-servers) document to learn how to configure the MCP server in Cursor editor.
@@ -89,6 +90,26 @@ Here is an example for `.cursor/mcp.json`:
         "-m",
         "pytidb.ext.mcp"
       ]
+    }
+  }
+}
+```
+
+### Server Sent Event (SSE) Mode
+
+TiDB MCP Server using `stdio` mode to serve by default. You can start up the server with `sse` mode with command:
+
+```bash
+uv run tidb-mcp-server --transport sse
+```
+
+And then, you can configure the `mcpServers` in the configuration file like:
+
+```json
+{
+  "mcpServers": {
+    "tidb": {
+      "url": "http://0.0.0.0:8000/sse"
     }
   }
 }
