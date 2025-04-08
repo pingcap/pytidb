@@ -1,9 +1,9 @@
 [project]
 name = "pytidb"
-version = "0.0.2.post7"
+version = "0.0.3.dev1"
 description = "A Python library for TiDB."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     { name = "Mini256", email = "minianter@foxmail.com" },
     { name = "sykp241095", email = "sykp241095@gmail.com" },
@@ -14,7 +14,14 @@ dependencies = [
     "pymysql>=1.1.1",
 ]
 
+[project.scripts]
+tidb-mcp-server = "pytidb.ext.mcp:main"
+
 [project.optional-dependencies]
+mcp = [
+    "mcp[cli]>=1.6.0",
+    "mcp",
+]
 pandas = [
     "pandas"
 ]
@@ -35,6 +42,8 @@ dev = [
     "notebook>=7.3.3",
     "pip>=25.0.1",
     "mypy>=1.15.0",
+    "mcp[cli]>=1.6.0",
+    "mcp",
 ]
 
 # Test
