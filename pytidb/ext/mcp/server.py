@@ -1,13 +1,14 @@
 import logging
-import mimetypes
+import os
 import re
-
 
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Optional
 from mcp.server.fastmcp import FastMCP, Context
 from dataclasses import dataclass
+
+from pydantic import MySQLDsn
 
 from pytidb import TiDBClient
 from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN
@@ -25,8 +26,6 @@ load_dotenv()
 # Constants
 TIDB_SERVERLESS_USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+$")
 
-mimetypes.add_type("text/markdown", ".md")
-
 
 # TiDB Connector
 class TiDBConnector:
@@ -34,25 +33,34 @@ class TiDBConnector:
         self,
         database_url: Optional[str] = None,
         *,
-        host: Optional[str] = "127.0.0.1",
-        port: Optional[int] = 4000,
-        username: Optional[str] = "root",
-        password: Optional[str] = "",
-        database: Optional[str] = "test",
+        host: Optional[str] = None,
+        port: Optional[int] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        database: Optional[str] = None,
     ):
         self.tidb_client = TiDBClient.connect(
+            database_url=database_url,
             host=host,
             port=port,
             username=username,
             password=password,
             database=database,
         )
-        self.host = host
-        self.port = port
-        self.username = username
-        self.password = password
-        self.database = database
-        self.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(host)
+        if database_url:
+            uri = MySQLDsn(database_url)
+            self.host = uri.host
+            self.port = uri.port
+            self.username = uri.username
+            self.password = uri.password
+            self.database = uri.path.lstrip("/")
+        else:
+            self.host = host
+            self.port = port
+            self.username = username
+            self.password = password
+            self.database = database
+        self.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(self.host)
 
     def show_databases(self) -> list[dict]:
         return self.tidb_client.query("SHOW DATABASES").to_list()
@@ -142,12 +150,25 @@ class AppContext:
 
 @asynccontextmanager
 async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
-    log.info("Starting TiDB Connector...")
-    tidb = TiDBConnector()
+    tidb = None
     try:
+        log.info("Starting TiDB Connector...")
+        tidb = TiDBConnector(
+            database_url=os.getenv("TIDB_DATABASE_URL", None),
+            host=os.getenv("TIDB_HOST", "127.0.0.1"),
+            port=int(os.getenv("TIDB_PORT", "4000")),
+            username=os.getenv("TIDB_USERNAME", "root"),
+            password=os.getenv("TIDB_PASSWORD", ""),
+            database=os.getenv("TIDB_DATABASE", "test"),
+        )
+        log.info(f"Connected to TiDB: {tidb.host}:{tidb.port}/{tidb.database}")
         yield AppContext(tidb=tidb)
+    except Exception as e:
+        log.error(f"Failed to connect to TiDB: {e}")
+        raise e
     finally:
-        tidb.disconnect()
+        if tidb:
+            tidb.disconnect()
 
 
 # MCP Server
@@ -158,6 +179,7 @@ statements on the tidb database.
 
 Notice:
 - use TiDB instead of MySQL syntax for sql statements
+- use `db_query("SHOW DATABASES()")` to get the current database.
 - use switch_database tool only if there's explicit instruction, you can reference different databases 
 via the `<db_name>.<table_name>` syntax.
 - TiDB using VECTOR to store the vector data
