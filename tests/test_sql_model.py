@@ -15,14 +15,14 @@ def test_static_create_models():
         id: Optional[int] = Field(default=None, primary_key=True)
         name: str = Field()
 
-    class Relationship(SQLModel, table=True):
-        __tablename__ = "relationships_1111"
+    class Relation(SQLModel, table=True):
+        __tablename__ = "relations_1111"
         id: Optional[int] = Field(default=None, primary_key=True)
         desc: str = Field()
         target_entity_id: int = Field()
         target_entity: Entity = SQLRelationship(
             sa_relationship_kwargs={
-                "primaryjoin": "Relationship.source_entity_id == Entity.id",
+                "primaryjoin": "Relation.source_entity_id == Entity.id",
                 "lazy": "joined",
             },
         )
@@ -37,8 +37,8 @@ def test_dynamic_create_models():
     entity_table_name = "entities_2222"
     entity_model_name = f"EntityModel_{entity_table_name}"
 
-    relationship_table_name = "relationships_2222"
-    relationship_model_name = f"RelationshipModel_{relationship_table_name}"
+    relation_table_name = "relations_2222"
+    relation_model_name = f"RelationModel_{relation_table_name}"
 
     class Entity(SQLModel):
         id: Optional[int] = Field(default=None, primary_key=True)
@@ -51,22 +51,22 @@ def test_dynamic_create_models():
         table=True,
     )
 
-    class Relationship(SQLModel):
+    class Relation(SQLModel):
         id: Optional[int] = Field(default=None, primary_key=True)
         desc: str = Field()
         source_entity_id: int = Field(foreign_key=f"{entity_table_name}.id")
 
     type(
-        relationship_model_name,
-        (Relationship,),
+        relation_model_name,
+        (Relation,),
         {
-            "__tablename__": relationship_table_name,
+            "__tablename__": relation_table_name,
             # Notice: In SQLModel rules, Relationship should be defined on the model class set to table=True.
             # If the definition is in the parent class, an error will occur.
             "__annotations__": {"target_entity": entity_model},
             "target_entity": SQLRelationship(
                 sa_relationship_kwargs={
-                    "primaryjoin": f"{relationship_model_name}.source_entity_id == {entity_model_name}.id",
+                    "primaryjoin": f"{relation_model_name}.source_entity_id == {entity_model_name}.id",
                     "lazy": "joined",
                 },
             ),
