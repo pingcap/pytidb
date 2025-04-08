@@ -1,16 +1,11 @@
 import logging
 import mimetypes
 import re
-import os
-from pathlib import Path
 
-from pydantic import AnyUrl
-import yaml
 
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Optional
-from mcp import Resource
 from mcp.server.fastmcp import FastMCP, Context
 from dataclasses import dataclass
 
@@ -165,80 +160,30 @@ Notice:
 - use TiDB instead of MySQL syntax for sql statements
 - use switch_database tool only if there's explicit instruction, you can reference different databases 
 via the `<db_name>.<table_name>` syntax.
+- TiDB using VECTOR to store the vector data
+
+    ```sql
+    # Create a table with a vector column, HNSW index supports both `VEC_COSINE_DISTANCE` and `VEC_L2_DISTANCE` functions
+    CREATE TABLE documents (
+        id INT PRIMARY KEY,
+        embedding VECTOR(3),
+        VECTOR INDEX idx_embedding ((VEC_COSINE_DISTANCE(embedding)))
+    );
+
+    # Insert a vector into the table
+    INSERT INTO documents (id, embedding) VALUES (1, '[1,2,3]');
+
+    # Search for similar vectors using cosine similarity:
+
+    SELECT id, document, 1 - VEC_COSINE_DISTANCE(embedding, '[1,2,3]') AS similarity
+    FROM documents
+    ORDER BY similarity DESC
+    LIMIT 3;
+    ```
+    
     """,
     lifespan=app_lifespan,
 )
-
-# Prompts
-
-
-def parse_markdown_frontmatter(content: str) -> tuple[str, str]:
-    """Parse markdown frontmatter and extract title and summary.
-
-    Args:
-        content: The markdown content
-
-    Returns:
-        A tuple of (title, summary) where title and summary are extracted from frontmatter
-        or default values if not found
-    """
-    title = None
-    summary = None
-
-    frontmatter_match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
-    if frontmatter_match:
-        try:
-            frontmatter = yaml.safe_load(frontmatter_match.group(1))
-            title = frontmatter.get("title")
-            summary = frontmatter.get("summary")
-        except yaml.YAMLError:
-            pass
-
-    return title, summary
-
-
-@mcp._mcp_server.list_resources()
-async def list_resources() -> list[Resource]:
-    log.info("Listing resources...")
-    if not os.path.exists("./mcp_resources"):
-        return []
-
-    resources = []
-    for path in Path("./mcp_resources").rglob("*"):
-        if not path.is_file():
-            continue
-
-        uri = path.resolve().as_uri()
-        filepath = path.as_posix()
-        mime_type = mimetypes.guess_type(uri)[0]
-
-        name, description = path.name, None
-        if mime_type == "text/markdown":
-            with open(filepath, "r") as f:
-                content = f.read()
-                title, summary = parse_markdown_frontmatter(content)
-                name, description = title, summary
-
-        resources.append(
-            Resource(uri=uri, name=name, description=description, mimeType=mime_type)
-        )
-
-    return resources
-
-
-@mcp._mcp_server.read_resource()
-async def read_resource(uri: AnyUrl) -> str:
-    log.info(f"Reading resource from {uri}...")
-
-    if uri.scheme != "file":
-        raise ValueError(f"Unsupported resource type: {uri}")
-
-    filepath = Path(uri.path).as_posix()
-    if os.path.exists(filepath) and "mcp_resources" in filepath:
-        with open(filepath, "r") as f:
-            return f.read()
-    else:
-        raise ValueError(f"Can not open the file: {filepath}")
 
 
 # Tools
@@ -306,7 +251,7 @@ def db_query(ctx: Context, sql_stmt: str) -> list[dict]:
 @mcp.tool(
     description="""
     Execute operations on TiDB database via SQL, best practices:
-    - sql_stmts can be a sql statement string or a list of sql statement strings
+    - sql_stmts can be a sql statement string or a array of sql statement strings
     - using db_execute to execute INSERT / UPDATE / DELETE / CREATE / DROP ... statements
     - the sql statements will be executed in the same transaction
     """
