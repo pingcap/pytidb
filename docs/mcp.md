@@ -39,7 +39,7 @@ Configuration can be provided through environment variables, or using `.env` fil
 
 #### Claude Desktop
 
-For Claude Desktop users, please check the [quickstart to learn [how to configure mcp server in the Claude Desktop](https://modelcontextprotocol.io/quickstart/user),
+For Claude Desktop users, please check the quickstart to learn [how to configure mcp server in the Claude Desktop](https://modelcontextprotocol.io/quickstart/user),
 
 In short, you can go to **Settings** dialog, and open the MCP config file by click **Developers > Edit Config**.
 
