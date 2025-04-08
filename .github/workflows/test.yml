@@ -4,9 +4,10 @@ on:
   push:
     branches:
       - main
-  pull_request_target:
+  pull_request:
     branches:
       - main
+
 
 jobs:
   test:
@@ -20,11 +21,16 @@ jobs:
         with:
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --all-extras --dev
+        run: make install_dev
       - name: Run Lint
-        run: uv tool run ruff check
+        run: make lint
       - name: Run Format
-        run: uv tool run ruff format
+        run: make format
       - name: Run Test
-        run: uv run pytest tests
-
+        run: make test
+        env:
+          TIDB_HOST: gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com
+          TIDB_PORT: 4000
+          TIDB_USERNAME: ${secrets.TIDB_USERNAME}
+          TIDB_PASSWORD: ${secrets.TIDB_PASSWORD}
+          TIDB_DATABASE: test
