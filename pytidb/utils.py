@@ -27,7 +27,7 @@ JSON_FIELD_PATTERN = re.compile(
 
 
 TIDB_SERVERLESS_HOST_PATTERN = re.compile(
-    r"gateway01\.(.+)\.(prod|dev|staging)\.aws\.tidbcloud\.com"
+    r"gateway01\.(.+)\.(prod|dev|staging)\.(aws|alicloud)\.tidbcloud\.com"
 )
 
 
@@ -77,7 +77,7 @@ def build_tidb_dsn(
         username=username,
         # TODO: remove quote after following issue is fixed:
         # https://github.com/pydantic/pydantic/issues/8061
-        password=quote(password),
+        password=quote(password) if password else None,
         path=database,
         query="ssl_verify_cert=true&ssl_verify_identity=true" if enable_ssl else None,
     )
