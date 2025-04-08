@@ -27,7 +27,7 @@ JSON_FIELD_PATTERN = re.compile(
 
 
 TIDB_SERVERLESS_HOST_PATTERN = re.compile(
-    r"gateway01\.(.+)\.(prod|dev|staging)\.aws\.tidbcloud\.com"
+    r"gateway01\.(.+)\.(prod|dev|staging)\.(aws|alicloud)\.tidbcloud\.com"
 )
 
 
