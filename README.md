@@ -7,7 +7,7 @@ Python SDK for vector storage and retrieval operations with TiDB.
 - 🎯 Advanced filtering capabilities
 - 📦 Bulk operations support
 - 💱 Transaction support
-- 🔌 Model Context Protocol (MCP) support (Quickstart: [How to integrate TiDB with Claude Desktop/Cursor with MCP](https://github.com/pingcap/pytidb/blob/main/docs/mcp.md))
+- 🔌 [Model Context Protocol (MCP) support](https://github.com/pingcap/pytidb/blob/main/docs/mcp.md)
 
 Documentation: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
 

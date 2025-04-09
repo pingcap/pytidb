@@ -128,3 +128,22 @@ And then, you can use the following command to start the server:
 ```bash
 mcp run --transport sse pytidb/ext/mcp/server.py
 ```
+
+
+## Aha: Start the TiDB MCP Server in 2 Lines of Shell
+
+There is a very easy way to start the SSE server like this:
+
+```bash
+pip install pytidb pytidb[mcp]
+DATABASE_URL="mysql+pymysql://user:pass@host:4000/test" python -m pytidb.ext.mcp --transport=sse
+# Please don't use `root` user.
+```
+
+Then, you can config the follow SSE server address to your MCP clients:
+
+```text
+http://localhost:8000/sse
+```
+> * **Note** Please select the `sse` transport mode in your MCP clients, otherwise, it will not work.
+> * **Note** Please don't use `root` user.
