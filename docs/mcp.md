@@ -29,7 +29,7 @@ Go [tidbcloud.com](https://tidbcloud.com) to create a free TiDB database cluster
 
 Configuration can be provided through environment variables, or using `.env` file:
 
-- `TIDB_HOST` - TiDB host address, e.g. 'gateway01.us-east-1.prod.aws.tidbcloud.com' ()
+- `TIDB_HOST` - TiDB host address, e.g. 'gateway01.us-east-1.prod.aws.tidbcloud.com'
 - `TIDB_PORT` - TiDB port (default: 4000)
 - `TIDB_USERNAME` - Database username, e.g.  'xxxxxxxxxx.\<username\>'
 - `TIDB_PASSWORD` - Database password
@@ -147,3 +147,35 @@ http://localhost:8000/sse
 ```
 > * **Note** Please select the `sse` transport mode in your MCP clients, otherwise, it will not work.
 > * **Note** Please don't use `root` user.
+
+## Tools
+
+### Database Management
+
+- `show_databases` - Show all databases in the TiDB cluster
+  - `username`: Database username (string, optional)
+  - `password`: Database password (string, optional)
+
+- `switch_database` - Switch to a specific database
+  - `db_name`: Database name to switch to (string, required)
+  - `username`: Database username (string, optional)
+  - `password`: Database password (string, optional)
+
+- `show_tables` - Show all tables in the current database
+
+### SQL Operations
+
+- `db_query` - Execute read-only SQL queries
+  - `sql_stmt`: SQL query statement (string, required)
+
+- `db_execute` - Execute data modification SQL statements
+  - `sql_stmts`: Single SQL statement or array of SQL statements (string|array, required)
+
+### User Management
+
+- `db_create_user` - Create a new database user
+  - `username`: Name for the new user (string, required)
+  - `password`: Password for the new user (string, required)
+
+- `db_remove_user` - Remove an existing database user
+  - `username`: Name of the user to remove (string, required)
