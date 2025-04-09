@@ -1,15 +1,17 @@
 import os
-import asyncio
 import dotenv
-dotenv.load_dotenv()
+
 import litellm
 from litellm import completion
-litellm.drop_params = True
 import streamlit as st
+
 from typing import Optional, Any
 from pytidb import TiDBClient
 from pytidb.schema import TableModel, Field
 from pytidb.embeddings import EmbeddingFunction
+
+dotenv.load_dotenv()
+litellm.drop_params = True
 
 # RAG prompt template
 RAG_PROMPT_TEMPLATE = """Answer the question based on the following reference information.
@@ -31,8 +33,9 @@ db = TiDBClient.connect(
 # database_url = "mysql://username:password@host:port/database"
 # db = TiDBClient.connect(database_url)
 
-text_embed = EmbeddingFunction('ollama/mxbai-embed-large')
+text_embed = EmbeddingFunction("ollama/mxbai-embed-large")
 llm_model = "ollama/llama3.2:3b"
+
 
 # Define the Chunk table
 class Chunk(TableModel, table=True):
@@ -44,6 +47,7 @@ class Chunk(TableModel, table=True):
     text_vec: Optional[Any] = text_embed.VectorField(
         source_field="text",
     )
+
 
 sample_chunks = [
     "Llamas are camelids known for their soft fur and use as pack animals.",
@@ -77,7 +81,9 @@ if table.rows() == 0:
 
 
 st.title("🔍 RAG Demo")
-st.write("Enter your question, and the system will retrieve relevant knowledge and generate an answer")
+st.write(
+    "Enter your question, and the system will retrieve relevant knowledge and generate an answer"
+)
 mode = st.radio("Select Mode:", ["Retrieval Only", "RAG Q&A"])
 
 query_limit = st.sidebar.slider("Retrieval Limit", min_value=1, max_value=20, value=5)
@@ -87,7 +93,7 @@ if st.button("Send") and query:
     with st.spinner("Processing..."):
         # Retrieve relevant chunks
         res = table.search(query).limit(query_limit)
-        
+
         if res:
             if mode == "Retrieval Only":
                 st.write("### Retrieval Results:")
@@ -97,20 +103,18 @@ if st.button("Send") and query:
 
                 # Build RAG prompt
                 context = "\n".join(text)
-                prompt = RAG_PROMPT_TEMPLATE.format(
-                    context=context,
-                    question=query
-                )
-                
+                prompt = RAG_PROMPT_TEMPLATE.format(context=context, question=query)
+
                 # Call LLM to generate answer
                 response = completion(
-                    model=llm_model, 
-                    messages=[{ "content": prompt,"role": "user"}], 
-                    api_base="http://localhost:11434"
+                    model=llm_model,
+                    messages=[{"content": prompt, "role": "user"}],
+                    api_base="http://localhost:11434",
                 )
-                
+
                 st.markdown(f"### 🤖 {llm_model}")
-                st.markdown("""
+                st.markdown(
+                    """
                 <style>
                 .llm-response {
                     background: rgba(255, 255, 255, 0.05);
@@ -129,10 +133,15 @@ if st.button("Send") and query:
                     transition: all 0.3s ease;
                 }
                 </style>
-                """, unsafe_allow_html=True)
-                
+                """,
+                    unsafe_allow_html=True,
+                )
+
                 # show the response
-                st.markdown(f'<div class="llm-response">{response.choices[0].message.content}</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="llm-response">{response.choices[0].message.content}</div>',
+                    unsafe_allow_html=True,
+                )
 
                 with st.expander("📚 Retrieved Knowledge", expanded=False):
                     st.dataframe(res.to_pandas())
