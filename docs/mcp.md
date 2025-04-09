@@ -109,7 +109,7 @@ And then, you can configure the `mcpServers` in the configuration file like:
 {
   "mcpServers": {
     "tidb": {
-      "url": "http://0.0.0.0:8000/sse"
+      "url": "http://localhost:8000/sse"
     }
   }
 }
