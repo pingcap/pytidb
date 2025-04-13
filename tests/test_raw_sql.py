@@ -1,6 +1,9 @@
 from pydantic import BaseModel
+from sqlalchemy import insert
 
 from pytidb import TiDBClient
+from pytidb.schema import TableModel, Field as TidbField
+from pytidb.sql import select
 
 
 def test_raw_sql(db: TiDBClient):
@@ -46,3 +49,25 @@ def test_raw_sql(db: TiDBClient):
     result = db.query("SELECT COUNT(*) FROM test_raw_sql;")
     n = result.scalar()
     assert n == 3
+
+
+def test_query_select_base(db: TiDBClient):
+    class Record(TableModel, table=True):
+        __tablename__ = "test_query_select_base"
+        id: int = TidbField(default=None, primary_key=True)
+        name: str = TidbField(default=None)
+
+    tbl = db.create_table(schema=Record)
+    tbl.truncate()
+
+    # Insert data
+    stmt = insert(tbl.table_model).values(id=1, name="test")
+    result = db.execute(stmt)
+    assert result.success
+
+    # Query data
+    stmt = select(tbl.table_model.id).where(tbl.table_model.id == 1)
+    result = db.query(stmt)
+    assert result.to_list() == [{"id": 1}]
+
+    db.drop_table(tbl.table_name)
