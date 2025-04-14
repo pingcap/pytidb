@@ -60,12 +60,12 @@ def test_query_select_base(db: TiDBClient):
     tbl = db.create_table(schema=Record)
     tbl.truncate()
 
-    # Insert data
+    # Insert data via execute()
     stmt = insert(tbl.table_model).values(id=1, name="test")
     result = db.execute(stmt)
     assert result.success
 
-    # Query data
+    # Query data via query()
     stmt = select(tbl.table_model.id).where(tbl.table_model.id == 1)
     result = db.query(stmt)
     assert result.to_list() == [{"id": 1}]
