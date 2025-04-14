@@ -4,7 +4,7 @@ from typing import List, Optional, Type, Generator
 
 from pydantic import PrivateAttr, BaseModel
 import sqlalchemy
-from sqlalchemy import text, Result
+from sqlalchemy import Executable, SelectBase, text, Result
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import Session
 
@@ -139,13 +139,17 @@ class TiDBClient:
 
     def execute(
         self,
-        sql: str,
+        sql: str | Executable,
         params: Optional[dict] = None,
         raise_error: Optional[bool] = False,
     ) -> SQLExecuteResult:
         try:
             with self.session() as session:
-                result: Result = session.execute(text(sql), params or {})
+                if isinstance(sql, str):
+                    stmt = text(sql)
+                else:
+                    stmt = sql
+                result: Result = session.execute(stmt, params or {})
                 return SQLExecuteResult(rowcount=result.rowcount, success=True)
         except Exception as e:
             if raise_error:
@@ -155,11 +159,15 @@ class TiDBClient:
 
     def query(
         self,
-        sql: str,
+        sql: str | SelectBase,
         params: Optional[dict] = None,
     ) -> SQLQueryResult:
         with self.session() as session:
-            result = session.execute(sqlalchemy.text(sql), params)
+            if isinstance(sql, str):
+                stmt = text(sql)
+            else:
+                stmt = sql
+            result = session.execute(stmt, params)
             return SQLQueryResult(result)
 
     def disconnect(self) -> None:
