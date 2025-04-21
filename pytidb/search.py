@@ -97,8 +97,9 @@ class SearchQuery(ABC):
         raise NotImplementedError()
 
 
-SIMILARITY_SCORE_LABEL = "similarity_score"
-SCORE_LABEL = "score"
+DISTANCE_LABEL = "_distance"
+SIMILARITY_SCORE_LABEL = "_similarity_score"
+SCORE_LABEL = "_score"
 
 
 class VectorSearchQuery(SearchQuery):
@@ -182,14 +183,13 @@ class VectorSearchQuery(SearchQuery):
             self._query = config["embed_fn"].get_query_embedding(self._query)
 
         # Distance metric.
-        distance_label = "_distance"
         if self._distance_metric == DistanceMetric.L2:
             distance_column = vector_column.l2_distance(self._query).label(
-                distance_label
+                DISTANCE_LABEL
             )
         else:
             distance_column = vector_column.cosine_distance(self._query).label(
-                distance_label
+                DISTANCE_LABEL
             )
 
         # Inner query for ANN search
@@ -197,7 +197,7 @@ class VectorSearchQuery(SearchQuery):
         columns = table_model.__table__.c
         subquery_stmt = (
             select(columns, distance_column)
-            .order_by(asc(distance_label))
+            .order_by(asc(DISTANCE_LABEL))
             .limit(num_candidate)
         )
 
@@ -219,8 +219,8 @@ class VectorSearchQuery(SearchQuery):
         # Main query with metadata filters
         query = select(
             subquery.c,
-            (1 - subquery.c[distance_label]).label(SIMILARITY_SCORE_LABEL),
-            (1 - subquery.c[distance_label]).label(SCORE_LABEL),
+            (1 - subquery.c[DISTANCE_LABEL]).label(SIMILARITY_SCORE_LABEL),
+            (1 - subquery.c[DISTANCE_LABEL]).label(SCORE_LABEL),
         )
 
         if self._filters is not None:
@@ -263,6 +263,7 @@ class VectorSearchQuery(SearchQuery):
             results = []
             for row in rows:
                 values: Dict[str, Any] = dict(row._mapping)
+                distance: float = values.pop(DISTANCE_LABEL)
                 similarity_score: float = values.pop(SIMILARITY_SCORE_LABEL)
                 score: float = values.pop(SCORE_LABEL)
                 hit = table_model.model_validate(values)
@@ -272,6 +273,7 @@ class VectorSearchQuery(SearchQuery):
                 else:
                     results.append(
                         SearchResultModel(
+                            distance=distance,
                             similarity_score=similarity_score,
                             score=score,
                             hit=hit,
@@ -300,8 +302,9 @@ T = TypeVar("T", bound=TableModel)
 
 class SearchResultModel(BaseModel, Generic[T]):
     hit: T
-    score: Optional[float] = Field(None)
+    distance: Optional[float] = Field(None)
     similarity_score: Optional[float] = Field(None)
+    score: Optional[float] = Field(None)
 
     def __getattr__(self, item: str):
         if hasattr(self.hit, item):

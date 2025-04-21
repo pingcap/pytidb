@@ -60,8 +60,9 @@ def test_vector_search(vector_table: Table):
     assert len(results) > 0
     assert results[0]["text"] == "bar"
     assert results[0][SIMILARITY_SCORE_LABEL] == 1
-    assert results[0]["score"] == 1
     assert results[0]["user_id"] == 2
+    assert results[0]["_distance"] == 0
+    assert results[0]["_score"] == 1
 
 
 def test_with_distance_threshold(vector_table: Table):
