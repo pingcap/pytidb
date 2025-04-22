@@ -18,7 +18,13 @@ from tidb_vector.sqlalchemy import VectorAdaptor
 from typing_extensions import Generic
 
 from pytidb.base import Base
-from pytidb.schema import VectorDataType, TableModel, DistanceMetric, ColumnInfo
+from pytidb.schema import (
+    QueryBundle,
+    VectorDataType,
+    TableModel,
+    DistanceMetric,
+    ColumnInfo,
+)
 from pytidb.search import SearchType, VectorSearchQuery, SearchQuery
 from pytidb.utils import (
     build_filter_clauses,
@@ -248,7 +254,7 @@ class Table(Generic[T]):
 
     def search(
         self,
-        query: Union[VectorDataType | str],
+        query: Optional[Union[VectorDataType, str, QueryBundle]] = None,
         query_type: SearchType = SearchType.VECTOR_SEARCH,
     ) -> SearchQuery:
         if query_type == SearchType.VECTOR_SEARCH:

@@ -1,8 +1,11 @@
+import os
 from typing import Any
 
 import pytest
 
 from pytidb import TiDBClient, Table
+from pytidb.rerankers import Reranker
+from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, TableModel, Field, Column
 from pytidb.datatype import Vector
 from pytidb.search import SIMILARITY_SCORE_LABEL
@@ -74,3 +77,23 @@ def test_with_distance_threshold(vector_table: Table):
         .to_list()
     )
     assert len(result) == 1
+
+
+@pytest.fixture(scope="module")
+def reranker():
+    return Reranker(
+        model_name="jina_ai/jina-reranker-v2-base-multilingual",
+        api_key=os.getenv("JINAAI_API_KEY"),
+    )
+
+
+def test_rerank(vector_table: Table, reranker: BaseReranker):
+    reranked_results = (
+        vector_table.search({"query_embedding": [1, 2, 3], "query_str": "bar"})
+        .rerank(reranker, "text")
+        .to_list()
+    )
+
+    assert len(reranked_results) > 0
+    assert reranked_results[0]["text"] == "bar"
+    assert reranked_results[0]["_score"] > 0
