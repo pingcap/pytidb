@@ -13,11 +13,10 @@ from typing import (
     Generic,
 )
 
-import numpy as np
 from pydantic import BaseModel, Field
-from sqlalchemy import asc, desc, select, and_, Result
-from sqlalchemy.orm import Session
-from pytidb.schema import DistanceMetric, VectorDataType, TableModel
+from sqlalchemy import Row, Select, asc, desc, select, and_
+from pytidb.rerankers.base import BaseReranker
+from pytidb.schema import DistanceMetric, QueryBundle, VectorDataType, TableModel
 from pytidb.utils import build_filter_clauses, check_vector_column
 from pytidb.logger import logger
 
@@ -51,7 +50,7 @@ class SearchQuery(ABC):
     def create(
         cls,
         table: "Table",
-        query: Optional[Union[np.ndarray, str, Tuple]],
+        query: Optional[Union[VectorDataType, str, QueryBundle]],
         query_type: SearchType,
     ) -> "SearchQuery":
         if query_type == SearchType.VECTOR_SEARCH:
@@ -77,8 +76,9 @@ class SearchQuery(ABC):
         return self
 
     @abstractmethod
-    def _execute(self, *args, **kwargs) -> Result:
-        raise NotImplementedError
+    def rerank(self, reranker: BaseReranker) -> "SearchQuery":
+        self._reranker = reranker
+        return self
 
     @abstractmethod
     def to_rows(self) -> Sequence[Any]:
@@ -103,12 +103,20 @@ SCORE_LABEL = "_score"
 
 
 class VectorSearchQuery(SearchQuery):
-    def __init__(self, table: "Table", query: VectorDataType):
+    def __init__(self, table: "Table", query: Union[VectorDataType, str, QueryBundle]):
         super().__init__(table)
         self._client = table.client
         if self._limit is None:
             self._limit = 10
+
         self._query = query
+        if isinstance(query, dict):
+            self._query_embedding = query["query_embedding"]
+            self._query_str = query["query_str"]
+        else:
+            self._query_embedding = query if isinstance(query, list) else None
+            self._query_str = query if isinstance(query, str) else None
+
         self._distance_metric = DistanceMetric.COSINE
         self._distance_threshold = None
         self._distance_lower_bound = None
@@ -116,6 +124,8 @@ class VectorSearchQuery(SearchQuery):
         self._num_candidate = 20
         self._vector_column = table.vector_column
         self._filters = None
+        self._reranker = None
+        self._rerank_field_name = None
         self._debug = False
 
     def vector_column(self, column_name: str):
@@ -155,7 +165,14 @@ class VectorSearchQuery(SearchQuery):
         self._debug = flag
         return self
 
-    def _execute(self, db_session: Session) -> Result:
+    def rerank(
+        self, reranker: BaseReranker, rerank_field: Optional[str] = None
+    ) -> "VectorSearchQuery":
+        self._reranker = reranker
+        self._rerank_field_name = rerank_field
+        return self
+
+    def _build_query(self) -> Select:
         num_candidate = self._num_candidate if self._num_candidate else self._limit * 10
 
         if self._vector_column is None:
@@ -173,24 +190,26 @@ class VectorSearchQuery(SearchQuery):
             vector_column = self._vector_column
 
         # Auto embedding
-        if isinstance(self._query, str):
+        if self._query_embedding is None:
             if vector_column.name not in self._table.vector_field_configs:
                 raise ValueError(
                     "query should be a vector, because the vector column didn't configure the embed_fn parameter"
                 )
 
             config = self._table.vector_field_configs[vector_column.name]
-            self._query = config["embed_fn"].get_query_embedding(self._query)
+            self._query_embedding = config["embed_fn"].get_query_embedding(
+                self._query_str
+            )
 
         # Distance metric.
         if self._distance_metric == DistanceMetric.L2:
-            distance_column = vector_column.l2_distance(self._query).label(
+            distance_column = vector_column.l2_distance(self._query_embedding).label(
                 DISTANCE_LABEL
             )
         else:
-            distance_column = vector_column.cosine_distance(self._query).label(
-                DISTANCE_LABEL
-            )
+            distance_column = vector_column.cosine_distance(
+                self._query_embedding
+            ).label(DISTANCE_LABEL)
 
         # Inner query for ANN search
         table_model = self._table.table_model
@@ -229,56 +248,102 @@ class VectorSearchQuery(SearchQuery):
             )
             query = query.filter(*filter_clauses)
 
-        query = query.order_by(desc(SIMILARITY_SCORE_LABEL)).limit(self._limit)
+        return query.order_by(desc(SIMILARITY_SCORE_LABEL)).limit(self._limit)
 
-        if self._debug:
-            db_engine = self._table.db_engine
-            sql = query.compile(
-                dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
-            )
-            logger.info(
-                f"Execute vector search query on table <{self._table.table_name}>:\n{sql}"
-            )
+    def _execute_query(self) -> Tuple[List[str], List[Any]]:
+        with self._client.session() as db_session:
+            sql_stmt = self._build_query()
 
-        return db_session.execute(query)
+            if self._debug:
+                db_engine = self._table.db_engine
+                compiled_sql = sql_stmt.compile(
+                    dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
+                )
+                logger.info(
+                    f"Execute vector search query on table <{self._table.table_name}>:\n{compiled_sql}"
+                )
+
+            # Execute SQL query.
+            result = db_session.execute(sql_stmt)
+            keys = result.keys()
+            rows = result.fetchall()
+
+            # Rerank.
+            if self._reranker is not None:
+                if self._rerank_field_name is not None:
+                    rerank_field_name = self._rerank_field_name
+                elif (
+                    self._vector_column is not None
+                    and self._vector_column.name in self._table.vector_field_configs
+                ):
+                    vector_field = self._table.vector_field_configs[
+                        self._vector_column.name
+                    ]
+                    rerank_field_name = vector_field["source_field_name"]
+                else:
+                    raise ValueError(
+                        "Please specify the rerank field name through .rerank(reranker, rerank_field_name)"
+                    )
+
+                if self._query_str is None:
+                    raise ValueError(
+                        "Query string is required for reranker, please specify it through .search({ 'query_str': '<your query string>', 'query_embedding': [...] })"
+                    )
+
+                documents = [row._mapping[rerank_field_name] for row in rows]
+                reranked_results = self._reranker.rerank(
+                    self._query_str, documents, self._limit
+                )
+                reranked_rows = []
+                for item in reranked_results:
+                    row = rows[item.index]
+                    score_index = row._key_to_index["_score"]
+                    _data = list(row._tuple())
+                    _data[score_index] = item.relevance_score
+                    reranked_rows.append(
+                        Row(
+                            row._parent,
+                            None,
+                            row._key_to_index,
+                            tuple(_data),
+                        )
+                    )
+                rows = reranked_rows
+
+            return keys, rows
 
     def to_rows(self) -> Sequence[Any]:
-        with self._client.session() as db_session:
-            result = self._execute(db_session)
-            return result.fetchall()
+        _, rows = self._execute_query()
+        return rows
 
     def to_list(self) -> List[dict]:
-        with self._client.session() as db_session:
-            res = self._execute(db_session)
-            keys = res.keys()
-            rows = res.fetchall()
-            return [dict(zip(keys, row)) for row in rows]
+        keys, rows = self._execute_query()
+        results = [dict(zip(keys, row)) for row in rows]
+        return results
 
     def to_pydantic(self, with_score: Optional[bool] = True) -> List[BaseModel]:
         table_model = self._table.table_model
 
-        with self._client.session() as db_session:
-            result = self._execute(db_session)
-            rows = result.fetchall()
-            results = []
-            for row in rows:
-                values: Dict[str, Any] = dict(row._mapping)
-                distance: float = values.pop(DISTANCE_LABEL)
-                similarity_score: float = values.pop(SIMILARITY_SCORE_LABEL)
-                score: float = values.pop(SCORE_LABEL)
-                hit = table_model.model_validate(values)
+        _, rows = self._execute_query()
+        results = []
+        for row in rows:
+            values: Dict[str, Any] = dict(row._mapping)
+            distance: float = values.pop(DISTANCE_LABEL)
+            similarity_score: float = values.pop(SIMILARITY_SCORE_LABEL)
+            score: float = values.pop(SCORE_LABEL)
+            hit = table_model.model_validate(values)
 
-                if not with_score:
-                    results.append(hit)
-                else:
-                    results.append(
-                        SearchResultModel(
-                            distance=distance,
-                            similarity_score=similarity_score,
-                            score=score,
-                            hit=hit,
-                        )
+            if not with_score:
+                results.append(hit)
+            else:
+                results.append(
+                    SearchResultModel(
+                        distance=distance,
+                        similarity_score=similarity_score,
+                        score=score,
+                        hit=hit,
                     )
+                )
 
         return results
 
@@ -290,11 +355,8 @@ class VectorSearchQuery(SearchQuery):
                 "Failed to import pandas, please install it with `pip install pandas`"
             )
 
-        with Session(self._table.db_engine) as db_session:
-            result = self._execute(db_session)
-            keys = result.keys()
-            rows = result.fetchall()
-            return pd.DataFrame(rows, columns=keys)
+        keys, rows = self._execute_query()
+        return pd.DataFrame(rows, columns=keys)
 
 
 T = TypeVar("T", bound=TableModel)

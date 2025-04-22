@@ -1,6 +1,6 @@
 [project]
 name = "pytidb"
-version = "0.0.5.dev1"
+version = "0.0.5.dev2"
 description = "A Python library for TiDB."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -53,6 +53,9 @@ log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+filterwarnings = [
+    "ignore:.*:DeprecationWarning:litellm.*"
+]
 
 # Build
 [tool.setuptools]
