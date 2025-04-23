@@ -35,7 +35,7 @@ curl http://localhost:11434/api/embed -d '{
 
 ```bash
 git clone https://github.com/pingcap/pytidb.git
-cd pytidb/examples/embedding_search/;
+cd pytidb/examples/vector_search/;
 ```
 
 **Step2**: Install the required packages and setup environment
