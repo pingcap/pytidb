@@ -308,7 +308,6 @@ class SearchQuery:
         elif self._search_type == "fulltext":
             return self._exec_fulltext_query()
         elif self._search_type == "hybrid":
-            # return self._exec_hybrid_query()
             raise NotImplementedError(
                 "hybrid search is not supported yet, please wait for the next release"
             )
@@ -343,28 +342,6 @@ class SearchQuery:
             rows = self._rerank_result_set(rows)
 
         return keys, rows
-
-    def _exec_hybrid_query(self) -> Tuple[List[str], List[Row]]:
-        with self._client.session() as db_session:
-            vs_query = self._build_vector_query()
-            vs_result = db_session.execute(vs_query)
-            vs_keys = vs_result.keys()
-            vs_rows = vs_result.fetchall()
-
-            fts_query = self._build_fulltext_query()
-            fts_result = db_session.execute(fts_query)
-            fts_keys = fts_result.keys()
-            fts_rows = fts_result.fetchall()
-
-            # Merge the results from vector search and fulltext search.
-            keys = list(vs_keys) + list(fts_keys)
-            rows = list(vs_rows) + list(fts_rows)
-
-            # Apply reranker to improve the quality of fulltext search results. (Optional)
-            if self._reranker is not None:
-                rows = self._rerank_result_set(rows)
-
-            return keys, rows
 
     def _rerank_result_set(self, rows: List[Row]) -> List[Row]:
         """

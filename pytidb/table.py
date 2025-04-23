@@ -1,4 +1,5 @@
 from typing import (
+    Literal,
     Optional,
     List,
     Any,
@@ -9,8 +10,7 @@ from typing import (
     TYPE_CHECKING,
 )
 
-import sqlalchemy
-from sqlalchemy import Engine, update, text
+from sqlalchemy import Engine, delete, update
 from sqlalchemy.orm import Session, DeclarativeMeta
 from sqlmodel.main import SQLModelMetaclass
 from tidb_vector.sqlalchemy import VectorAdaptor
@@ -51,8 +51,9 @@ class Table(Generic[T]):
         distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
         checkfirst: bool = True,
     ):
-        self._client = client
+        self._db = client
         self._db_engine = client.db_engine
+        self._identifier_preparer = self._db_engine.dialect.identifier_preparer
 
         # Init table model.
         if type(schema) is SQLModelMetaclass:
@@ -121,7 +122,7 @@ class Table(Generic[T]):
 
     @property
     def client(self) -> "TiDBClient":
-        return self._client
+        return self._db
 
     @property
     def db_engine(self) -> Engine:
@@ -148,8 +149,8 @@ class Table(Generic[T]):
         return self._vector_field_configs
 
     def get(self, id: Any) -> T:
-        with self._client.session() as session:
-            return session.get(self._table_model, id)
+        with self._db.session() as db_session:
+            return db_session.get(self._table_model, id)
 
     def insert(self, data: T) -> T:
         # Auto embedding.
@@ -165,10 +166,10 @@ class Table(Generic[T]):
             vector_embedding = config["embed_fn"].get_source_embedding(embedding_source)
             setattr(data, field_name, vector_embedding)
 
-        with self._client.session() as session:
-            session.add(data)
-            session.flush()
-            session.refresh(data)
+        with self._db.session() as db_session:
+            db_session.add(data)
+            db_session.flush()
+            db_session.refresh(data)
             return data
 
     def bulk_insert(self, data: List[T]) -> List[T]:
@@ -191,11 +192,11 @@ class Table(Generic[T]):
             for item, embedding in zip(items_need_embedding, vector_embeddings):
                 setattr(item, field_name, embedding)
 
-        with self._client.session() as session:
-            session.add_all(data)
-            session.flush()
+        with self._db.session() as db_session:
+            db_session.add_all(data)
+            db_session.flush()
             for item in data:
-                session.refresh(item)
+                db_session.refresh(item)
             return data
 
     def update(self, values: dict, filters: Optional[Dict[str, Any]] = None) -> object:
@@ -212,10 +213,12 @@ class Table(Generic[T]):
             vector_embedding = config["embed_fn"].get_source_embedding(embedding_source)
             values[field_name] = vector_embedding
 
-        filter_clauses = build_filter_clauses(filters, self._columns, self._table_model)
-        with self._client.session() as session:
+        with self._db.session() as db_session:
+            filter_clauses = build_filter_clauses(
+                filters, self._columns, self._table_model
+            )
             stmt = update(self._table_model).filter(*filter_clauses).values(values)
-            session.execute(stmt)
+            db_session.execute(stmt)
 
     def delete(self, filters: Optional[Dict[str, Any]] = None):
         """
@@ -224,44 +227,43 @@ class Table(Generic[T]):
         params:
             filters: (Optional[Dict[str, Any]]): The filters to apply to the delete operation.
         """
-        filter_clauses = build_filter_clauses(filters, self._columns, self._table_model)
-        with self._client.session() as session:
-            stmt = sqlalchemy.delete(self._table_model).filter(*filter_clauses)
-            session.execute(stmt)
-            session.commit()
+        with self._db.session() as db_session:
+            filter_clauses = build_filter_clauses(
+                filters, self._columns, self._table_model
+            )
+            stmt = delete(self._table_model).filter(*filter_clauses)
+            db_session.execute(stmt)
 
     def truncate(self):
-        with self._client.session() as session:
-            table_name = self._db_engine.dialect.identifier_preparer.quote(
-                self.table_name
-            )
-            session.execute(text(f"TRUNCATE TABLE {table_name};"))
+        with self._db.session():
+            table_name = self._identifier_preparer.quote(self.table_name)
+            stmt = f"TRUNCATE TABLE {table_name};"
+            self._db.execute(stmt)
 
     def columns(self) -> List[ColumnInfo]:
-        show_columns_sql = text("""
-            SELECT
-                COLUMN_NAME,
-                COLUMN_TYPE
-            FROM information_schema.columns
-            WHERE
-                table_schema = DATABASE()
-                AND table_name = :table_name;
-        """)
-        with self._client.session() as session:
-            rows = session.execute(show_columns_sql, {"table_name": self.table_name})
-            return [ColumnInfo(column_name=row[0], column_type=row[1]) for row in rows]
+        with self._db.session():
+            table_name = self._identifier_preparer.quote(self.table_name)
+            stmt = """
+                SELECT
+                    COLUMN_NAME as column_name,
+                    COLUMN_TYPE as column_type
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE
+                    TABLE_SCHEMA = DATABASE()
+                    AND TABLE_NAME = :table_name;
+            """
+            res = self._db.query(stmt, {"table_name": table_name})
+            return res.to_pydantic(ColumnInfo)
 
     def rows(self):
-        with self._client.session() as session:
-            table_name = self._db_engine.dialect.identifier_preparer.quote(
-                self.table_name
-            )
-            res = session.execute(text(f"SELECT COUNT(*) FROM {table_name};"))
-            return res.scalar()
+        with self._db.session():
+            table_name = self._identifier_preparer.quote(self.table_name)
+            stmt = f"SELECT COUNT(*) FROM {table_name};"
+            return self._db.query(stmt).scalar()
 
     def query(self, filters: Optional[Dict[str, Any]] = None) -> List[T]:
-        with Session(self._db_engine) as session:
-            query = session.query(self._table_model)
+        with Session(self._db_engine) as db_session:
+            query = db_session.query(self._table_model)
             if filters:
                 filter_clauses = build_filter_clauses(
                     filters, self._columns, self._table_model
@@ -280,42 +282,49 @@ class Table(Generic[T]):
             search_type=search_type,
         )
 
-    def _has_index(self, column_name: str) -> bool:
-        table_name = self._table_model.__tablename__
-        show_indexes_stmt = text("""
-        SELECT *
-        FROM INFORMATION_SCHEMA.TIDB_INDEXES
-        WHERE
-            TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = :table_name
-            AND COLUMN_NAME = :column_name
-        """)
-        rows = self._client.query(
-            show_indexes_stmt, {"table_name": table_name, "column_name": column_name}
-        ).to_list()
-        return len(rows) > 0
+    def _has_tiflash_index(
+        self,
+        column_name: str,
+        index_kind: Optional[Literal["FullText", "Vector"]] = None,
+    ) -> bool:
+        stmt = """SELECT EXISTS(
+            SELECT 1
+            FROM INFORMATION_SCHEMA.TIFLASH_INDEXES
+            WHERE
+                TIDB_DATABASE = DATABASE()
+                AND TIDB_TABLE = :table_name
+                AND COLUMN_NAME = :column_name
+                AND INDEX_KIND = :index_kind
+        )
+        """
+        with self._db.session():
+            res = self._db.query(
+                stmt,
+                {
+                    "table_name": self.table_name,
+                    "column_name": column_name,
+                    "index_kind": index_kind,
+                },
+            )
+            return res.scalar()
 
     def has_fts_index(self, column_name: str) -> bool:
-        check_text_column(self._columns, column_name)
-        # TODO: need to check if the index is a fulltext index.
-        return self._has_index(column_name)
+        return self._has_tiflash_index(column_name, "FullText")
 
-    def create_fts_index(self, column_name: str, name: Optional[str] = None) -> bool:
-        table = self._table_model.__table__
-        column = self._columns[column_name]
-        preparer = self._db_engine.dialect.identifier_preparer
+    def create_fts_index(self, column_name: str, name: Optional[str] = None):
+        _name = self._identifier_preparer.quote(name or f"fts_idx_{column_name}")
+        _column_name = self._identifier_preparer.format_column(
+            self._columns[column_name]
+        )
 
-        if name is not None:
-            _name = preparer.quote(name)
-        else:
-            _name = preparer.quote(f"fts_idx_{column_name}")
-        _table_name = preparer.format_table(table)
-        _column_name = preparer.format_column(column)
+        add_tiflash_replica_stmt = (
+            f"ALTER TABLE {self.table_name} SET TIFLASH REPLICA 1;"
+        )
+        self._db.execute(add_tiflash_replica_stmt, raise_error=True)
 
-        add_tiflash_replica_stmt = f"ALTER TABLE {_table_name} SET TIFLASH REPLICA 1;"
-        self._client.execute(add_tiflash_replica_stmt, raise_error=True)
-
-        create_index_stmt = f"CREATE FULLTEXT INDEX IF NOT EXISTS {_name} ON {_table_name} ({_column_name}) WITH PARSER MULTILINGUAL;"
-        self._client.execute(create_index_stmt, raise_error=True)
-
-        return True
+        create_index_stmt = (
+            f"CREATE FULLTEXT INDEX {_name} ON "
+            f"{self.table_name} ({_column_name}) "
+            f"WITH PARSER MULTILINGUAL;"
+        )
+        self._db.execute(create_index_stmt, raise_error=True)
