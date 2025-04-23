@@ -18,7 +18,7 @@ def text_table(db: TiDBClient):
     tbl = db.create_table(schema=Chunk)
 
     # Prepare test data.
-    tbl.truncate()
+    tbl.delete()
     tbl.bulk_insert(
         [
             Chunk(

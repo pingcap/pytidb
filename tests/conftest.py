@@ -21,4 +21,5 @@ def db(env) -> TiDBClient:
         username=os.getenv("TIDB_USERNAME", "root"),
         password=os.getenv("TIDB_PASSWORD", ""),
         database=os.getenv("TIDB_DATABASE", "test"),
+        debug=True,
     )
