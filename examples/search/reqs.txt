@@ -1,4 +1,4 @@
-pytidb
+pytidb==0.0.5.dev4
 pymysql
 streamlit
 httpx[socks]

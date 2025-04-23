@@ -21,14 +21,26 @@ def text_table(db: TiDBClient):
     tbl.truncate()
     tbl.bulk_insert(
         [
-            Chunk(id=1, text="foo", user_id=1),
-            Chunk(id=2, text="bar", user_id=2),
-            Chunk(id=3, text="biz", user_id=3),
+            Chunk(
+                id=1,
+                text="TiDB is a distributed database that supports OLTP, OLAP, HTAP and AI workloads.",
+                user_id=1,
+            ),
+            Chunk(
+                id=2,
+                text="LlamaIndex is a framework for building AI applications.",
+                user_id=2,
+            ),
+            Chunk(
+                id=3,
+                text="OpenAI is a company that provides a platform for building AI models.",
+                user_id=3,
+            ),
         ]
     )
 
     if not tbl.has_fts_index("text"):
-        tbl.create_fts_index("text", name="fts_idx_text_on_documents_for_fts")
+        tbl.create_fts_index("text")
 
     return tbl
 
@@ -36,26 +48,31 @@ def text_table(db: TiDBClient):
 def test_fulltext_search(text_table: Table):
     # to_pydantic()
     results = (
-        text_table.search("foo", search_type="fulltext")
+        text_table.search("HTAP database", search_type="fulltext")
         .debug()
         .text_column("text")
         .limit(2)
         .to_pydantic()
     )
     assert len(results) == 1
-    assert results[0].text == "foo"
+    assert "TiDB" in results[0].text
     assert results[0].user_id == 1
 
     # to_pandas()
-    results = text_table.search("bar", search_type="fulltext").limit(2).to_pandas()
+    results = (
+        text_table.search(search_type="fulltext")
+        .text("AI framework")
+        .limit(2)
+        .to_pandas()
+    )
     assert results.size > 0
-    assert results.iloc[0]["text"] == "bar"
+    assert "LlamaIndex" in results.iloc[0]["text"]
     assert results.iloc[0]["user_id"] == 2
 
     # to_list()
-    results = text_table.search("biz", search_type="fulltext").limit(2).to_list()
+    results = text_table.search("OpenAI", search_type="fulltext").limit(2).to_list()
     assert len(results) > 0
-    assert results[0]["text"] == "biz"
+    assert "OpenAI" in results[0]["text"]
     assert results[0]["user_id"] == 3
 
 
@@ -69,12 +86,12 @@ def reranker():
 
 def test_rerank(text_table: Table, reranker: BaseReranker):
     reranked_results = (
-        text_table.search("foo", search_type="fulltext")
+        text_table.search("An AI library", search_type="fulltext")
         .rerank(reranker, "text")
         .limit(3)
         .to_list()
     )
 
     assert len(reranked_results) > 0
-    assert reranked_results[0]["text"] == "foo"
+    assert "LlamaIndex" in reranked_results[0]["text"]
     assert reranked_results[0]["_score"] > 0
