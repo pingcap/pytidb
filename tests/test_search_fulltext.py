@@ -86,7 +86,9 @@ def reranker():
 
 def test_rerank(text_table: Table, reranker: BaseReranker):
     reranked_results = (
-        text_table.search("An AI library", search_type="fulltext")
+        text_table.search(
+            "An AI library to develop AI applications", search_type="fulltext"
+        )
         .rerank(reranker, "text")
         .limit(3)
         .to_list()
