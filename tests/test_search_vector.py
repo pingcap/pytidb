@@ -89,8 +89,11 @@ def reranker():
 
 def test_rerank(vector_table: Table, reranker: BaseReranker):
     reranked_results = (
-        vector_table.search({"query_embedding": [1, 2, 3], "query_str": "bar"})
+        vector_table.search(search_type="vector")
+        .vector([1, 2, 3])
+        .text("bar")
         .rerank(reranker, "text")
+        .limit(3)
         .to_list()
     )
 

@@ -4,7 +4,8 @@ from urllib.parse import quote
 
 import sqlalchemy
 from pydantic import AnyUrl, UrlConstraints
-from sqlalchemy import BinaryExpression
+from sqlalchemy import BinaryExpression, Column, String
+from sqlmodel import AutoString
 from tidb_vector.sqlalchemy import VectorType
 
 from pytidb.schema import TableModel
@@ -83,7 +84,7 @@ def build_tidb_dsn(
     )
 
 
-def filter_vector_columns(columns: Dict):
+def filter_vector_columns(columns: Dict) -> List[Column]:
     vector_columns = []
     for column in columns:
         if isinstance(column.type, VectorType):
@@ -100,6 +101,27 @@ def check_vector_column(columns: Dict, column_name: str) -> Optional[str]:
         raise ValueError(f"Invalid vector column: {vector_column}")
 
     return vector_column
+
+
+def filter_text_columns(columns: Dict) -> List[Column]:
+    text_columns = []
+    for column in columns:
+        if isinstance(column.type, AutoString) or isinstance(column.type, String):
+            text_columns.append(column)
+    return text_columns
+
+
+def check_text_column(columns: Dict, column_name: str) -> Optional[str]:
+    if column_name not in columns:
+        raise ValueError(f"Non-exists text column: {column_name}")
+
+    text_column = columns[column_name]
+    if not isinstance(text_column.type, String) and not isinstance(
+        text_column.type, AutoString
+    ):
+        raise ValueError(f"Invalid text column: {text_column}")
+
+    return text_column
 
 
 def build_filter_clauses(

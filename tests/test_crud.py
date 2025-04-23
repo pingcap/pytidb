@@ -51,6 +51,13 @@ def test_table_crud(db):
     tbl.delete(filters={"id": {"$in": [1, 2]}})
     assert tbl.rows() == 1
 
+    # Columns
+    columns = tbl.columns()
+    assert len(columns) == 3
+    assert columns[0].column_name == "id"
+    assert columns[1].column_name == "text"
+    assert columns[2].column_name == "text_vec"
+
 
 # Test filters
 

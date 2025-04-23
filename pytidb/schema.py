@@ -1,5 +1,5 @@
 import enum
-from typing import Optional, TYPE_CHECKING, List, TypedDict
+from typing import Literal, Optional, TYPE_CHECKING, List, TypedDict
 
 from pydantic import BaseModel
 from sqlalchemy import Column
@@ -13,9 +13,12 @@ if TYPE_CHECKING:
 VectorDataType = List[float]
 
 
+IndexType = Literal["vector", "fulltext"]
+
+
 class QueryBundle(TypedDict):
-    query_str: Optional[str]
-    query_embedding: Optional[VectorDataType]
+    query_text: Optional[str]
+    query_vector: Optional[VectorDataType]
 
 
 class TableModel(SQLModel):
