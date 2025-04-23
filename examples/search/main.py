@@ -62,7 +62,7 @@ if table.rows() == 0:
     chunks = [Chunk(text=text) for text in sample_chunks]
     table.bulk_insert(chunks)
 
-st.title("🔍 Search Demo")
+st.title("🔍 Vector Search Demo")
 st.write("Input search query, find similar chunks")
 query_limit = st.sidebar.slider("query limit", min_value=1, max_value=20, value=10)
 query = st.text_input("Search:", "")
