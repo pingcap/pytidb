@@ -4,8 +4,8 @@ from typing import List, Optional, Type, Generator
 
 from pydantic import PrivateAttr, BaseModel
 import sqlalchemy
-from sqlalchemy import Executable, SelectBase, text, Result
-from sqlalchemy.engine import Engine, create_engine
+from sqlalchemy import Executable, SelectBase, text, Result, create_engine
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from pytidb.base import default_registry

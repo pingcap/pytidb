@@ -1,10 +1,9 @@
-from abc import ABC, abstractmethod
-from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
     List,
+    Literal,
     Optional,
     Union,
     Tuple,
@@ -14,10 +13,11 @@ from typing import (
 )
 
 from pydantic import BaseModel, Field
-from sqlalchemy import Row, Select, asc, desc, select, and_
+from sqlalchemy import Row, Select, asc, desc, literal, select, and_
+from pytidb.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, QueryBundle, VectorDataType, TableModel
-from pytidb.utils import build_filter_clauses, check_vector_column
+from pytidb.utils import build_filter_clauses, check_text_column, check_vector_column
 from pytidb.logger import logger
 
 
@@ -26,163 +26,145 @@ if TYPE_CHECKING:
     from pandas import DataFrame
 
 
-class SearchType(str, Enum):
-    VECTOR_SEARCH = "vector_search"
-    FULLTEXT_SEARCH = "fulltext_search"
-    HYBRID_SEARCH = "hybrid_search"
-
-
-class SearchQuery(ABC):
-    def __init__(self, table: "Table"):
-        self._table = table
-        self._limit = None
-        self._offset = 0
-        self._columns = None
-        self._where = None
-        self._prefilter = True
-        self._with_row_id = False
-        self._vector = None
-        self._text = None
-        self._ef = None
-        self._use_index = True
-
-    @classmethod
-    def create(
-        cls,
-        table: "Table",
-        query: Optional[Union[VectorDataType, str, QueryBundle]],
-        query_type: SearchType,
-    ) -> "SearchQuery":
-        if query_type == SearchType.VECTOR_SEARCH:
-            return VectorSearchQuery(
-                table=table,
-                query=query,
-            )
-        elif query_type == SearchType.FULLTEXT_SEARCH:
-            raise NotImplementedError
-        elif query_type == SearchType.HYBRID_SEARCH:
-            raise NotImplementedError
-        else:
-            raise NotImplementedError
-
-    def limit(self, limit: Union[int, None]) -> "SearchQuery":
-        if limit is None or limit <= 0:
-            if isinstance(self, VectorSearchQuery):
-                raise ValueError("Limit is required for ANN/KNN queries")
-            else:
-                self._limit = None
-        else:
-            self._limit = limit
-        return self
-
-    @abstractmethod
-    def rerank(self, reranker: BaseReranker) -> "SearchQuery":
-        self._reranker = reranker
-        return self
-
-    @abstractmethod
-    def to_rows(self) -> Sequence[Any]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def to_list(self) -> List[dict]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def to_pandas(self) -> Sequence[Any]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def to_pydantic(self) -> "DataFrame":
-        raise NotImplementedError()
+SearchType = Literal["vector", "fulltext", "hybrid"]
 
 
 DISTANCE_LABEL = "_distance"
 SIMILARITY_SCORE_LABEL = "_similarity_score"
 SCORE_LABEL = "_score"
 
+T = TypeVar("T", bound=TableModel)
 
-class VectorSearchQuery(SearchQuery):
-    def __init__(self, table: "Table", query: Union[VectorDataType, str, QueryBundle]):
-        super().__init__(table)
+
+class SearchResultModel(BaseModel, Generic[T]):
+    hit: T
+    distance: Optional[float] = Field(None)
+    similarity_score: Optional[float] = Field(None)
+    score: Optional[float] = Field(None)
+
+    def __getattr__(self, item: str):
+        if hasattr(self.hit, item):
+            return getattr(self.hit, item)
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{item}'"
+        )
+
+
+class SearchQuery:
+    def __init__(
+        self,
+        table: "Table",
+        search_type: SearchType = "vector",
+        query: Optional[Union[VectorDataType, str, QueryBundle]] = None,
+    ):
+        # Table.
+        self._table = table
         self._client = table.client
-        if self._limit is None:
-            self._limit = 10
+        self._columns = table._columns
+        self._vector_column = table.vector_column
+        self._text_column = table.text_column
 
+        # Query.
+        self._search_type = search_type
         self._query = query
         if isinstance(query, dict):
-            self._query_embedding = query["query_embedding"]
-            self._query_str = query["query_str"]
+            self._query_vector = query["query_vector"]
+            self._query_text = query["query_text"]
         else:
-            self._query_embedding = query if isinstance(query, list) else None
-            self._query_str = query if isinstance(query, str) else None
+            self._query_vector = query if isinstance(query, list) else None
+            self._query_text = query if isinstance(query, str) else None
 
+        # Vector search.
         self._distance_metric = DistanceMetric.COSINE
         self._distance_threshold = None
         self._distance_lower_bound = None
         self._distance_upper_bound = None
-        self._num_candidate = 20
-        self._vector_column = table.vector_column
         self._filters = None
+        self._num_candidate = 20
+
+        # Reranker.
         self._reranker = None
         self._rerank_field_name = None
+
+        # Miscellaneous.
         self._debug = False
+        self._limit = None
+
+    def vector(self, query_vector: VectorDataType):
+        self._query_vector = query_vector
+        return self
+
+    def text(self, query_text: str):
+        self._query_text = query_text
+        return self
 
     def vector_column(self, column_name: str):
         self._vector_column = check_vector_column(self._columns, column_name)
         return self
 
-    def distance_metric(self, metric: DistanceMetric) -> "VectorSearchQuery":
+    def text_column(self, column_name: str):
+        self._text_column = check_text_column(self._columns, column_name)
+        return self
+
+    def distance_metric(self, metric: DistanceMetric) -> "SearchQuery":
         self._distance_metric = metric
         return self
 
-    def distance_threshold(
-        self, threshold: Optional[float] = None
-    ) -> "VectorSearchQuery":
+    def distance_threshold(self, threshold: Optional[float] = None) -> "SearchQuery":
         self._distance_threshold = threshold
         return self
 
     def distance_range(
         self, lower_bound: float = 0, upper_bound: float = 1
-    ) -> "VectorSearchQuery":
+    ) -> "SearchQuery":
         self._distance_lower_bound = lower_bound
         self._distance_upper_bound = upper_bound
         return self
 
-    def num_candidate(self, num_candidate: int) -> "VectorSearchQuery":
+    def num_candidate(self, num_candidate: int) -> "SearchQuery":
         self._num_candidate = num_candidate
         return self
 
-    def filter(self, filters: Optional[Dict[str, Any]] = None) -> "VectorSearchQuery":
+    def filter(self, filters: Optional[Dict[str, Any]] = None) -> "SearchQuery":
         self._filters = filters
         return self
 
-    def limit(self, k: int) -> "VectorSearchQuery":
+    def limit(self, k: int) -> "SearchQuery":
         self._limit = k
         return self
 
-    def debug(self, flag: bool = True) -> "VectorSearchQuery":
+    def debug(self, flag: bool = True) -> "SearchQuery":
         self._debug = flag
         return self
 
     def rerank(
         self, reranker: BaseReranker, rerank_field: Optional[str] = None
-    ) -> "VectorSearchQuery":
+    ) -> "SearchQuery":
+        """
+        Rerank the search results.
+
+        Reranker can be used for multiple-way (multi-vectors, hybrid) search result fusion or
+        improve the quality of vector search results.
+
+        Args:
+            reranker: The reranker to use.
+            rerank_field: The field to rerank on.
+        """
         self._reranker = reranker
         self._rerank_field_name = rerank_field
         return self
 
-    def _build_query(self) -> Select:
+    def _build_vector_query(self) -> Select:
         num_candidate = self._num_candidate if self._num_candidate else self._limit * 10
 
         if self._vector_column is None:
             if len(self._table.vector_columns) == 0:
                 raise ValueError(
-                    "no vector column found in the table, vector search cannot be executed"
+                    "vector column is not found, but is required for vector search"
                 )
             elif len(self._table.vector_columns) >= 1:
                 raise ValueError(
-                    "more than two vector columns in the table, need to be specified one through .vector_column()"
+                    "more than two vector columns, please choice one through .vector_column()"
                 )
             else:
                 vector_column = self._table.vector_columns[0]
@@ -190,26 +172,26 @@ class VectorSearchQuery(SearchQuery):
             vector_column = self._vector_column
 
         # Auto embedding
-        if self._query_embedding is None:
+        if self._query_vector is None:
             if vector_column.name not in self._table.vector_field_configs:
                 raise ValueError(
                     "query should be a vector, because the vector column didn't configure the embed_fn parameter"
                 )
 
             config = self._table.vector_field_configs[vector_column.name]
-            self._query_embedding = config["embed_fn"].get_query_embedding(
-                self._query_str
+            self._query_vector = config["embed_fn"].get_query_embedding(
+                self._query_text
             )
 
         # Distance metric.
         if self._distance_metric == DistanceMetric.L2:
-            distance_column = vector_column.l2_distance(self._query_embedding).label(
+            distance_column = vector_column.l2_distance(self._query_vector).label(
                 DISTANCE_LABEL
             )
         else:
-            distance_column = vector_column.cosine_distance(
-                self._query_embedding
-            ).label(DISTANCE_LABEL)
+            distance_column = vector_column.cosine_distance(self._query_vector).label(
+                DISTANCE_LABEL
+            )
 
         # Inner query for ANN search
         table_model = self._table.table_model
@@ -236,7 +218,7 @@ class VectorSearchQuery(SearchQuery):
         subquery = subquery_stmt.subquery("candidates")
 
         # Main query with metadata filters
-        query = select(
+        stmt = select(
             subquery.c,
             (1 - subquery.c[DISTANCE_LABEL]).label(SIMILARITY_SCORE_LABEL),
             (1 - subquery.c[DISTANCE_LABEL]).label(SCORE_LABEL),
@@ -246,71 +228,201 @@ class VectorSearchQuery(SearchQuery):
             filter_clauses = build_filter_clauses(
                 self._filters, subquery.c, table_model
             )
-            query = query.filter(*filter_clauses)
+            stmt = stmt.filter(*filter_clauses)
 
-        return query.order_by(desc(SIMILARITY_SCORE_LABEL)).limit(self._limit)
+        stmt = stmt.order_by(desc(SIMILARITY_SCORE_LABEL)).limit(self._limit)
+
+        # Debug.
+        if self._debug:
+            db_engine = self._table.db_engine
+            table_name = self._table.table_name
+            compiled_sql = stmt.compile(
+                dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
+            )
+            logger.info(
+                f"Build vector search query on table <{table_name}>:\n{compiled_sql}"
+            )
+
+        return stmt
+
+    def _build_fulltext_query(self) -> Select:
+        table_model = self._table.table_model
+        columns = table_model.__table__.c
+
+        if self._query_text is None:
+            raise ValueError(
+                "query string is required for fulltext search, please specify it through "
+                ".text('<your query string>')"
+            )
+
+        if self._text_column is None:
+            if len(self._table.text_columns) == 0:
+                raise ValueError(
+                    "no text column found in the table, fulltext search cannot be executed"
+                )
+            elif len(self._table.text_columns) >= 1:
+                raise ValueError(
+                    "more than two text columns in the table, need to specify one through"
+                    ".text_column('<your text column name>')"
+                )
+            else:
+                text_column = self._table.text_columns[0]
+        else:
+            text_column = self._text_column
+
+        # TODO: support return score after fts_match_word is supported.
+        table_name = self._table.table_name
+        stmt = select(columns, literal(None).label(SCORE_LABEL)).filter(
+            fts_match_word(self._query_text, text_column)
+        )
+
+        if self._filters is not None:
+            filter_clauses = build_filter_clauses(self._filters, columns, table_model)
+            stmt = stmt.filter(*filter_clauses)
+
+        stmt = stmt.order_by(desc(fts_match_word(self._query_text, text_column))).limit(
+            self._limit
+        )
+
+        # Debug.
+        if self._debug:
+            db_engine = self._table.db_engine
+            table_name = self._table.table_name
+            compiled_sql = stmt.compile(
+                dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
+            )
+            logger.info(
+                f"Build fulltext search query on table <{table_name}>:\n{compiled_sql}"
+            )
+
+        return stmt
 
     def _execute_query(self) -> Tuple[List[str], List[Any]]:
+        if self._limit is None:
+            raise ValueError(
+                "limit is required for search, please specify it through " ".limit(n)"
+            )
+
+        if self._search_type == "vector":
+            return self._exec_vector_query()
+        elif self._search_type == "fulltext":
+            return self._exec_fulltext_query()
+        elif self._search_type == "hybrid":
+            # return self._exec_hybrid_query()
+            raise NotImplementedError(
+                "hybrid search is not supported yet, please wait for the next release"
+            )
+        else:
+            raise ValueError(
+                f"invalid search type: {self._search_type}, allowed search types are "
+                "`vector`, `fulltext`, and `hybrid`"
+            )
+
+    def _exec_vector_query(self) -> Tuple[List[str], List[Row]]:
         with self._client.session() as db_session:
-            sql_stmt = self._build_query()
-
-            if self._debug:
-                db_engine = self._table.db_engine
-                compiled_sql = sql_stmt.compile(
-                    dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
-                )
-                logger.info(
-                    f"Execute vector search query on table <{self._table.table_name}>:\n{compiled_sql}"
-                )
-
-            # Execute SQL query.
-            result = db_session.execute(sql_stmt)
+            vector_query = self._build_vector_query()
+            result = db_session.execute(vector_query)
             keys = result.keys()
             rows = result.fetchall()
 
-            # Rerank.
+            # Apply reranker to improve the accuracy of vector search results. (Optional)
             if self._reranker is not None:
-                if self._rerank_field_name is not None:
-                    rerank_field_name = self._rerank_field_name
-                elif (
-                    self._vector_column is not None
-                    and self._vector_column.name in self._table.vector_field_configs
-                ):
-                    vector_field = self._table.vector_field_configs[
-                        self._vector_column.name
-                    ]
-                    rerank_field_name = vector_field["source_field_name"]
-                else:
-                    raise ValueError(
-                        "Please specify the rerank field name through .rerank(reranker, rerank_field_name)"
-                    )
-
-                if self._query_str is None:
-                    raise ValueError(
-                        "Query string is required for reranker, please specify it through .search({ 'query_str': '<your query string>', 'query_embedding': [...] })"
-                    )
-
-                documents = [row._mapping[rerank_field_name] for row in rows]
-                reranked_results = self._reranker.rerank(
-                    self._query_str, documents, self._limit
-                )
-                reranked_rows = []
-                for item in reranked_results:
-                    row = rows[item.index]
-                    score_index = row._key_to_index["_score"]
-                    _data = list(row._tuple())
-                    _data[score_index] = item.relevance_score
-                    reranked_rows.append(
-                        Row(
-                            row._parent,
-                            None,
-                            row._key_to_index,
-                            tuple(_data),
-                        )
-                    )
-                rows = reranked_rows
+                rows = self._rerank_result_set(rows)
 
             return keys, rows
+
+    def _exec_fulltext_query(self) -> Tuple[List[str], List[Row]]:
+        with self._client._db_engine.connect() as conn:
+            query = self._build_fulltext_query()
+            result = conn.execute(query)
+            keys = result.keys()
+            rows = result.fetchall()
+
+        # Apply reranker to improve the accuracy of fulltext search results. (Optional)
+        if self._reranker is not None:
+            rows = self._rerank_result_set(rows)
+
+        return keys, rows
+
+    def _exec_hybrid_query(self) -> Tuple[List[str], List[Row]]:
+        with self._client.session() as db_session:
+            vs_query = self._build_vector_query()
+            vs_result = db_session.execute(vs_query)
+            vs_keys = vs_result.keys()
+            vs_rows = vs_result.fetchall()
+
+            fts_query = self._build_fulltext_query()
+            fts_result = db_session.execute(fts_query)
+            fts_keys = fts_result.keys()
+            fts_rows = fts_result.fetchall()
+
+            # Merge the results from vector search and fulltext search.
+            keys = list(vs_keys) + list(fts_keys)
+            rows = list(vs_rows) + list(fts_rows)
+
+            # Apply reranker to improve the quality of fulltext search results. (Optional)
+            if self._reranker is not None:
+                rows = self._rerank_result_set(rows)
+
+            return keys, rows
+
+    def _rerank_result_set(self, rows: List[Row]) -> List[Row]:
+        """
+        Rerank the search results.
+
+        Args:
+            rows: The rows to rerank.
+
+        Returns:
+            The reranked rows.
+        """
+        rerank_field_name = self._get_rerank_field_name()
+
+        if self._query_text is None:
+            raise ValueError(
+                "query text is required for reranker, please specify it through "
+                ".text('<your query string>')"
+            )
+
+        documents = [row._mapping[rerank_field_name] for row in rows]
+        reranked_results = self._reranker.rerank(
+            self._query_text, documents, self._limit
+        )
+        reranked_rows = []
+        for item in reranked_results:
+            row = rows[item.index]
+            score_index = row._key_to_index["_score"]
+            _data = list(row._tuple())
+            # Replace the score with the reranked score.
+            _data[score_index] = item.relevance_score
+            reranked_rows.append(
+                Row(
+                    row._parent,
+                    None,
+                    row._key_to_index,
+                    tuple(_data),
+                )
+            )
+        return reranked_rows
+
+    def _get_rerank_field_name(self) -> str:
+        if self._rerank_field_name is not None:
+            return self._rerank_field_name
+
+        if self._search_type in ["vector", "hybrid"]:
+            if self._vector_column is not None:
+                vector_field = self._table.vector_field_configs[
+                    self._vector_column.name
+                ]
+                return vector_field["source_field_name"]
+
+        if self._search_type == "fulltext":
+            if self._text_column is not None:
+                return self._text_column
+
+        raise ValueError(
+            "Please specify the rerank field name through .rerank(reranker, rerank_field_name)"
+        )
 
     def to_rows(self) -> Sequence[Any]:
         _, rows = self._execute_query()
@@ -328,9 +440,15 @@ class VectorSearchQuery(SearchQuery):
         results = []
         for row in rows:
             values: Dict[str, Any] = dict(row._mapping)
-            distance: float = values.pop(DISTANCE_LABEL)
-            similarity_score: float = values.pop(SIMILARITY_SCORE_LABEL)
-            score: float = values.pop(SCORE_LABEL)
+            distance: float = (
+                values.pop(DISTANCE_LABEL) if DISTANCE_LABEL in values else None
+            )
+            similarity_score: float = (
+                values.pop(SIMILARITY_SCORE_LABEL)
+                if SIMILARITY_SCORE_LABEL in values
+                else None
+            )
+            score: float = values.pop(SCORE_LABEL) if SCORE_LABEL in values else None
             hit = table_model.model_validate(values)
 
             if not with_score:
@@ -357,20 +475,3 @@ class VectorSearchQuery(SearchQuery):
 
         keys, rows = self._execute_query()
         return pd.DataFrame(rows, columns=keys)
-
-
-T = TypeVar("T", bound=TableModel)
-
-
-class SearchResultModel(BaseModel, Generic[T]):
-    hit: T
-    distance: Optional[float] = Field(None)
-    similarity_score: Optional[float] = Field(None)
-    score: Optional[float] = Field(None)
-
-    def __getattr__(self, item: str):
-        if hasattr(self.hit, item):
-            return getattr(self.hit, item)
-        raise AttributeError(
-            f"'{self.__class__.__name__}' object has no attribute '{item}'"
-        )

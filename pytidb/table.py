@@ -5,7 +5,6 @@ from typing import (
     Dict,
     TypeVar,
     Type,
-    overload,
     Union,
     TYPE_CHECKING,
 )
@@ -25,10 +24,12 @@ from pytidb.schema import (
     DistanceMetric,
     ColumnInfo,
 )
-from pytidb.search import SearchType, VectorSearchQuery, SearchQuery
+from pytidb.search import SearchType, SearchQuery
 from pytidb.utils import (
     build_filter_clauses,
+    check_text_column,
     check_vector_column,
+    filter_text_columns,
     filter_vector_columns,
 )
 
@@ -46,6 +47,7 @@ class Table(Generic[T]):
         client: "TiDBClient",
         schema: Optional[Type[T]] = None,
         vector_column: Optional[str] = None,
+        text_column: Optional[str] = None,
         distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
         checkfirst: bool = True,
     ):
@@ -80,15 +82,18 @@ class Table(Generic[T]):
             self._db_engine, tables=[self._table_model.__table__], checkfirst=checkfirst
         )
 
-        # Create index.
+        # Find vector and text columns.
         self._vector_columns = filter_vector_columns(self._columns)
+        self._text_columns = filter_text_columns(self._columns)
+
+        # Create vector index automatically.
         vector_adaptor = VectorAdaptor(self._db_engine)
         for col in self._vector_columns:
             if vector_adaptor.has_vector_index(col):
                 continue
             vector_adaptor.create_vector_index(col, distance_metric)
 
-        # Determine vector column for search.
+        # Determine default vector column for vector search.
         if vector_column is not None:
             self._vector_column = check_vector_column(self._columns, vector_column)
         else:
@@ -96,6 +101,15 @@ class Table(Generic[T]):
                 self._vector_column = self._vector_columns[0]
             else:
                 self._vector_column = None
+
+        # Determine default text column for fulltext search.
+        if text_column is not None:
+            self._text_column = check_text_column(self._columns, text_column)
+        else:
+            if len(self._text_columns) == 1:
+                self._text_column = self._text_columns[0]
+            else:
+                self._text_column = None
 
     @property
     def table_model(self) -> T:
@@ -120,6 +134,14 @@ class Table(Generic[T]):
     @property
     def vector_columns(self):
         return self._vector_columns
+
+    @property
+    def text_column(self):
+        return self._text_column
+
+    @property
+    def text_columns(self):
+        return self._text_columns
 
     @property
     def vector_field_configs(self):
@@ -247,20 +269,53 @@ class Table(Generic[T]):
                 query = query.filter(*filter_clauses)
             return query.all()
 
-    @overload
-    def search(
-        self, query: VectorDataType, query_type: SearchType = SearchType.VECTOR_SEARCH
-    ) -> VectorSearchQuery: ...
-
     def search(
         self,
         query: Optional[Union[VectorDataType, str, QueryBundle]] = None,
-        query_type: SearchType = SearchType.VECTOR_SEARCH,
+        search_type: SearchType = "vector",
     ) -> SearchQuery:
-        if query_type == SearchType.VECTOR_SEARCH:
-            return VectorSearchQuery(
-                table=self,
-                query=query,
-            )
+        return SearchQuery(
+            table=self,
+            query=query,
+            search_type=search_type,
+        )
+
+    def _has_index(self, column_name: str) -> bool:
+        table_name = self._table_model.__tablename__
+        show_indexes_stmt = text("""
+        SELECT *
+        FROM INFORMATION_SCHEMA.TIDB_INDEXES
+        WHERE
+            TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = :table_name
+            AND COLUMN_NAME = :column_name
+        """)
+        rows = self._client.query(
+            show_indexes_stmt, {"table_name": table_name, "column_name": column_name}
+        ).to_list()
+        return len(rows) > 0
+
+    def has_fts_index(self, column_name: str) -> bool:
+        check_text_column(self._columns, column_name)
+        # TODO: need to check if the index is a fulltext index.
+        return self._has_index(column_name)
+
+    def create_fts_index(self, column_name: str, name: Optional[str] = None) -> bool:
+        table = self._table_model.__table__
+        column = self._columns[column_name]
+        preparer = self._db_engine.dialect.identifier_preparer
+
+        if name is not None:
+            _name = preparer.quote(name)
         else:
-            raise ValueError(f"Unsupported query type: {query_type}")
+            _name = preparer.quote(f"fts_idx_{column_name}")
+        _table_name = preparer.format_table(table)
+        _column_name = preparer.format_column(column)
+
+        add_tiflash_replica_stmt = f"ALTER TABLE {_table_name} SET TIFLASH REPLICA 1;"
+        self._client.execute(add_tiflash_replica_stmt, raise_error=True)
+
+        create_index_stmt = f"CREATE FULLTEXT INDEX IF NOT EXISTS {_name} ON {_table_name} ({_column_name}) WITH PARSER MULTILINGUAL;"
+        self._client.execute(create_index_stmt, raise_error=True)
+
+        return True
