@@ -25,6 +25,8 @@
         "mypy",
         "mysqlconnector",
         "mysqldb",
+        "OLAP",
+        "OLTP",
         "outerjoin",
         "prefilter",
         "primaryjoin",
@@ -37,6 +39,7 @@
         "sqlmodel",
         "sqls",
         "Streamlit",
+        "tablename",
         "tidbcloud",
         "tiflash"
     ]

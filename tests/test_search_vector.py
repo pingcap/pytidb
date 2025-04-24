@@ -8,7 +8,7 @@ from pytidb.rerankers import Reranker
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, TableModel, Field, Column
 from pytidb.datatype import Vector
-from pytidb.search import SIMILARITY_SCORE_LABEL
+from pytidb.search import SCORE_LABEL
 
 
 # Vector Search
@@ -62,7 +62,7 @@ def test_vector_search(vector_table: Table):
     results = vector_table.search([1, 2, 3]).limit(2).to_list()
     assert len(results) > 0
     assert results[0]["text"] == "bar"
-    assert results[0][SIMILARITY_SCORE_LABEL] == 1
+    assert results[0][SCORE_LABEL] == 1
     assert results[0]["user_id"] == 2
     assert results[0]["_distance"] == 0
     assert results[0]["_score"] == 1

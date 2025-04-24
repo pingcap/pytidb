@@ -51,7 +51,7 @@ class Table(Generic[T]):
         distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
         checkfirst: bool = True,
     ):
-        self._db = client
+        self._client = client
         self._db_engine = client.db_engine
         self._identifier_preparer = self._db_engine.dialect.identifier_preparer
 
@@ -79,8 +79,9 @@ class Table(Generic[T]):
                     }
 
         # Create table.
+        self._sa_table = self._table_model.__table__
         Base.metadata.create_all(
-            self._db_engine, tables=[self._table_model.__table__], checkfirst=checkfirst
+            self._db_engine, tables=[self._sa_table], checkfirst=checkfirst
         )
 
         # Find vector and text columns.
@@ -122,7 +123,7 @@ class Table(Generic[T]):
 
     @property
     def client(self) -> "TiDBClient":
-        return self._db
+        return self._client
 
     @property
     def db_engine(self) -> Engine:
@@ -149,7 +150,7 @@ class Table(Generic[T]):
         return self._vector_field_configs
 
     def get(self, id: Any) -> T:
-        with self._db.session() as db_session:
+        with self._client.session() as db_session:
             return db_session.get(self._table_model, id)
 
     def insert(self, data: T) -> T:
@@ -166,7 +167,7 @@ class Table(Generic[T]):
             vector_embedding = config["embed_fn"].get_source_embedding(embedding_source)
             setattr(data, field_name, vector_embedding)
 
-        with self._db.session() as db_session:
+        with self._client.session() as db_session:
             db_session.add(data)
             db_session.flush()
             db_session.refresh(data)
@@ -192,7 +193,7 @@ class Table(Generic[T]):
             for item, embedding in zip(items_need_embedding, vector_embeddings):
                 setattr(item, field_name, embedding)
 
-        with self._db.session() as db_session:
+        with self._client.session() as db_session:
             db_session.add_all(data)
             db_session.flush()
             for item in data:
@@ -213,7 +214,7 @@ class Table(Generic[T]):
             vector_embedding = config["embed_fn"].get_source_embedding(embedding_source)
             values[field_name] = vector_embedding
 
-        with self._db.session() as db_session:
+        with self._client.session() as db_session:
             filter_clauses = build_filter_clauses(
                 filters, self._columns, self._table_model
             )
@@ -227,7 +228,7 @@ class Table(Generic[T]):
         params:
             filters: (Optional[Dict[str, Any]]): The filters to apply to the delete operation.
         """
-        with self._db.session() as db_session:
+        with self._client.session() as db_session:
             filter_clauses = build_filter_clauses(
                 filters, self._columns, self._table_model
             )
@@ -235,13 +236,13 @@ class Table(Generic[T]):
             db_session.execute(stmt)
 
     def truncate(self):
-        with self._db.session():
+        with self._client.session():
             table_name = self._identifier_preparer.quote(self.table_name)
             stmt = f"TRUNCATE TABLE {table_name};"
-            self._db.execute(stmt)
+            self._client.execute(stmt)
 
     def columns(self) -> List[ColumnInfo]:
-        with self._db.session():
+        with self._client.session():
             table_name = self._identifier_preparer.quote(self.table_name)
             stmt = """
                 SELECT
@@ -252,14 +253,14 @@ class Table(Generic[T]):
                     TABLE_SCHEMA = DATABASE()
                     AND TABLE_NAME = :table_name;
             """
-            res = self._db.query(stmt, {"table_name": table_name})
+            res = self._client.query(stmt, {"table_name": table_name})
             return res.to_pydantic(ColumnInfo)
 
     def rows(self):
-        with self._db.session():
+        with self._client.session():
             table_name = self._identifier_preparer.quote(self.table_name)
             stmt = f"SELECT COUNT(*) FROM {table_name};"
-            return self._db.query(stmt).scalar()
+            return self._client.query(stmt).scalar()
 
     def query(self, filters: Optional[Dict[str, Any]] = None) -> List[T]:
         with Session(self._db_engine) as db_session:
@@ -297,8 +298,8 @@ class Table(Generic[T]):
                 AND INDEX_KIND = :index_kind
         )
         """
-        with self._db.session():
-            res = self._db.query(
+        with self._client.session():
+            res = self._client.query(
                 stmt,
                 {
                     "table_name": self.table_name,
@@ -320,11 +321,11 @@ class Table(Generic[T]):
         add_tiflash_replica_stmt = (
             f"ALTER TABLE {self.table_name} SET TIFLASH REPLICA 1;"
         )
-        self._db.execute(add_tiflash_replica_stmt, raise_error=True)
+        self._client.execute(add_tiflash_replica_stmt, raise_error=True)
 
         create_index_stmt = (
             f"CREATE FULLTEXT INDEX {_name} ON "
             f"{self.table_name} ({_column_name}) "
             f"WITH PARSER MULTILINGUAL;"
         )
-        self._db.execute(create_index_stmt, raise_error=True)
+        self._client.execute(create_index_stmt, raise_error=True)

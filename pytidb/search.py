@@ -13,11 +13,17 @@ from typing import (
 )
 
 from pydantic import BaseModel, Field
-from sqlalchemy import Row, Select, asc, desc, literal, select, and_
+from sqlalchemy import Row, Select, asc, desc, literal, select, and_, text
 from pytidb.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, QueryBundle, VectorDataType, TableModel
-from pytidb.utils import build_filter_clauses, check_text_column, check_vector_column
+from pytidb.utils import (
+    build_filter_clauses,
+    check_text_column,
+    check_vector_column,
+    get_row_id_from_row,
+    merge_result_rows,
+)
 from pytidb.logger import logger
 
 
@@ -30,17 +36,27 @@ SearchType = Literal["vector", "fulltext", "hybrid"]
 
 
 DISTANCE_LABEL = "_distance"
-SIMILARITY_SCORE_LABEL = "_similarity_score"
+MATCH_SCORE_LABEL = "_match_score"
 SCORE_LABEL = "_score"
+ROW_ID_LABEL = "_tidb_rowid"
 
 T = TypeVar("T", bound=TableModel)
 
 
-class SearchResultModel(BaseModel, Generic[T]):
+class SearchResult(BaseModel, Generic[T]):
     hit: T
-    distance: Optional[float] = Field(None)
-    similarity_score: Optional[float] = Field(None)
-    score: Optional[float] = Field(None)
+    distance: Optional[float] = Field(
+        description="The distance between the query vector and the vectors in the table.",
+        default=None,
+    )
+    match_score: Optional[float] = Field(
+        description="The match score between the query text and the text in the table.",
+        default=None,
+    )
+    score: Optional[float] = Field(
+        description="The score of the search result.",
+        default=None,
+    )
 
     def __getattr__(self, item: str):
         if hasattr(self.hit, item):
@@ -48,6 +64,13 @@ class SearchResultModel(BaseModel, Generic[T]):
         raise AttributeError(
             f"'{self.__class__.__name__}' object has no attribute '{item}'"
         )
+
+    @property
+    def similarity_score(self) -> float:
+        if self.distance is not None:
+            return 1 - self.distance
+        else:
+            return None
 
 
 class SearchQuery:
@@ -59,6 +82,7 @@ class SearchQuery:
     ):
         # Table.
         self._table = table
+        self._sa_table = table._sa_table
         self._client = table.client
         self._columns = table._columns
         self._vector_column = table.vector_column
@@ -196,8 +220,15 @@ class SearchQuery:
         # Inner query for ANN search
         table_model = self._table.table_model
         columns = table_model.__table__.c
+        inner_select_columns = list(columns)
+        if self._sa_table.primary_key is None:
+            inner_select_columns.insert(0, text("_tidb_rowid"))
+
         subquery_stmt = (
-            select(columns, distance_column)
+            select(
+                *columns,
+                distance_column,
+            )
             .order_by(asc(DISTANCE_LABEL))
             .limit(num_candidate)
         )
@@ -218,9 +249,12 @@ class SearchQuery:
         subquery = subquery_stmt.subquery("candidates")
 
         # Main query with metadata filters
+        outer_select_columns = list(subquery.c)
+        if self._sa_table.primary_key is None:
+            outer_select_columns.insert(0, text("_tidb_rowid"))
+
         stmt = select(
-            subquery.c,
-            (1 - subquery.c[DISTANCE_LABEL]).label(SIMILARITY_SCORE_LABEL),
+            *outer_select_columns,
             (1 - subquery.c[DISTANCE_LABEL]).label(SCORE_LABEL),
         )
 
@@ -230,7 +264,7 @@ class SearchQuery:
             )
             stmt = stmt.filter(*filter_clauses)
 
-        stmt = stmt.order_by(desc(SIMILARITY_SCORE_LABEL)).limit(self._limit)
+        stmt = stmt.order_by(asc(DISTANCE_LABEL)).limit(self._limit)
 
         # Debug.
         if self._debug:
@@ -246,9 +280,6 @@ class SearchQuery:
         return stmt
 
     def _build_fulltext_query(self) -> Select:
-        table_model = self._table.table_model
-        columns = table_model.__table__.c
-
         if self._query_text is None:
             raise ValueError(
                 "query string is required for fulltext search, please specify it through "
@@ -270,11 +301,19 @@ class SearchQuery:
         else:
             text_column = self._text_column
 
+        table_model = self._table.table_model
+        columns = table_model.__table__.c
+        select_columns = list(columns)
+        if self._sa_table.primary_key is None:
+            select_columns.insert(0, text("_tidb_rowid"))
+
         # TODO: support return score after fts_match_word is supported.
         table_name = self._table.table_name
-        stmt = select(columns, literal(None).label(SCORE_LABEL)).filter(
-            fts_match_word(self._query_text, text_column)
-        )
+        stmt = select(
+            *select_columns,
+            literal(None).label(MATCH_SCORE_LABEL),
+            literal(None).label(SCORE_LABEL),
+        ).filter(fts_match_word(self._query_text, text_column))
 
         if self._filters is not None:
             filter_clauses = build_filter_clauses(self._filters, columns, table_model)
@@ -308,9 +347,7 @@ class SearchQuery:
         elif self._search_type == "fulltext":
             return self._exec_fulltext_query()
         elif self._search_type == "hybrid":
-            raise NotImplementedError(
-                "hybrid search is not supported yet, please wait for the next release"
-            )
+            return self._exec_hybrid_query()
         else:
             raise ValueError(
                 f"invalid search type: {self._search_type}, allowed search types are "
@@ -342,6 +379,33 @@ class SearchQuery:
             rows = self._rerank_result_set(rows)
 
         return keys, rows
+
+    def _exec_hybrid_query(self) -> Tuple[List[str], List[Row]]:
+        with self._client.session() as db_session:
+            vs_query = self._build_vector_query()
+            vs_result = db_session.execute(vs_query)
+            vs_rows = vs_result.fetchall()
+
+            fts_query = self._build_fulltext_query()
+            fts_result = db_session.execute(fts_query)
+            fts_rows = fts_result.fetchall()
+
+            # Merge the rows from vector search and fulltext search.
+            def get_row_id(row: Row) -> Optional[int]:
+                return get_row_id_from_row(row, self._sa_table)
+
+            keys, rows = merge_result_rows(vs_rows, fts_rows, get_row_id)
+
+            # Apply reranker to rerank the merged result set. (Optional)
+            if self._reranker is not None:
+                rows = self._rerank_result_set(rows)
+            else:
+                # Sort the rows by score.
+                rows = sorted(
+                    rows, key=lambda row: row._mapping[SCORE_LABEL] or 0, reverse=True
+                )
+
+            return keys, rows[: self._limit]
 
     def _rerank_result_set(self, rows: List[Row]) -> List[Row]:
         """
@@ -417,24 +481,20 @@ class SearchQuery:
         results = []
         for row in rows:
             values: Dict[str, Any] = dict(row._mapping)
-            distance: float = (
-                values.pop(DISTANCE_LABEL) if DISTANCE_LABEL in values else None
+            distance = values.pop(DISTANCE_LABEL) if DISTANCE_LABEL in values else None
+            match_score = (
+                values.pop(MATCH_SCORE_LABEL) if MATCH_SCORE_LABEL in values else None
             )
-            similarity_score: float = (
-                values.pop(SIMILARITY_SCORE_LABEL)
-                if SIMILARITY_SCORE_LABEL in values
-                else None
-            )
-            score: float = values.pop(SCORE_LABEL) if SCORE_LABEL in values else None
+            score = values.pop(SCORE_LABEL) if SCORE_LABEL in values else None
             hit = table_model.model_validate(values)
 
             if not with_score:
                 results.append(hit)
             else:
                 results.append(
-                    SearchResultModel(
+                    SearchResult(
                         distance=distance,
-                        similarity_score=similarity_score,
+                        match_score=match_score,
                         score=score,
                         hit=hit,
                     )

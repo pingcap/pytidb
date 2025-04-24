@@ -1,6 +1,6 @@
 [project]
 name = "pytidb"
-version = "0.0.5.dev5"
+version = "0.0.5.dev8"
 description = "A Python library for TiDB."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -9,7 +9,7 @@ authors = [
     { name = "sykp241095", email = "sykp241095@gmail.com" },
 ]
 dependencies = [
-    "sqlmodel==0.0.24",
+    "sqlmodel>=0.0.14",
     "tidb-vector>=0.0.14",
     "pymysql>=1.1.1",
 ]
