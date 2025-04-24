@@ -25,6 +25,8 @@
         "mypy",
         "mysqlconnector",
         "mysqldb",
+        "OLAP",
+        "OLTP",
         "outerjoin",
         "prefilter",
         "primaryjoin",
