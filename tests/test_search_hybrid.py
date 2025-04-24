@@ -53,7 +53,6 @@ def test_hybrid_search(hybrid_table: Table):
     # to_pydantic()
     results = (
         hybrid_table.search("HTAP database", search_type="hybrid")
-        .debug()
         .text_column("text")
         .limit(2)
         .to_pydantic()

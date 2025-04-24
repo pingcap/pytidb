@@ -220,10 +220,13 @@ class SearchQuery:
         # Inner query for ANN search
         table_model = self._table.table_model
         columns = table_model.__table__.c
+        inner_select_columns = list(columns)
+        if self._sa_table.primary_key is None:
+            inner_select_columns.insert(0, text("_tidb_rowid"))
+
         subquery_stmt = (
             select(
-                text("_tidb_rowid") if self._sa_table.primary_key is None else None,
-                columns,
+                *columns,
                 distance_column,
             )
             .order_by(asc(DISTANCE_LABEL))
@@ -246,9 +249,12 @@ class SearchQuery:
         subquery = subquery_stmt.subquery("candidates")
 
         # Main query with metadata filters
+        outer_select_columns = list(subquery.c)
+        if self._sa_table.primary_key is None:
+            outer_select_columns.insert(0, text("_tidb_rowid"))
+
         stmt = select(
-            subquery.c[ROW_ID_LABEL] if self._sa_table.primary_key is None else None,
-            subquery.c,
+            *outer_select_columns,
             (1 - subquery.c[DISTANCE_LABEL]).label(SCORE_LABEL),
         )
 
@@ -274,9 +280,6 @@ class SearchQuery:
         return stmt
 
     def _build_fulltext_query(self) -> Select:
-        table_model = self._table.table_model
-        columns = table_model.__table__.c
-
         if self._query_text is None:
             raise ValueError(
                 "query string is required for fulltext search, please specify it through "
@@ -298,11 +301,16 @@ class SearchQuery:
         else:
             text_column = self._text_column
 
+        table_model = self._table.table_model
+        columns = table_model.__table__.c
+        select_columns = list(columns)
+        if self._sa_table.primary_key is None:
+            select_columns.insert(0, text("_tidb_rowid"))
+
         # TODO: support return score after fts_match_word is supported.
         table_name = self._table.table_name
         stmt = select(
-            text("_tidb_rowid") if self._sa_table.primary_key is None else None,
-            columns,
+            *select_columns,
             literal(None).label(MATCH_SCORE_LABEL),
             literal(None).label(SCORE_LABEL),
         ).filter(fts_match_word(self._query_text, text_column))
