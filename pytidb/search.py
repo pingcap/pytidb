@@ -402,7 +402,7 @@ class SearchQuery:
             else:
                 # Sort the rows by score.
                 rows = sorted(
-                    rows, key=lambda row: row._mapping["_score"], reverse=True
+                    rows, key=lambda row: row._mapping[SCORE_LABEL] or 0, reverse=True
                 )
 
             return keys, rows[: self._limit]
