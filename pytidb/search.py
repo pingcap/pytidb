@@ -65,6 +65,7 @@ class SearchResult(BaseModel, Generic[T]):
             f"'{self.__class__.__name__}' object has no attribute '{item}'"
         )
 
+    @property
     def similarity_score(self) -> float:
         if self.distance is not None:
             return 1 - self.distance
@@ -383,13 +384,13 @@ class SearchQuery:
             fts_result = db_session.execute(fts_query)
             fts_rows = fts_result.fetchall()
 
-            # Merge the keys and rows from vector search and fulltext search.
+            # Merge the rows from vector search and fulltext search.
             def get_row_id(row: Row) -> Optional[int]:
                 return get_row_id_from_row(row, self._sa_table)
 
             keys, rows = merge_result_rows(vs_rows, fts_rows, get_row_id)
 
-            # Apply reranker to improve the quality of fulltext search results. (Optional)
+            # Apply reranker to rerank the merged result set. (Optional)
             if self._reranker is not None:
                 rows = self._rerank_result_set(rows)
             else:
