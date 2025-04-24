@@ -9,12 +9,11 @@
   </a>
 </p>
 
-Python SDK for vector storage and retrieval operations with TiDB.
+A Python SDK for TiDB developers to build AI applications efficiently.
 
+- 🔍 Support various search modes: vector search, fulltext search, hybrid search
 - 🔄 Automatic embedding generation
-- 🔍 Vector similarity search
 - 🎯 Advanced filtering capabilities
-- 📦 Bulk operations support
 - 💱 Transaction support
 - 🔌 [Model Context Protocol (MCP) support](https://github.com/pingcap/pytidb/blob/main/docs/mcp.md)
 
@@ -25,7 +24,7 @@ Documentation: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/do
 ```bash
 pip install pytidb
 
-# If you want to use built-in embedding function.
+# If you want to use built-in embedding function and rerankers.
 pip install "pytidb[models]"
 
 # If you want to convert query result to pandas DataFrame.
@@ -84,13 +83,32 @@ table.bulk_insert(
 )
 ```
 
-### 🔍 Vector Search with Filtering
+### 🔍 Vector Search
 
 ```python
 table.search(
     "A quick fox in the park"
 )  # 👈 The query will be embedding automatically.
 .filter({"user_id": 2})
+.limit(2)
+.to_pandas()
+```
+
+### 🔍 Fulltext Search
+
+```python
+table.search(search_type="fulltext")
+.text("keyword")
+.limit(2)
+.to_pandas()
+```
+
+### 🔍 Hybrid Search
+
+```python
+table.search(search_type="hybrid")
+.text("keyword")
+.vector([1, 2, 3])
 .limit(2)
 .to_pandas()
 ```

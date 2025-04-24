@@ -2087,7 +2087,7 @@ wheels = [
 
 [[package]]
 name = "pytidb"
-version = "0.0.5.dev5"
+version = "0.0.5.dev6"
 source = { editable = "." }
 dependencies = [
     { name = "pymysql" },
@@ -2129,7 +2129,7 @@ requires-dist = [
     { name = "mcp", extras = ["cli"], marker = "extra == 'mcp'", specifier = ">=1.6.0" },
     { name = "pandas", marker = "extra == 'pandas'" },
     { name = "pymysql", specifier = ">=1.1.1" },
-    { name = "sqlmodel", specifier = "==0.0.24" },
+    { name = "sqlmodel", specifier = ">=0.0.14" },
     { name = "tidb-vector", specifier = ">=0.0.14" },
 ]
 provides-extras = ["mcp", "pandas", "models"]

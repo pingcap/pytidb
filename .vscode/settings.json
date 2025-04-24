@@ -39,6 +39,7 @@
         "sqlmodel",
         "sqls",
         "Streamlit",
+        "tablename",
         "tidbcloud",
         "tiflash"
     ]
