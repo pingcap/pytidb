@@ -137,10 +137,10 @@ def test_merge_result_rows_with_fusion():
     assert rows_by_id[1].score == 175  # 85 + 90
     assert rows_by_id[1].distance == 100  # 2 * 50
 
-    # Case 2: Score None in rows_a - take rows_b score
-    assert rows_by_id[2].score == 88  # None + 88 = 88
+    # Case 2: Score None in rows_a
+    assert rows_by_id[2].score == 88  # 0 (None) + 88 = 88
     assert rows_by_id[2].distance == 2000  # 200 * 10
 
     # Case 3: Distance None in rows_b
     assert rows_by_id[3].score == 187  # 95 + 92
-    assert rows_by_id[3].distance == 10  # 10 * 1
+    assert rows_by_id[3].distance == 10  # 10 * 1 (None)
