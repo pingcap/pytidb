@@ -87,7 +87,7 @@ table.bulk_insert(
 
 ```python
 table.search(
-    "A quick fox in the park"
+    "<query>"
 )  # 👈 The query will be embedding automatically.
 .filter({"user_id": 2})
 .limit(2)
@@ -98,19 +98,24 @@ table.search(
 
 ```python
 table.search(search_type="fulltext")
-.text("keyword")
-.limit(2)
-.to_pandas()
+  .text("<keywords>")
+  .limit(2)
+  .to_pandas()
 ```
 
 ### 🔍 Hybrid Search
 
 ```python
+from pytidb.rerankers import Reranker
+
+jinaai = Reranker(model_name="jina_ai/jina-reranker-v2-base-multilingual")
+
 table.search(search_type="hybrid")
-.text("keyword")
-.vector([1, 2, 3])
-.limit(2)
-.to_pandas()
+  .text("<keywords>")
+  .vector([1, 2, 3])
+  .rerank(jinaai, "text")
+  .limit(2)
+  .to_pandas()
 ```
 
 #### Advanced Filtering
