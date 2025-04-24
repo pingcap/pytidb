@@ -249,7 +249,6 @@ class SearchQuery:
         stmt = select(
             subquery.c[ROW_ID_LABEL] if self._sa_table.primary_key is None else None,
             subquery.c,
-            literal(None).label(MATCH_SCORE_LABEL),
             (1 - subquery.c[DISTANCE_LABEL]).label(SCORE_LABEL),
         )
 
@@ -304,7 +303,6 @@ class SearchQuery:
         stmt = select(
             text("_tidb_rowid") if self._sa_table.primary_key is None else None,
             columns,
-            literal(None).label(DISTANCE_LABEL),
             literal(None).label(MATCH_SCORE_LABEL),
             literal(None).label(SCORE_LABEL),
         ).filter(fts_match_word(self._query_text, text_column))
@@ -475,9 +473,7 @@ class SearchQuery:
         results = []
         for row in rows:
             values: Dict[str, Any] = dict(row._mapping)
-            distance_score = (
-                values.pop(DISTANCE_LABEL) if DISTANCE_LABEL in values else None
-            )
+            distance = values.pop(DISTANCE_LABEL) if DISTANCE_LABEL in values else None
             match_score = (
                 values.pop(MATCH_SCORE_LABEL) if MATCH_SCORE_LABEL in values else None
             )
@@ -489,7 +485,7 @@ class SearchQuery:
             else:
                 results.append(
                     SearchResult(
-                        distance=distance_score,
+                        distance=distance,
                         match_score=match_score,
                         score=score,
                         hit=hit,
