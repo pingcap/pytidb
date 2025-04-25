@@ -52,6 +52,10 @@ db = TiDBClient.connect(
 
 ### 🤖 Auto Embedding
 
+PyTiDB automatically embeds the text field (e.g. `text`) and saves the vector embedding to the vector field (e.g. `text_vec`).
+
+**Create a table with embedding function**:
+
 ```python
 from pytidb.schema import TableModel, Field
 from pytidb.embeddings import EmbeddingFunction
@@ -71,7 +75,7 @@ class Chunk(TableModel, table=True):
 table = db.create_table(schema=Chunk)
 ```
 
-### 📦 Bulk operations support
+**Bulk insert data**:
 
 ```python
 table.bulk_insert(
@@ -83,44 +87,56 @@ table.bulk_insert(
 )
 ```
 
-### 🔍 Vector Search
+### 🔍 Search
+
+**Vector Search**:
+
+Vector search help you find the most relevant records based on **semantic similarity**, so you don't need to explicitly include all the keywords in your query.
 
 ```python
-table.search(
-    "<query>"
-)  # 👈 The query will be embedding automatically.
-.filter({"user_id": 2})
-.limit(2)
-.to_pandas()
+df = (
+  table.search("<query>")  # 👈 The query will be embedding automatically.
+    .filter({"user_id": 2})
+    .limit(2)
+    .to_pandas()
+)
 ```
 
-### 🔍 Fulltext Search
+**Fulltext Search**:
+
+Full-text search helps tokenize the query and find the most relevant records by matching exact keywords.
 
 ```python
-table.search(search_type="fulltext")
-  .text("<keywords>")
-  .limit(2)
-  .to_pandas()
+if not table.has_fts_index("text"):
+    table.create_fts_index("text")   # 👈 Create a fulltext index on the text column.
+
+df = (
+  table.search("<query>", search_type="fulltext")
+    .limit(2)
+    .to_pandas()
+)
 ```
 
-### 🔍 Hybrid Search
+**Hybrid Search**:
+
+Hybrid search combines vector search and fulltext search to provide a more accurate and relevant search result.
 
 ```python
 from pytidb.rerankers import Reranker
 
-jinaai = Reranker(model_name="jina_ai/jina-reranker-v2-base-multilingual")
+jinaai = Reranker(model_name="jina_ai/jina-reranker-m0")
 
-table.search(search_type="hybrid")
-  .text("<keywords>")
-  .vector([1, 2, 3])
-  .rerank(jinaai, "text")
-  .limit(2)
-  .to_pandas()
+df = (
+  table.search("<query>", search_type="hybrid")
+    .rerank(jinaai, "text")  # 👈 Rerank the query result with the jinaai model.
+    .limit(2)
+    .to_pandas()
+)
 ```
 
 #### Advanced Filtering
 
-TiDB Client supports various filter operators for flexible querying:
+PyTiDB supports various operators for flexible filtering:
 
 | Operator | Description               | Example                                      |
 |----------|---------------------------|----------------------------------------------|
@@ -159,6 +175,8 @@ with Session(engine) as session:
 ```
 
 ### 💱Transaction support
+
+PyTiDB supports transaction management, so you can avoid race conditions and ensure data consistency.
 
 ```python
 with db.session() as session:
