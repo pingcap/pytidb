@@ -54,6 +54,8 @@ db = TiDBClient.connect(
 
 PyTiDB automatically embeds the text field (e.g. `text`) and saves the vector embedding to the vector field (e.g. `text_vec`).
 
+**Create a table with embedding function**:
+
 ```python
 from pytidb.schema import TableModel, Field
 from pytidb.embeddings import EmbeddingFunction
@@ -73,7 +75,7 @@ class Chunk(TableModel, table=True):
 table = db.create_table(schema=Chunk)
 ```
 
-### 📦 Bulk operations support
+**Bulk insert data**:
 
 ```python
 table.bulk_insert(
