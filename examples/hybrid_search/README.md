@@ -1,7 +1,10 @@
-# Fulltext Search Examples
+# Hybrid Search Demo
 
-* Use `pytidb` to connect to TiDB
-* Use Streamlit as web ui
+In this demo, we will show you how to use TiDB to perform hybrid search (vector + fulltext) on a set of documents.
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/4626e8c4-9ff9-45c9-b744-d649f41347db" alt="hybrid search demo" width="754"/>
+</p>
 
 ## Prerequisites
 

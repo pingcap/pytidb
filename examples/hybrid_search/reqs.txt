@@ -1,6 +1,6 @@
 pytidb==0.0.5
+pytidb[models]
 pymysql
 streamlit
 httpx[socks]
 python-dotenv
-litellm==1.40.0

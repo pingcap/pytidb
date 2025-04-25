@@ -53,20 +53,27 @@ if not table.has_fts_index("text"):
 # Ingest sample documents
 
 sample_documents = [
-    "TiDB is a database for AI applications with vector search, knowledge graphs, and operational data capabilities.",
     "Ollama is an open-source platform that allows you to run large language models (LLMs) locally on your machine.",
-    "GPT-4 is a multimodal large language model created by OpenAI, the fourth in its GPT series.",
-    "LlamaIndex is the leading framework for building LLM-powered agents over your data.",
-    "LangChain is a framework for developing applications powered by large language models.",
-    "OpenAI is an AI research organization founded in 2015 and based in San Francisco.",
+    "LlamaIndex is the leading framework for building LLM-powered agents and AI applications over your data.",
+    "LangChain is a framework for developing AI applications powered by large language models.",
+    # For multi-language test.
+    "TiDB is a database for AI applications with vector search, knowledge graphs, and operational data capabilities.",
     "TiDB是一个开源的NewSQL数据库，支持混合事务和分析处理（HTAP）工作负载。",
     "TiDBはオープンソースの分散型HTAPデータベースで、トランザクション処理と分析処理の両方をサポートしています。",
-    "AWS is a cloud computing platform providing on-demand services to individuals and organizations.",
-    "Langfuse is an open-source LLM engineering platform that helps teams debug and analyze LLM applications.",
-    "Machine learning algorithms improve with more training data.",
-    "Neural networks are inspired by the human brain's structure.",
+    "MySQL is a relational database management system.",
+    "Redis is an in-memory data structure store.",
     "Docker containers package applications with their dependencies.",
-    "Artificial intelligence aims to mimic human cognitive functions.",
+    "HTTPS is a protocol for secure communication over the internet.",
+    "SSH is a protocol for secure remote login from one computer to another.",
+    "Blockchain is a distributed ledger technology that enables secure and transparent transactions.",
+    "Autonomous vehicles are vehicles that can drive themselves without human intervention.",
+    "Physical intelligence is the ability of machines to understand and reason about the physical world.",
+    "Linux is a family of open-source Unix-like operating systems based on the Linux kernel.",
+    "iOS is a smartphone operating system developed by Apple Inc.",
+    "Android is an open-source mobile operating system developed by Google.",
+    "Twitter is a social media platform that allows users to share and interact with messages called 'tweets'.",
+    "Amazon is a platform for buying and selling products online.",
+    "Azure is a cloud computing platform providing on-demand services to individuals and organizations.",
 ]
 
 
@@ -101,7 +108,7 @@ limit = st.sidebar.slider(
 sample_query_text = (
     "HTAP database"
     if search_type == "fulltext"
-    else "A library for my artificial intelligence software"
+    else "A library to build artificial intelligence software"
 )
 query_text = st.text_input(
     label=f"Input your search query (e.g. '{sample_query_text}')",
@@ -120,10 +127,11 @@ if st.button("Search") and query_text:
 
         if df.size > 0:
             st.write("##### Search results:")
-            df = df.drop(columns=["text_vec", "_match_score"])
-            st.dataframe(
-                df, hide_index=True, column_order=["id", "text", "_distance", "_score"]
-            )
+            columns_to_hide = ["text_vec"]
+            if search_type != "vector":
+                columns_to_hide.append("_match_score")
+            df = df.drop(columns=columns_to_hide)
+            st.dataframe(df, hide_index=True)
         else:
             st.info("No results found")
 else:
