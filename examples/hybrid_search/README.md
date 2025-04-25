@@ -30,8 +30,7 @@ pip install -r reqs.txt
 
 **Step3**: Set up environment to connect to storage
 
-If you are using TiDB Cloud, you can find the connection string in the [TiDB Cloud console](https://tidbcloud.com/).
-
+If you are using TiDB Cloud, you can find the connection parameters in the [TiDB Cloud console](https://tidbcloud.com/).
 
 ```bash
 cat > .env <<EOF
