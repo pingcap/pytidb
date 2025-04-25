@@ -80,16 +80,16 @@ table = db.create_table(schema=Chunk)
 ```python
 table.bulk_insert(
     [
-        Chunk(id=2, text="bar", user_id=2),   # 👈 The text field will be embedded to a vector 
-        Chunk(id=3, text="baz", user_id=3),   # and save to the text_vec field automatically.
-        Chunk(id=4, text="qux", user_id=4),
+        Chunk(id=2, text="bar", user_id=2),   # 👈 The text field will be embedded to a 
+        Chunk(id=3, text="baz", user_id=3),   # vector and save to the text_vec field
+        Chunk(id=4, text="qux", user_id=4),   # automatically.
     ]
 )
 ```
 
 ### 🔍 Search
 
-**Vector Search**:
+**Vector Search**
 
 Vector search help you find the most relevant records based on **semantic similarity**, so you don't need to explicitly include all the keywords in your query.
 
@@ -102,7 +102,9 @@ df = (
 )
 ```
 
-**Fulltext Search**:
+For a complete example, please go to the [Vector Search](https://github.com/pingcap/pytidb/blob/main/examples/vector_search) demo.
+
+**Fulltext Search**
 
 Full-text search helps tokenize the query and find the most relevant records by matching exact keywords.
 
@@ -117,7 +119,9 @@ df = (
 )
 ```
 
-**Hybrid Search**:
+For a complete example, please go to the [Fulltext Search](https://github.com/pingcap/pytidb/blob/main/examples/fulltext_search) demo.
+
+**Hybrid Search**
 
 Hybrid search combines vector search and fulltext search to provide a more accurate and relevant search result.
 
@@ -133,6 +137,8 @@ df = (
     .to_pandas()
 )
 ```
+
+For a complete example, please go to the [Hybrid Search](https://github.com/pingcap/pytidb/blob/main/examples/hybrid_search) demo.
 
 #### Advanced Filtering
 
