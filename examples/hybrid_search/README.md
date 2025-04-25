@@ -6,16 +6,18 @@
 ## Prerequisites
 
 * Python 3.10+
-* TiDB server connection string, either local or TiDB Cloud
+* TiDB database connection string (Only for TiDB Serverless `Frankfurt (eu-central-1)` region for now)
+* OpenAI API key (Go to [OpenAI](https://platform.openai.com/api-keys) to get the API key)
+* Jina AI API key (Go to [Jina AI](https://jina.ai/reranker) to get the API key)
 
 
 ## How to run
 
-**Step1**: Clone the repo
+**Step1**: Clone the repository
 
 ```bash
 git clone https://github.com/pingcap/pytidb.git
-cd pytidb/examples/search;
+cd pytidb/examples/hybrid_search;
 ```
 
 **Step2**: Install the required packages and setup environment
@@ -28,15 +30,8 @@ pip install -r reqs.txt
 
 **Step3**: Set up environment to connect to storage
 
-If you are using TiDB Cloud, you'd better set up the environment variable `DATABASE_URL` to connect to the TiDB Cloud database. You can find the connection string in the [TiDB Cloud console](https://tidbcloud.com/).
+If you are using TiDB Cloud, you can find the connection string in the [TiDB Cloud console](https://tidbcloud.com/).
 
-```bash
-cat > .env <<EOF
-DATABASE_URL="mysql+pymysql://<username>:<password>@<host>:4000/test?ssl_verify_cert=true&ssl_verify_identity=true"
-EOF
-```
-
-If you are using a local TiDB server, you can set up the environment variable like this:
 
 ```bash
 cat > .env <<EOF
@@ -45,6 +40,8 @@ TIDB_PORT=4000
 TIDB_USERNAME=root
 TIDB_PASSWORD=
 TIDB_DATABASE=test
+OPENAI_API_KEY=<your-openai-api-key>
+JINA_AI_API_KEY=<your-jina-ai-api-key>
 EOF
 ```
 
