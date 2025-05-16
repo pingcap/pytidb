@@ -1,5 +1,4 @@
 pytidb
 pymysql
 python-dotenv
-litellm==1.40.0
 openai
