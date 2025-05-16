@@ -59,7 +59,14 @@ class Memory:
         self, query: str, user_id: str = "default_user", limit: int = 3
     ) -> Dict[str, Any]:
         results = (
-            self.table.search(query=query, search_type="vector").limit(limit).to_list()
+            self.table.search(query=query, search_type="vector")
+            .filter(
+                {
+                    "user_id": user_id,
+                }
+            )
+            .limit(limit)
+            .to_list()
         )
         return {"results": results}
 
