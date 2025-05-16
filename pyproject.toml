@@ -82,3 +82,6 @@ exclude = [
 
 [tool.hatch.metadata]
 allow-direct-references = true
+
+[tool.uv.workspace]
+members = ["docs"]
