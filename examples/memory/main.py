@@ -76,7 +76,7 @@ memory = Memory()
 
 def chat_with_memories(message: str, user_id: str = "default_user") -> str:
     # Retrieve relevant memories
-    relevant_memories = memory.search(query=message, user_id=user_id, limit=3)
+    relevant_memories = memory.search(query=message, user_id=user_id, limit=10)
     memories_str = "\n".join(
         f"- {entry['memory']}" for entry in relevant_memories["results"]
     )
