@@ -46,6 +46,36 @@ EOF
 
 **Step4**: Run the app
 
+Run the following command to start the app, feel free to talk with the AI assistant and tell him/her any information about you.
+
 ```bash
 python main.py
 ```
+
+```plain
+Chat with AI (type 'exit' to quit)
+You: Hello, I am Mini256.
+AI: Hello, Mini256! How can I assist you today?
+You: I am working at PingCAP.
+AI: That's great to hear, Mini256! PingCAP is known for its work on distributed databases, particularly TiDB. How's your experience been working there?
+You: I am developing pytidb (A Python SDK for TiDB) which helps developers easy to connect to TiDB.
+AI: That sounds like a great project, Mini256! Developing a Python SDK for TiDB can make it much easier for developers to integrate with TiDB and interact with it using Python. If you need any advice on best practices, libraries to use, or specific features to implement, feel free to ask!
+You: exit
+Goodbye!
+```
+
+Open another terminal and run the app again, ask the AI assistant "Who am I?":
+
+```bash
+python main.py
+```
+
+```plain
+Chat with AI (type 'exit' to quit)
+You: Who am I?
+AI: You are Mini256, and you work at PingCAP, where you are developing pytidb, a Python SDK for TiDB to assist developers in easily connecting to TiDB.
+You: exit
+Goodbye!
+```
+
+As you can see, the AI assistant remembers you!
