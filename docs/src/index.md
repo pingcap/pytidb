@@ -4,7 +4,7 @@ TiDB is an open-source, distributed SQL database designed for modern AI applicat
 
 === "Python"
 
-    TiDB provide a Python SDK and a series of integrations with popular AI frameworks to help developers build AI applications efficiently
+    TiDB provide a Python SDK and a series of integrations with popular AI frameworks to help developers build AI applications efficiently.
 
     To install the TiDB Python SDK, run the following command:
 

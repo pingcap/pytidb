@@ -1,4 +1,4 @@
-# Raw SQL
+# Raw Queries
 
 ## Operate data with SQL
 
