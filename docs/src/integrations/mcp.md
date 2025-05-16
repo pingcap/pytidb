@@ -1,4 +1,4 @@
-# TiDB MCP Server
+# MCP Server
 
 MCP server implementation for TiDB database.
 
