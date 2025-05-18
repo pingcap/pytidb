@@ -189,8 +189,8 @@ with db.session() as session:
     initial_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
 
     # Transfer 10 coins from player 1 to player 2
-    db.execute("UPDATE players SET balance = balance + 10 WHERE id = 1")
-    db.execute("UPDATE players SET balance = balance - 10 WHERE id = 2")
+    db.execute("UPDATE players SET balance = balance - 10 WHERE id = 1")
+    db.execute("UPDATE players SET balance = balance + 10 WHERE id = 2")
 
     session.commit()
     # or session.rollback()
