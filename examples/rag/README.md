@@ -1,4 +1,4 @@
-# Vector Search Examples
+# RAG Example based on Vector Search
 
 * Use `pytidb` to connect to TiDB
 * Use `ollama` to deploy local embedding model
