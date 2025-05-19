@@ -6,20 +6,20 @@ TiDB's support both semantic search (also termed vector search) and keyword-base
 
 ## Basic Usage
 
+=== "Python"
 
+    ```python
+    from pytidb.rerankers import Reranker
 
-```python
-from pytidb.rerankers import Reranker
+    jinaai = Reranker(model_name="jina_ai/jina-reranker-m0")
 
-jinaai = Reranker(model_name="jina_ai/jina-reranker-m0")
-
-res = (
-    table.search(
-        "A library for my artificial intelligence software", search_type="hybrid"
+    res = (
+        table.search(
+            "A library for my artificial intelligence software", search_type="hybrid"
+        )
+        .rerank(jinaai, "text")  # Rerank the result set with Jina AI reranker.
+        .limit(3)
+        .to_pandas()
     )
-    .rerank(jinaai, "text")  # Rerank the result set with Jina AI reranker.
-    .limit(3)
-    .to_pandas()
-)
-res
-``` 
+    res
+    ``` 

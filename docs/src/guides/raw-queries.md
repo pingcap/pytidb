@@ -1,6 +1,6 @@
 # Raw Queries
 
-## Operate data with SQL
+## Operate data with raw SQL
 
 You can use `db.execute()` method to execute `INSERT`, `UPDATE`, `DELETE` and other data manipulation SQL statements.
 
@@ -22,7 +22,7 @@ db.execute(
 )
 ```
 
-## Query data with SQL
+## Query data with rawSQL
 
 You can use `db.query()` method to execute `SELECT`, `SHOW` and other query SQL statements.
 

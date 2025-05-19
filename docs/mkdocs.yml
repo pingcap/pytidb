@@ -93,7 +93,7 @@ nav:
     - 📚 Guides:
       - Connect to database: guides/connect.md
       - Working with tables: guides/tables.md
-      - Table Model: guides/table-model.md
+      - CRUD Operations: guides/crud.md
       - Vector Search: guides/vector-search.md
       - Fulltext Search: guides/fulltext-search.md
       - Hybrid Search: guides/hybrid-search.md
@@ -106,7 +106,7 @@ nav:
   - Guides:
     - Connect to database: guides/connect.md
     - Working with tables: guides/tables.md
-    - Table Model: guides/table-model.md
+    - CRUD Operations: guides/crud.md
     - Vector Search: guides/vector-search.md
     - Fulltext Search: guides/fulltext-search.md
     - Hybrid Search: guides/hybrid-search.md
