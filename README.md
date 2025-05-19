@@ -9,7 +9,7 @@
   </a>
 </p>
 
-A Python SDK for TiDB developers to build AI applications efficiently.
+A Python SDK leverages TiDB as an unified data store for developers to build GenAI applications.
 
 - 🔍 Support various search modes: vector search, fulltext search, hybrid search
 - 🔄 Automatic embedding generation
@@ -17,7 +17,7 @@ A Python SDK for TiDB developers to build AI applications efficiently.
 - 💱 Transaction support
 - 🔌 [Model Context Protocol (MCP) support](https://github.com/pingcap/pytidb/blob/main/docs/mcp.md)
 
-Documentation: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
+Quick Start Guide: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
 
 ## Installation
 
@@ -31,9 +31,9 @@ pip install "pytidb[models]"
 pip install pandas
 ```
 
-## Connect to TiDB
+## Connect to TiDB Cloud
 
-Go [tidbcloud.com](https://tidbcloud.com/) or using [tiup playground](https://docs.pingcap.com/tidb/stable/tiup-playground/) to create a free TiDB database cluster.
+Go to [tidbcloud.com](https://tidbcloud.com/) to create a free TiDB cluster.
 
 ```python
 import os
@@ -144,17 +144,17 @@ For a complete example, please go to the [Hybrid Search](https://github.com/ping
 
 PyTiDB supports various operators for flexible filtering:
 
-| Operator | Description               | Example                                      |
-|----------|---------------------------|----------------------------------------------|
-| `$eq`    | Equal to                  | `{"field": {"$eq": "hello"}}`                |
-| `$gt`    | Greater than              | `{"field": {"$gt": 1}}`                      |
-| `$gte`   | Greater than or equal     | `{"field": {"$gte": 1}}`                     |
-| `$lt`    | Less than                 | `{"field": {"$lt": 1}}`                      |
-| `$lte`   | Less than or equal        | `{"field": {"$lte": 1}}`                     |
-| `$in`    | In array                  | `{"field": {"$in": [1, 2, 3]}}`              |
-| `$nin`   | Not in array              | `{"field": {"$nin": [1, 2, 3]}}`             |
-| `$and`   | Logical AND               | `{"$and": [{"field1": 1}, {"field2": 2}]}`   |
-| `$or`    | Logical OR                | `{"$or": [{"field1": 1}, {"field2": 2}]}`    |
+| Operator | Description           | Example                                    |
+| -------- | --------------------- | ------------------------------------------ |
+| `$eq`    | Equal to              | `{"field": {"$eq": "hello"}}`              |
+| `$gt`    | Greater than          | `{"field": {"$gt": 1}}`                    |
+| `$gte`   | Greater than or equal | `{"field": {"$gte": 1}}`                   |
+| `$lt`    | Less than             | `{"field": {"$lt": 1}}`                    |
+| `$lte`   | Less than or equal    | `{"field": {"$lte": 1}}`                   |
+| `$in`    | In array              | `{"field": {"$in": [1, 2, 3]}}`            |
+| `$nin`   | Not in array          | `{"field": {"$nin": [1, 2, 3]}}`           |
+| `$and`   | Logical AND           | `{"$and": [{"field1": 1}, {"field2": 2}]}` |
+| `$or`    | Logical OR            | `{"$or": [{"field1": 1}, {"field2": 2}]}`  |
 
 
 ### ⛓ Join Structured Data and Unstructured Data
@@ -180,7 +180,7 @@ with Session(engine) as session:
 [(c.id, c.text, c.user_id) for c in chunks]
 ```
 
-### 💱Transaction support
+### 💱Transaction Support
 
 PyTiDB supports transaction management, so you can avoid race conditions and ensure data consistency.
 
@@ -189,8 +189,8 @@ with db.session() as session:
     initial_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
 
     # Transfer 10 coins from player 1 to player 2
-    db.execute("UPDATE players SET balance = balance + 10 WHERE id = 1")
-    db.execute("UPDATE players SET balance = balance - 10 WHERE id = 2")
+    db.execute("UPDATE players SET balance = balance - 10 WHERE id = 1")
+    db.execute("UPDATE players SET balance = balance + 10 WHERE id = 2")
 
     session.commit()
     # or session.rollback()
