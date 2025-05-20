@@ -1,6 +1,6 @@
 # Fulltext Search
 
-TiDB supports full-text search feature that enables you to retrieve documents for exact keywords.
+Full-text search enables you to retrieve documents for exact keywords.
 
 !!! note
 
@@ -8,11 +8,11 @@ TiDB supports full-text search feature that enables you to retrieve documents fo
     
     - **TiDB Cloud Serverless: Frankfurt (eu-central-1)**
 
+!!! tip
+
+    To check the complete example code, please refer to the [full-text search example](https://github.com/pingcap/pytidb/blob/main/examples/fulltext_search).
 
 ## Basic Usage
-
-After [connecting to your TiDB database](./connect.md) using `TiDBClient`, you can create a table with a column of `Text` type to store document text data.
-
 
 ### Step 1. Create a table and a full-text index
 
@@ -137,11 +137,6 @@ For demonstration purposes, we will ingest some sample text data with multiple l
         {"id": 15, "title": "皎月银 国家补贴 心率血氧监测 蓝牙通话 智能手表 男女表"},
     ]
     ```
-    
-    !!! tip
-
-        To check the complete example code, please refer to the [full-text search example](https://github.com/pingcap/pytidb/blob/main/examples/fulltext_search).
-
 
 === "SQL"
 
