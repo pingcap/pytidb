@@ -8,9 +8,7 @@ from pytidb.datatype import JSON, Text
 # Load environment variables
 dotenv.load_dotenv()
 
-# Connect to database
-# Support .env configuration
-# TIDB_HOST, TIDB_PORT, TIDB_USERNAME, TIDB_PASSWORD, TIDB_DATABASE
+# Connect to database with connection parameters
 db = TiDBClient.connect(
     host=os.getenv("TIDB_HOST", "localhost"),
     port=int(os.getenv("TIDB_PORT", "4000")),
@@ -18,6 +16,11 @@ db = TiDBClient.connect(
     password=os.getenv("TIDB_PASSWORD", ""),
     database=os.getenv("TIDB_DATABASE", "test"),
 )
+
+# Connect to database with connection string
+# db = TiDBClient.connect(
+#     database_url=os.getenv("TIDB_DATABASE_URL"),
+# )
 
 
 # Define table schema
