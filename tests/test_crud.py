@@ -28,8 +28,12 @@ def test_table_crud(db):
 
     # CREATE
     tbl.insert(Chunk(id=1, text="foo", text_vec=[1, 2, 3]))
-    tbl.insert(Chunk(id=2, text="bar", text_vec=[4, 5, 6]))
-    tbl.insert(Chunk(id=3, text="biz", text_vec=[7, 8, 9]))
+    tbl.bulk_insert(
+        [
+            Chunk(id=2, text="bar", text_vec=[4, 5, 6]),
+            Chunk(id=3, text="biz", text_vec=[7, 8, 9]),
+        ]
+    )
 
     # RETRIEVE
     c = tbl.get(1)
