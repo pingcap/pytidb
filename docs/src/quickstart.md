@@ -153,19 +153,19 @@ table.bulk_insert([
 
 ## Search for nearest neighbors
 
-To search for nearest neighbors of a given query, you can use the `search()` method:
+To search for nearest neighbors of a given query, you can use the `table.search()` method, it will perform a [vector search](./guides/vector-search.md) by default.
 
 ```python
 table.search(
-    # 👇 Pass the query text directly, it will be embedded automatically.
+    # 👇 Pass the query text directly, it will be embedded to a query vector automatically.
     "A library for my artificial intelligence software"
 )
 .limit(3).to_list()
 ```
 
-When you use the `search()` method, it performs a semantic search using [vector search](./guides/vector-search.md) by default. 
+In this example, vector search compares the query vector with the stored vectors in the `text_vec` field of the `chunks` table and returns the top 3 most semantically relevant results based on similarity scores.
 
-In this example, the method converts your query into an embedding vector, compares it with the stored vectors in `text_vec` field of the `chunks` table, and returns the top 3 most semantically relevant results based on similarity scores.
+The closer `_distance` means the more similar the two vectors are.
 
 ```json title="Expected output"
 [
