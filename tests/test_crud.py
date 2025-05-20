@@ -123,7 +123,10 @@ filter_test_data = [
     pytest.param(
         {"meta.f": {"$gte": 0.5}}, ["bar", "biz"], id="json column: $gt operator"
     ),
-    pytest.param({"meta.s": {"$eq": "apple"}}, ["foo"], id="json column: $eq operator"),
+    pytest.param(
+        {"meta.s": {"$eq": "apple"}}, ["foo"], id="json column: explicit $eq operator"
+    ),
+    pytest.param({"meta.s": "apple"}, ["foo"], id="json column: implicit $eq operator"),
 ]
 
 
