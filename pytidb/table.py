@@ -178,15 +178,25 @@ class Table(Generic[T]):
         for field_name, config in self._vector_field_configs.items():
             items_need_embedding = []
             sources_to_embedding = []
+
+            # Skip if no embedding function is provided.
+            if "embed_fn" not in config or config["embed_fn"] is None:
+                continue
+
             for item in data:
+                # Skip if vector embeddings is provided.
                 if getattr(item, field_name) is not None:
                     continue
+
+                # Skip if no source field is provided.
                 if not hasattr(item, config["source_field_name"]):
                     continue
+
                 items_need_embedding.append(item)
                 embedding_source = getattr(item, config["source_field_name"])
                 sources_to_embedding.append(embedding_source)
 
+            # Batch embedding.
             vector_embeddings = config["embed_fn"].get_source_embeddings(
                 sources_to_embedding
             )
