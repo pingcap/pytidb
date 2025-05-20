@@ -2,17 +2,148 @@
 
 Vector search uses semantic similarity to help you find the most relevant records, even if your query does not explicitly include all the keywords. The query will be embedded automatically.
 
+!!! tip
+
+    To check complete example of vector search, please refer to the [vector-search example](https://github.com/pingcap/pytidb/tree/main/examples/vector_search).
+
+
+## Basic Usage
+
+### Step 1. Create a table with a vector field
+
+=== "Python"
+
+    To store vector data, you need to define a vector field via `VectorField` in the table schema.
+
+    ```python hl_lines="7"
+    from pytidb.schema import TableModel, Field, VectorField
+
+    class Chunk(TableModel, table=True):
+        __table__ = "chunks"
+        id: int = Field(primary_key=True)
+        text: str = Field()
+        text_vec: list[float] = VectorField(dimension=3)
+
+    table = db.create_table(schema=Chunk)
+    ```
+
+    By default, the `create_table` method will create a [vector index](https://docs.pingcap.com/tidbcloud/vector-search-index/) for cosine distance metric on the vector field.
+
+=== "SQL"
+
+    To store vector data, you need to define a vector column of `VECTOR` type in the `CREATE TABLE` statement.
+
+    ```sql hl_lines="4 5"
+    CREATE TABLE chunks (
+        id INT PRIMARY KEY,
+        text VARCHAR(255),
+        text_vec VECTOR(3),
+        VECTOR INDEX `vec_idx_text_vec`((VEC_COSINE_DISTANCE(`text_vec`))),
+    );
+    ```
+
+    In the example above, we create a `VECTOR INDEX` on the `text_vec` column to optimize vector search using the `VEC_COSINE_DISTANCE` function.
+
+
+### Step 2. Insert vector data into the table
+
+Ingest some sample data into the table. For demonstration purposes, this example uses simplified 3-dimensional vectors.
+
+=== "Python"
+
+    ```python
+    table.bulk_insert([
+        Chunk(text="dog", text_vec=[1,2,1]),
+        Chunk(text="fish", text_vec=[1,2,4]),
+        Chunk(text="tree", text_vec=[1,0,0]),
+    ])
+    ```
+
+=== "SQL"
+
+    ```sql
+    INSERT INTO chunks (id, text, text_vec) VALUES
+        (1, 'dog', '[1,2,1]'),
+        (2, 'fish', '[1,2,4]'),
+        (3, 'tree', '[1,0,0]');
+    ```
+
+!!! tip
+
+    In real applications, pytidb provides an auto embedding feature that can automatically generate vector embeddings for your text fields when you insert, update, or search—no manual processing needed.
+
+    For details, see the [Auto Embedding](./auto-embedding.md) guide.  
+
+### Step 3. Perform vector search
+
+=== "Python"
+
+    You can use the `table.search()` method to perform searches, which uses `search_mode="vector"` by default.
+
+    ```python
+    table.search([1, 2, 3]).limit(3).to_list()
+    ```
+
+    ```python title="Execution result"
+    [
+        {"id": 1, "text": "dog", "text_vec": [1,2,1], "_distance": 0.12712843905603044},
+        {"id": 2, "text": "fish", "text_vec": [1,2,4], "_distance": 0.00853986601633272},
+        {"id": 3, "text": "tree", "text_vec": [1,0,0], "_distance": 0.7327387580875756},
+    ]
+    ```
+
+
+=== "SQL"
+
+    You can use the `ORDER BY vec_cosine_distance(<column_name>, <query_vector>) LIMIT <n>` clause in the `SELECT` statement to get the n nearest neighbors of the query vector.
+
+    ```sql
+    SELECT id, text, vec_cosine_distance(text_vec, '[1,2,3]') AS distance
+    FROM chunks
+    ORDER BY distance
+    LIMIT 3;
+    ```
+
+    ```plain title="Execution result"
+    +----+----------+---------------------+
+    | id | document | distance            |
+    +----+----------+---------------------+
+    |  2 | fish     | 0.00853986601633272 |
+    |  1 | dog      | 0.12712843905603044 |
+    |  3 | tree     |  0.7327387580875756 |
+    +----+----------+---------------------+
+    3 rows in set (0.15 sec)
+    ```
+
 ## Distance metrics
 
 Distance metrics are a measure of the similarity between a pair of vectors. Currently, TiDB supports the following metrics:
 
 === "Python"
 
-    | Metric     | Description                                                             | Typical Use Case          |
-    |------------|-------------------------------------------------------------------------|---------------------------|
-    | `COSINE`   | [Cosine similarity](https://en.wikipedia.org/wiki/Cosine_similarity)    | Text, semantic similarity |
-    | `L2`       | [Euclidean distance ](https://en.wikipedia.org/wiki/Euclidean_distance) | Image search              |
+    pytidb provides the following functions on vector column to calculate vector distances:
 
+    | Function Name | Description |
+    |---------------|-------------|
+    | `l1_distance()` | Calculates the L1 distance (Manhattan distance) between two vectors |
+    | `l2_distance()` | Calculates the L2 distance (Euclidean distance) between two vectors |
+    | `cosine_distance()` | Calculates the cosine distance between two vectors |
+    | `negative_inner_product()` | Calculates the negative of the inner product between two vectors |
+
+    For example, to calculate the L1 distance between the `text_vec` column and the query vector `[1, 2, 3]`, you can use the following SQL statement:
+
+    ```python
+    from pytidb.sql import select
+
+    # table is created in the previous basic usage example.
+    stmt = select(
+        table.id,
+        table.text,
+        table.text_vec.l1_distance(table.text_vec)
+    ).limit(3)
+
+    db.query(stmt).to_list()
+    ```
 
 === "SQL"
 
@@ -26,77 +157,9 @@ Distance metrics are a measure of the similarity between a pair of vectors. Curr
     | [`VEC_L1_DISTANCE`](https://docs.pingcap.com/tidbcloud/vector-search-functions-and-operators/#vec_l1_distance)                       | Calculates L1 distance (Manhattan distance) between two vectors |
 
 
-## Basic Usage
-
-=== "Python"
-
-    You can use the `table.search()` method to perform searches, which uses `search_mode="vector"` by default.
-
-    For example:
-
-    ```python hl_lines="17"
-    from pytidb.schema import TableModel, Field, VectorField
-
-    class Chunk(TableModel, table=True):
-        __table__ = "chunks"
-
-        id: int = Field(primary_key=True)
-        text: str = Field()
-        text_vec: list[float] = VectorField(dimension=3)
-
-    table = db.create_table(schema=Chunk)
-    table.bulk_insert([
-        Chunk(text="dog", text_vec=[1,2,1]),
-        Chunk(text="fish", text_vec=[1,2,4]),
-        Chunk(text="tree", text_vec=[1,0,0]),
-    ])
-
-    res = table.search([1, 2, 3]).limit(3).to_list()
-
-    print(res)
-    ```
-
-=== "SQL"
-
-    You can use the `ORDER BY vec_cosine_distance(column_name, query_vector)` function to get the nearest neighbors of the query vector.
-
-    For example, assuming you have created the following `chunks` table:
-
-    ```sql hl_lines="12-15"
-    CREATE TABLE chunks (
-        id INT PRIMARY KEY,
-        text VARCHAR(255),
-        text_vec VECTOR(3)
-    );
-
-    INSERT INTO chunks (id, text, text_vec) VALUES
-        (1, 'dog', '[1,2,1]'),
-        (2, 'fish', '[1,2,4]'),
-        (3, 'tree', '[1,0,0]');
-
-    SELECT id, text, vec_cosine_distance(text_vec, '[1,2,3]') AS distance
-    FROM chunks
-    ORDER BY distance
-    LIMIT 3;
-    ```
-
-    The result will be:
-
-    ```python
-    +----+----------+---------------------+
-    | id | document | distance            |
-    +----+----------+---------------------+
-    |  2 | fish     | 0.00853986601633272 |
-    |  1 | dog      | 0.12712843905603044 |
-    |  3 | tree     |  0.7327387580875756 |
-    +----+----------+---------------------+
-    3 rows in set (0.15 sec)
-    ```
-
 ## Output search results
 
-The search results can be returned in several formats:
-
+pytidb provides several helper methods to output the search results in a convenient format as you need.
 ### As SQLAlchemy result rows
 
 If you want to work with the raw SQLAlchemy result rows, you can use:
@@ -120,7 +183,3 @@ To display the results in a user-friendly table—especially useful in Jupyter n
 ```python
 table.search([1, 2, 3]).to_pandas()
 ```
-
-
-
-

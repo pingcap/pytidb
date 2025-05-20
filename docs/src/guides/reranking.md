@@ -2,7 +2,6 @@
 
 Reranking is a technique used to improve search results by reordering them based on weighted algorithms or specialized models.
 
-
 ## Model-based Rerankers
 
 Model-based reranking uses specialized models to refine vector search results. 

@@ -97,6 +97,7 @@ nav:
       - Vector Search: guides/vector-search.md
       - Fulltext Search: guides/fulltext-search.md
       - Hybrid Search: guides/hybrid-search.md
+      - Auto Embedding: guides/auto-embedding.md
       - Reranking: guides/reranking.md
       - Filtering: guides/filtering.md
     - 🔌 Integrations:
@@ -110,6 +111,7 @@ nav:
     - Vector Search: guides/vector-search.md
     - Fulltext Search: guides/fulltext-search.md
     - Hybrid Search: guides/hybrid-search.md
+    - Auto Embedding: guides/auto-embedding.md
     - Reranking: guides/reranking.md
     - Filtering: guides/filtering.md
     - Transaction: guides/transaction.md
