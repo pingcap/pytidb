@@ -32,20 +32,27 @@ class Item(TableModel, table=True):
 
 
 # Create table
-print("Creating table...")
-item_table = db.create_table(schema=Item)
-item_table.truncate()
+print("=== CREATE TABLE ===")
+table = db.create_table(schema=Item)
+print("Table created")
+
+# Truncate table
+print("\n=== TRUNCATE TABLE ===")
+table.truncate()
+print("Table truncated")
 
 # Create: Insert items
 print("\n=== CREATE ===")
-item_table.bulk_insert(
+table.insert(
+    Item(
+        id=1,
+        content="TiDB is a distributed SQL database",
+        embedding=[0.1, 0.2, 0.3],
+        meta={"category": "database"},
+    )
+)
+table.bulk_insert(
     [
-        Item(
-            id=1,
-            content="TiDB is a distributed SQL database",
-            embedding=[0.1, 0.2, 0.3],
-            meta={"category": "database"},
-        ),
         Item(
             id=2,
             content="GPT-4 is a large language model",
@@ -54,9 +61,9 @@ item_table.bulk_insert(
         ),
         Item(
             id=3,
-            content="PyTiDB is a Python client for TiDB",
+            content="LlamaIndex is a Python library for building AI-powered applications",
             embedding=[0.7, 0.8, 0.9],
-            meta={"category": "database"},
+            meta={"category": "rag"},
         ),
     ]
 )
@@ -64,25 +71,25 @@ print("Created 3 items")
 
 # Read: Query all items
 print("\n=== READ ===")
-items = item_table.query(filters={"meta.category": "database"})
+items = table.query()
 for item in items:
     print(f"ID: {item.id}, Content: {item.content}, Metadata: {item.meta}")
 
 # Update: Modify an item
 print("\n=== UPDATE ===")
 item_id_to_update = 1
-item_table.update(
+table.update(
     values={
-        "content": "Updated item",
-        "meta": {"category": "database"},
-        "embedding": [0.1, 0.2, 0.3],
+        "content": "TiDB Cloud Serverless is a fully-managed, auto-scaling cloud database service",
+        "embedding": [0.1, 0.2, 0.4],
+        "meta": {"category": "dbass"},
     },
     filters={"id": item_id_to_update},
 )
-print(f"Updated item with ID: {item_id_to_update}")
+print(f"Updated item #{item_id_to_update}")
 
 # Read again to verify update
-updated_item = item_table.query(filters={"id": item_id_to_update})[0]
+updated_item = table.query(filters={"id": item_id_to_update})[0]
 print(
     f"After update - ID: {updated_item.id}, Content: {updated_item.content}, Metadata: {updated_item.meta}"
 )
@@ -90,16 +97,25 @@ print(
 # Delete: Remove an item
 print("\n=== DELETE ===")
 item_id_to_delete = 2
-item_table.delete(filters={"id": item_id_to_delete})
-print(f"Deleted item with ID: {item_id_to_delete}")
+table.delete(filters={"id": item_id_to_delete})
+print(f"Deleted item #{item_id_to_delete}")
 
 # Read again to verify deletion
 print("\n=== FINAL STATE ===")
-remaining_items = item_table.query()
+remaining_items = table.query()
 if remaining_items:
     for item in remaining_items:
         print(f"ID: {item.id}, Content: {item.content}, Metadata: {item.meta}")
 else:
     print("No items remaining.")
+
+# Count rows
+print("\n=== COUNT ROWS ===")
+print(f"Number of rows: {table.rows()}")
+
+# Drop table
+print("\n=== DROP TABLE ===")
+db.drop_table("items_in_basic_example")
+print("Table dropped")
 
 print("\nBasic CRUD operations completed!")

@@ -61,27 +61,37 @@ python main.py
 
 *Expected output:*
 
-```bash
-Creating table...
+```plain
+=== CREATE TABLE ===
+Table created
+
+=== TRUNCATE TABLE ===
+Table truncated
 
 === CREATE ===
 Created 3 items
 
 === READ ===
-ID: 1, Name: First item, Description: This is item #1
-ID: 2, Name: Second item, Description: This is item #2
-ID: 3, Name: Third item, Description: This is item #3
+ID: 1, Content: TiDB is a distributed SQL database, Metadata: {'category': 'database'}
+ID: 2, Content: GPT-4 is a large language model, Metadata: {'category': 'llm'}
+ID: 3, Content: LlamaIndex is a Python library for building AI-powered applications, Metadata: {'category': 'rag'}
 
 === UPDATE ===
-Updated item with ID: 1
-After update - ID: 1, Name: Updated item, Description: This item was updated
+Updated item #1
+After update - ID: 1, Content: TiDB Cloud Serverless is a fully-managed, auto-scaling cloud database service, Metadata: {'category': 'dbass'}
 
 === DELETE ===
-Deleted item with ID: 2
+Deleted item #2
 
 === FINAL STATE ===
-ID: 1, Name: Updated item, Description: This item was updated
-ID: 3, Name: Third item, Description: This is item #3
+ID: 1, Content: TiDB Cloud Serverless is a fully-managed, auto-scaling cloud database service, Metadata: {'category': 'dbass'}
+ID: 3, Content: LlamaIndex is a Python library for building AI-powered applications, Metadata: {'category': 'rag'}
+
+=== COUNT ROWS ===
+Number of rows: 2
+
+=== DROP TABLE ===
+Table dropped
 
 Basic CRUD operations completed!
 ```

@@ -31,7 +31,7 @@ Vector search uses semantic similarity to help you find the most relevant record
 
 === "SQL"
 
-    To store vector data, you need to define a vector column of `VECTOR` type in the `CREATE TABLE` statement.
+    To store vector data, you need to define a column of `VECTOR` type in the `CREATE TABLE` statement.
 
     ```sql hl_lines="4 5"
     CREATE TABLE chunks (
@@ -42,7 +42,7 @@ Vector search uses semantic similarity to help you find the most relevant record
     );
     ```
 
-    In the example above, we create a `VECTOR INDEX` on the `text_vec` column to optimize vector search using the `VEC_COSINE_DISTANCE` function.
+    In the example above, we also create a `VECTOR INDEX` on the `text_vec` column to optimize vector search using the `VEC_COSINE_DISTANCE` function.
 
 
 ### Step 2. Insert vector data into the table
