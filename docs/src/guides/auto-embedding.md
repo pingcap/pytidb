@@ -2,6 +2,10 @@
 
 Auto embedding is a feature that allows you to automatically generate vector embeddings for text data.
 
+!!! tip
+
+    To check the complete example code, please refer to the [auto embedding example](https://github.com/pingcap/pytidb/blob/main/examples/auto_embedding).
+
 ## Basic Usage
 
 ### Step 1. Define a embedding function
@@ -13,9 +17,9 @@ Auto embedding is a feature that allows you to automatically generate vector emb
     In this example, we use Jina AI as the embedding provider for demonstration. You can go to [Jina AI](https://jina.ai/embeddings/) to get your own API key.
 
     ```python
-    from pytidb.embedding import Embedding
+    from pytidb.embeddings import EmbeddingFunction
 
-    embed_func = Embedding(
+    embed_func = EmbeddingFunction(
         model_name="jina_ai/jina-embeddings-v3",
         api_key="your-jina-api-key"
     )
@@ -41,7 +45,9 @@ Auto embedding is a feature that allows you to automatically generate vector emb
     table = db.create_table(schema=Chunk)
     ```
 
-    You don't need to specify the `dimension` parameter, it will be automatically determined by the embedding model. However, you can specify the `dimension` parameter to override the default dimension.
+    You don't need to specify the `dimensions` parameter, it will be automatically determined by the embedding model.
+    
+    However, you can specify the `dimensions` parameter to override the default dimension.
 
 ### Step 3. Insert some sample data
 
@@ -57,14 +63,14 @@ Auto embedding is a feature that allows you to automatically generate vector emb
     ])
     ```
 
-    When inserting data, the `text_vec` field will be automatically populated with the vector embeddings generated based on the `text` field by the embedding function.
+    When inserting data, the `text_vec` field will be automatically populated with the vector embeddings generated based on the `text` field.
 
 ### Step 4. Perform a vector search
 
 === "Python"
 
-    You can pass the query text to the `search()` method directly, the query text will be embedded by the embedding function and then used for vector search.
+    You can pass the query text to the `search()` method directly, the query text will be embedded and then used for vector search.
 
     ```python
-    table.search("HTAP database").to_list()
+    table.search("HTAP database").limit(3).to_list()
     ```
