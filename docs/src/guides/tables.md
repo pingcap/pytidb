@@ -54,8 +54,6 @@ Once the table is created, you can use the `table` object to insert, update, del
 
 ## Add data to a table
 
-Use the `table.insert()` method to add new records to the table.
-
 ### With TableModel
 
 You can using a `TableModel` instance to represent a record and insert it into the table.
@@ -64,7 +62,7 @@ Insert a single record:
 
 === "Python"
 
-    Use the `insert()` method to insert a single record into the table.
+    Use the `table.insert()` method to insert a single record into the table.
 
     ```python
     table.insert(
@@ -90,7 +88,7 @@ Insert multiple records:
 
 === "Python"
 
-    Use the `bulk_insert()` method to insert multiple records into the table.
+    Use the `table.bulk_insert()` method to insert multiple records into the table.
 
     ```python
     table.bulk_insert([
@@ -144,7 +142,7 @@ Find records based on some query conditions:
 
 === "Python"
 
-    Pass the `filters` parameter to the `query()` method.
+    Pass the `filters` parameter to the `table.query()` method.
 
     ```python
     table.query(filters={
@@ -167,7 +165,7 @@ To check all the supported filters, please refer to the [filtering](./filtering.
 
 === "Python"
 
-    Use the `update()` method to update the specified records with [filters](./filtering.md).
+    Use the `table.update()` method to update the specified records with [filters](./filtering.md).
 
     For example, update the record with `id` equals to 1.
 
@@ -202,7 +200,7 @@ To check all the supported filters, please refer to the [filtering](./filtering.
 
 === "Python"
 
-    Use the `delete()` method to delete specified data records with [filters](./filtering.md).
+    Use the `table.delete()` method to delete specified data records with [filters](./filtering.md).
 
 
     ```python
