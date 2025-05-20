@@ -60,6 +60,8 @@ def test_hybrid_search(hybrid_table: Table):
     assert len(results) == 2
     assert "TiDB" in results[0].text
     assert results[0].user_id == 1
+    assert results[0].distance > 0
+    assert results[0].match_score > 0
     assert results[0].score > 0
 
     # to_pandas()
@@ -72,6 +74,9 @@ def test_hybrid_search(hybrid_table: Table):
     assert results.size > 0
     assert "LlamaIndex" in results.iloc[0]["text"]
     assert results.iloc[0]["user_id"] == 2
+    assert results.iloc[0]["_distance"] > 0
+    assert results.iloc[0]["_match_score"] > 0
+    assert results.iloc[0]["_score"] > 0
 
     # to_list()
     results = (
@@ -80,6 +85,9 @@ def test_hybrid_search(hybrid_table: Table):
     assert len(results) > 0
     assert "OpenAI" in results[0]["text"]
     assert results[0]["user_id"] == 3
+    assert results[0]["_distance"] > 0
+    assert results[0]["_match_score"] > 0
+    assert results[0]["_score"] > 0
 
 
 @pytest.fixture(scope="module")
