@@ -112,12 +112,12 @@ If you prefer to use a connection string (database URL), you can follow the form
 
 ## Connect with SQLAlchemy DB engine
 
-If your application already has an existing SQLAlchemy database engine, you can pass the engine to the `TiDBClient()` constructor for connection:
+If your application already has an existing SQLAlchemy database engine, you can reuse the engine through the `db_engine` parameter:
 
 ```python title="main.py"
 from pytidb import TiDBClient
 
-db = TiDBClient(db_engine)
+db = TiDBClient(db_engine=db_engine)
 ```
 
 ## Next Steps
