@@ -139,7 +139,7 @@ Distance metrics are a measure of the similarity between a pair of vectors. Curr
     stmt = select(
         table.id,
         table.text,
-        table.text_vec.l1_distance(table.text_vec)
+        table.text_vec.l1_distance([1, 2, 3])
     ).limit(3)
 
     db.query(stmt).to_list()
