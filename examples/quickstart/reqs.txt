@@ -1,2 +1,3 @@
+pytidb
 pytidb[models]
 python-dotenv 

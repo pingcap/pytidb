@@ -143,21 +143,13 @@ Now let's add some sample data to our table.
 
 ```python
 table.bulk_insert([
+    # 👇 The text will be automatically embedded and populated into the `text_vec` field.
     Chunk(text="PyTiDB is a Python library for developers to connect to TiDB.", user_id=2),
     Chunk(text="LlamaIndex is a framework for building AI applications.", user_id=2),
     Chunk(text="OpenAI is a company and platform that provides AI models service and tools.", user_id=3),
 ])
 ```
 
-!!! tip
-
-    The `text_vec` field will be automatically populated with embeddings generated from the `text` field. You don't need to handle the embedding process manually.
-
-### Query data
-
-```python
-table.query().limit(3)
-```
 
 ## Search for nearest neighbors
 
@@ -165,24 +157,48 @@ To search for nearest neighbors of a given query, you can use the `search()` met
 
 ```python
 table.search(
+    # 👇 Pass the query text directly, it will be embedded automatically.
     "A library for my artificial intelligence software"
-)  # 👈 The query will be embedding automatically.
-.limit(3)
+)
+.limit(3).to_list()
 ```
 
 When you use the `search()` method, it performs a semantic search using [vector search](./guides/vector-search.md) by default. 
 
 In this example, the method converts your query into an embedding vector, compares it with the stored vectors in `text_vec` field of the `chunks` table, and returns the top 3 most semantically relevant results based on similarity scores.
 
-Expected output:
-
-```
-
+```json title="Expected output"
+[
+    {
+        'id': 2,
+        'text': 'LlamaIndex is a framework for building AI applications.',
+        'text_vec': [...],
+        'user_id': 2,
+        '_distance': 0.5719928358786761,
+        '_score': 0.4280071641213239
+    },
+    {
+        'id': 3,
+        'text': 'OpenAI is a company and platform that provides AI models service and tools.',
+        'text_vec': [...],
+        'user_id': 3,
+        '_distance': 0.603133726213383,
+        '_score': 0.396866273786617
+    },
+    {
+        'id': 1,
+        'text': 'PyTiDB is a Python library for developers to connect to TiDB.',
+        'text_vec': [...],
+        'user_id': 2,
+        '_distance': 0.6202191842385758,
+        '_score': 0.3797808157614242
+    }
+]
 ```
 
 ## Delete data
 
-To delete a specific row from the table, you can use the `delete()` method:
+To delete a specific row from the table, you can use the `table.delete()` method:
 
 ```python
 table.delete({
@@ -192,7 +208,7 @@ table.delete({
 
 ## Drop table
 
-When you no longer need a table, you can drop it using the `drop()` method:
+When you no longer need a table, you can drop it using the `db.drop_table()` method:
 
 ```python
 db.drop_table("chunks")

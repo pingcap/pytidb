@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# 1. Connect to TiDB (fill in your own parameters in .env)
+# Connect to TiDB (fill in your own parameters in .env)
+print("=== Connect to TiDB ===")
 db = TiDBClient.connect(
     host=os.getenv("TIDB_HOST"),
     port=int(os.getenv("TIDB_PORT", 4000)),
@@ -15,15 +16,20 @@ db = TiDBClient.connect(
     password=os.getenv("TIDB_PASSWORD"),
     database=os.getenv("TIDB_DATABASE"),
 )
+print("Connected to TiDB")
 
-# 2. Create embedding function (e.g., OpenAI, fill in your API key in .env)
+
+print("\n=== Create embedding function ===")
 text_embed = EmbeddingFunction(
     model_name="openai/text-embedding-3-small",
     api_key=os.getenv("OPENAI_API_KEY"),
 )
+print("Embedding function created")
 
 
-# 3. Define table schema
+print("\n=== Create table ===")
+
+
 class Chunk(TableModel, table=True):
     id: int = Field(primary_key=True)
     text: str = Field()
@@ -31,10 +37,16 @@ class Chunk(TableModel, table=True):
     user_id: int = Field()
 
 
-# 4. Create table
 table = db.create_table(schema=Chunk)
+print("Table created")
 
-# 5. Insert data
+
+print("\n=== Truncate table ===")
+table.truncate()
+print("Table truncated")
+
+
+print("\n=== Insert data ===")
 table.bulk_insert(
     [
         Chunk(
@@ -50,18 +62,31 @@ table.bulk_insert(
         ),
     ]
 )
+print("Inserted 3 chunks")
 
-# 6. Query data
-print("Query result:", table.query().limit(3).all())
 
-# 7. Semantic search
-print(
-    "Semantic search result:",
-    table.search("A library for my artificial intelligence software").limit(3).all(),
+print("\n=== Query data ===")
+results = table.query()
+for result in results:
+    print(f"ID: {result.id}, Text: {result.text}, User ID: {result.user_id}")
+
+
+print("\n=== Semantic search ===")
+results = (
+    table.search("A library for my artificial intelligence software").limit(3).to_list()
 )
+print(results)
+for result in results:
+    print(
+        f"ID: {result['id']}, Text: {result['text']}, User ID: {result['user_id']}, Distance: {result['_distance']}"
+    )
 
-# 8. Delete a row (delete row with id=1)
+
+print("\n=== Delete a row ===")
 table.delete({"id": 1})
+print("Deleted chunk #1")
 
-# 9. Drop table
+
+print("\n=== Drop table ===")
 db.drop_table("chunks")
+print("Table dropped")
