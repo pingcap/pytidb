@@ -164,21 +164,28 @@ def build_filter_clauses(
             if isinstance(value, dict):
                 filter_clause = build_column_filter(column, value)
             else:
-                # value maybe int / float / string
+                # implicit $eq operator: value maybe int / float / string
                 filter_clause = build_column_filter(column, {EQ: value})
             if filter_clause is not None:
                 filter_clauses.append(filter_clause)
         elif "." in key:
             match = JSON_FIELD_PATTERN.match(key)
-            if match:
-                column = match.group("column")
-                json_field = match.group("json_field")
-                column = sqlalchemy.func.json_extract(
-                    getattr(table_model, column), f"$.{json_field}"
+            if not match:
+                raise ValueError(
+                    f"Got unexpected filter key: {key}, please use valid column name instead"
                 )
+            column_name = match.group("column")
+            json_field = match.group("json_field")
+            column = sqlalchemy.func.json_extract(
+                getattr(table_model, column_name), f"$.{json_field}"
+            )
+            if isinstance(value, dict):
                 filter_clause = build_column_filter(column, value)
-                if filter_clause is not None:
-                    filter_clauses.append(filter_clause)
+            else:
+                # implicit $eq operator: value maybe int / float / string
+                filter_clause = build_column_filter(column, {EQ: value})
+            if filter_clause is not None:
+                filter_clauses.append(filter_clause)
         else:
             raise ValueError(
                 f"Got unexpected filter key: {key}, please use valid column name instead"
