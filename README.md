@@ -18,6 +18,7 @@ A Python SDK leverages TiDB as an unified data store for developers to build Gen
 - 🔌 [Model Context Protocol (MCP) support](https://pingcap.github.io/pytidb/integrations/mcp)
 
 Documentation: https://pingcap.github.io/pytidb/
+
 Quick Start Guide: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
 
 ## Installation
