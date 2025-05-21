@@ -1,15 +1,14 @@
 import os
 import dotenv
-from typing import Optional
 from pytidb import TiDBClient
-from pytidb.schema import TableModel, Field
+from pytidb.schema import TableModel, Field, VectorField
+from pytidb.datatype import JSON, Text
+
 
 # Load environment variables
 dotenv.load_dotenv()
 
-# Connect to database
-# Support .env configuration
-# TIDB_HOST, TIDB_PORT, TIDB_USERNAME, TIDB_PASSWORD, TIDB_DATABASE
+# Connect to database with connection parameters
 db = TiDBClient.connect(
     host=os.getenv("TIDB_HOST", "localhost"),
     port=int(os.getenv("TIDB_PORT", "4000")),
@@ -18,67 +17,108 @@ db = TiDBClient.connect(
     database=os.getenv("TIDB_DATABASE", "test"),
 )
 
+# Connect to database with connection string
+# db = TiDBClient.connect(
+#     database_url=os.getenv("TIDB_DATABASE_URL"),
+# )
+
 
 # Define table schema
 class Item(TableModel, table=True):
-    __tablename__ = "items"
+    __tablename__ = "items_in_basic_example"
     __table_args__ = {"extend_existing": True}
 
     id: int = Field(primary_key=True)
-    name: str = Field()
-    description: Optional[str] = Field(default=None)
+    content: str = Field(sa_type=Text)  # text
+    embedding: list[float] = VectorField(dimensions=3)  # vector embedding
+    meta: dict = Field(sa_type=JSON, default_factory=dict)  # metadata
 
 
 # Create table
-print("Creating table...")
-item_table = db.create_table(schema=Item)
-item_table.truncate()
+print("=== CREATE TABLE ===")
+table = db.create_table(schema=Item)
+print("Table created")
+
+# Truncate table
+print("\n=== TRUNCATE TABLE ===")
+table.truncate()
+print("Table truncated")
 
 # Create: Insert items
 print("\n=== CREATE ===")
-item_table.bulk_insert(
+table.insert(
+    Item(
+        id=1,
+        content="TiDB is a distributed SQL database",
+        embedding=[0.1, 0.2, 0.3],
+        meta={"category": "database"},
+    )
+)
+table.bulk_insert(
     [
-        Item(name="First item", description="This is item #1"),
-        Item(name="Second item", description="This is item #2"),
-        Item(name="Third item", description="This is item #3"),
+        Item(
+            id=2,
+            content="GPT-4 is a large language model",
+            embedding=[0.4, 0.5, 0.6],
+            meta={"category": "llm"},
+        ),
+        Item(
+            id=3,
+            content="LlamaIndex is a Python library for building AI-powered applications",
+            embedding=[0.7, 0.8, 0.9],
+            meta={"category": "rag"},
+        ),
     ]
 )
 print("Created 3 items")
 
 # Read: Query all items
 print("\n=== READ ===")
-items = item_table.query()
+items = table.query()
 for item in items:
-    print(f"ID: {item.id}, Name: {item.name}, Description: {item.description}")
+    print(f"ID: {item.id}, Content: {item.content}, Metadata: {item.meta}")
 
 # Update: Modify an item
 print("\n=== UPDATE ===")
 item_id_to_update = 1
-item_table.update(
-    values={"name": "Updated item", "description": "This item was updated"},
+table.update(
+    values={
+        "content": "TiDB Cloud Serverless is a fully-managed, auto-scaling cloud database service",
+        "embedding": [0.1, 0.2, 0.4],
+        "meta": {"category": "dbass"},
+    },
     filters={"id": item_id_to_update},
 )
-print(f"Updated item with ID: {item_id_to_update}")
+print(f"Updated item #{item_id_to_update}")
 
 # Read again to verify update
-updated_item = item_table.query({"id": item_id_to_update})[0]
+updated_item = table.query(filters={"id": item_id_to_update})[0]
 print(
-    f"After update - ID: {updated_item.id}, Name: {updated_item.name}, Description: {updated_item.description}"
+    f"After update - ID: {updated_item.id}, Content: {updated_item.content}, Metadata: {updated_item.meta}"
 )
 
 # Delete: Remove an item
 print("\n=== DELETE ===")
 item_id_to_delete = 2
-item_table.delete({"id": item_id_to_delete})
-print(f"Deleted item with ID: {item_id_to_delete}")
+table.delete(filters={"id": item_id_to_delete})
+print(f"Deleted item #{item_id_to_delete}")
 
 # Read again to verify deletion
 print("\n=== FINAL STATE ===")
-remaining_items = item_table.query()
+remaining_items = table.query()
 if remaining_items:
     for item in remaining_items:
-        print(f"ID: {item.id}, Name: {item.name}, Description: {item.description}")
+        print(f"ID: {item.id}, Content: {item.content}, Metadata: {item.meta}")
 else:
     print("No items remaining.")
+
+# Count rows
+print("\n=== COUNT ROWS ===")
+print(f"Number of rows: {table.rows()}")
+
+# Drop table
+print("\n=== DROP TABLE ===")
+db.drop_table("items_in_basic_example")
+print("Table dropped")
 
 print("\nBasic CRUD operations completed!")

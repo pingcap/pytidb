@@ -4,10 +4,10 @@ import dotenv
 import litellm
 import streamlit as st
 import pandas as pd
-from sqlalchemy import Text
 
 from pytidb import TiDBClient
 from pytidb.schema import TableModel, Field
+from pytidb.datatype import Text
 
 dotenv.load_dotenv()
 litellm.drop_params = True
@@ -26,89 +26,68 @@ db = TiDBClient.connect(
 # Create document table
 
 
-class Document(TableModel, table=True):
-    __tablename__ = "documents_for_fts"
+class StockItem(TableModel, table=True):
+    __tablename__ = "stock_items"
     __table_args__ = {"extend_existing": True}
 
     id: int = Field(primary_key=True)
-    text: str = Field(sa_type=Text)
+    title: str = Field(sa_type=Text)
 
 
-table = db.create_table(schema=Document)
+table = db.create_table(schema=StockItem)
 
-if not table.has_fts_index("text"):
-    table.create_fts_index("text")
+if not table.has_fts_index("title"):
+    table.create_fts_index("title")
 
 # Ingest sample documents
 
 sample_documents = [
-    "Llamas are camelids known for their soft fur and use as pack animals.",
-    "Python's GIL ensures only one thread executes bytecode at a time.",
-    "TiDB is a distributed SQL database with HTAP capabilities.",
-    "Einstein's theory of relativity revolutionized modern physics.",
-    "The Great Wall of China stretches over 13,000 miles.",
-    "Ollama enables local deployment of large language models.",
-    "HTTP/3 uses QUIC protocol for improved web performance.",
-    "Kubernetes orchestrates containerized applications across clusters.",
-    "Blockchain technology enables decentralized transaction systems.",
-    "GPT-4 demonstrates remarkable few-shot learning capabilities.",
-    "Machine learning algorithms improve with more training data.",
-    "Quantum computing uses qubits instead of traditional bits.",
-    "Neural networks are inspired by the human brain's structure.",
-    "Docker containers package applications with their dependencies.",
-    "Cloud computing provides on-demand computing resources.",
-    "Artificial intelligence aims to mimic human cognitive functions.",
-    "Cybersecurity protects systems from digital attacks.",
-    "Big data analytics extracts insights from large datasets.",
-    "Internet of Things connects everyday objects to the internet.",
-    "Augmented reality overlays digital content on the real world.",
+    {"id": 1, "title": "イヤホン bluetooth ワイヤレスイヤホン "},
+    {"id": 2, "title": "完全ワイヤレスイヤホン/ウルトラノイズキャンセリング 2.0 "},
+    {
+        "id": 3,
+        "title": "ワイヤレス ヘッドホン Bluetooth 5.3 65時間再生 ヘッドホン 40mm HD ",
+    },
+    {"id": 4, "title": "楽器用 オンイヤーヘッドホン 密閉型【国内正規品】"},
+    {
+        "id": 5,
+        "title": "ワイヤレスイヤホン ハイブリッドANC搭载 40dBまでアクティブノイズキャンセル",
+    },
+    {"id": 6, "title": "Lightweight Bluetooth Earbuds with 48 Hours Playtime"},
+    {
+        "id": 7,
+        "title": "True Wireless Noise Cancelling Earbuds - Compatible with Apple & Android, Built-in Microphone",
+    },
+    {"id": 8, "title": "In-Ear Earbud Headphones with Mic, Black"},
+    {
+        "id": 9,
+        "title": "Wired Headphones, HD Bass Driven Audio, Lightweight Aluminum Wired in Ear Earbud Headphones",
+    },
+    {"id": 10, "title": "LED Light Bar, Music Sync RGB Light Bar, USB Ambient Lamp"},
+    {
+        "id": 11,
+        "title": "无线消噪耳机-黑色 手势触控蓝牙降噪 主动降噪头戴式耳机（智能降噪 长久续航）",
+    },
+    {
+        "id": 12,
+        "title": "专业版USB7.1声道游戏耳机电竞耳麦头戴式电脑网课办公麦克风带线控",
+    },
+    {"id": 13, "title": "投影仪家用智能投影机便携卧室手机投影"},
+    {"id": 14, "title": "无线蓝牙耳机超长续航42小时快速充电 流光金属耳机"},
+    {"id": 15, "title": "皎月银 国家补贴 心率血氧监测 蓝牙通话 智能手表 男女表"},
 ]
 
 if table.rows() == 0:
-    table.bulk_insert([Document(text=text) for text in sample_documents])
+    table.bulk_insert([StockItem(**doc) for doc in sample_documents])
 
 
 # Streamlit UI
 st.title("🔍 Fulltext Search Demo")
 query_limit = st.sidebar.slider("query limit", min_value=1, max_value=20, value=10)
 
-# Add sample code display
-with st.expander("Show Sample Code"):
-    st.code(
-        """from pytidb import TiDBClient
-from pytidb.schema import TableModel, Field
-from sqlalchemy import Text
-
-db = TiDBClient.connect(
-    host="localhost",
-    port=4000,
-    username="root",
-    password="",
-    database="test",
+st.write(
+    "Input your search query (e.g. 'Bluetooth Headphone','イヤホン bluetooth', '蓝牙耳机')"
 )
-
-# Define document table
-class Document(TableModel, table=True):
-    __tablename__ = "documents_for_fts"
-    id: int = Field(primary_key=True)
-    text: str = Field(sa_type=Text)
-
-# Create table and FTS index
-table = db.create_table(schema=Document)
-table.create_fts_index("text")
-
-# Search documents
-results = (
-    table
-    .search("your query", search_type="fulltext")
-    .limit(10)
-    .to_pandas()
-)
-""",
-        language="python",
-    )
-
-st.write("Input your search query (e.g. 'HTAP database')")
 
 
 query_text = st.text_input("", "")
@@ -129,7 +108,7 @@ if st.button("Search") and query_text:
             st.info("No results found")
 else:
     with st.spinner("Loading all documents..."):
-        docs = table.query()
-        df = pd.DataFrame([{"id": doc.id, "text": doc.text} for doc in docs])
+        items = table.query()
+        df = pd.DataFrame([{"id": item.id, "title": item.title} for item in items])
         st.write("### All documents:")
         st.dataframe(df)
