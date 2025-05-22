@@ -13,7 +13,7 @@ from typing import (
 )
 
 from pydantic import BaseModel, Field
-from sqlalchemy import Row, Select, asc, desc, literal, select, and_, text
+from sqlalchemy import Row, Select, asc, desc, select, and_, text
 from pytidb.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, QueryBundle, VectorDataType, TableModel
@@ -311,8 +311,8 @@ class SearchQuery:
         table_name = self._table.table_name
         stmt = select(
             *select_columns,
-            literal(None).label(MATCH_SCORE_LABEL),
-            literal(None).label(SCORE_LABEL),
+            fts_match_word(self._query_text, text_column).label(MATCH_SCORE_LABEL),
+            fts_match_word(self._query_text, text_column).label(SCORE_LABEL),
         ).filter(fts_match_word(self._query_text, text_column))
 
         if self._filters is not None:
