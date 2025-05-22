@@ -9,7 +9,7 @@
   </a>
 </p>
 
-A Python SDK leverages TiDB as an unified data store for developers to build GenAI applications.
+Python SDK of TiDB as an unified data platform for developers to build GenAI applications.
 
 - 🔍 Support various search modes: vector search, fulltext search, hybrid search
 - 🔄 Automatic embedding generation
