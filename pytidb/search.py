@@ -1,6 +1,7 @@
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     List,
     Literal,
@@ -10,6 +11,7 @@ from typing import (
     Sequence,
     TypeVar,
     Generic,
+    overload,
 )
 
 from pydantic import BaseModel, Field
@@ -18,12 +20,13 @@ from pytidb.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, QueryBundle, VectorDataType, TableModel
 from pytidb.utils import (
+    RowKeyType,
     build_filter_clauses,
     check_text_column,
     check_vector_column,
     get_row_id_from_row,
-    merge_result_rows,
 )
+from pytidb.fusion import fusion_result_rows_by_rrf
 from pytidb.logger import logger
 
 
@@ -87,6 +90,10 @@ class SearchQuery:
         self._columns = table._columns
         self._vector_column = table.vector_column
         self._text_column = table.text_column
+        self._fusion_method = "rrf"
+        self._fusion_params = {
+            "k": 60,
+        }
 
         # Query.
         self._search_type = search_type
@@ -159,6 +166,30 @@ class SearchQuery:
 
     def debug(self, flag: bool = True) -> "SearchQuery":
         self._debug = flag
+        return self
+
+    @overload
+    def fusion(self, fusion_method: Literal["rrf"], k: int = 60) -> "SearchQuery": ...
+
+    def fusion(self, fusion_method: Literal["rrf"] = "rrf", **params) -> "SearchQuery":
+        """
+        Fusion the search results.
+
+        Args:
+            fusion_method: The fusion method to use.
+            **params: The parameters for the fusion method.
+        """
+        if self._search_type != "hybrid":
+            raise ValueError(
+                "fusion method is only supported for hybrid search, please specify the search type through "
+                ".search_type(type='hybrid')"
+            )
+
+        if fusion_method not in ["rrf"]:
+            raise ValueError("invalid fusion method, allowed fusion methods are `rrf`")
+
+        self._fusion_method = fusion_method
+        self._fusion_params = params
         return self
 
     def rerank(
@@ -394,7 +425,8 @@ class SearchQuery:
             def get_row_id(row: Row) -> Optional[int]:
                 return get_row_id_from_row(row, self._sa_table)
 
-            keys, rows = merge_result_rows(vs_rows, fts_rows, get_row_id)
+            # Apply fusion method to merge the multiple result sets.
+            keys, rows = self._fusion_result_set(vs_rows, fts_rows, get_row_id)
 
             # Apply reranker to rerank the merged result set. (Optional)
             if self._reranker is not None:
@@ -406,6 +438,21 @@ class SearchQuery:
                 )
 
             return keys, rows[: self._limit]
+
+    def _fusion_result_set(
+        self,
+        vs_rows: List[Row],
+        fts_rows: List[Row],
+        get_row_id: Callable[[Row], RowKeyType],
+    ) -> Tuple[List[str], List[Row]]:
+        """
+        Fusion the search results.
+        """
+        if self._fusion_method == "rrf":
+            k = self._fusion_params.get("k", self._limit)
+            return fusion_result_rows_by_rrf(vs_rows, fts_rows, get_row_id, k=k)
+        else:
+            raise ValueError(f"invalid fusion method: {self._fusion_method}")
 
     def _rerank_result_set(self, rows: List[Row]) -> List[Row]:
         """

@@ -6,88 +6,137 @@ from pytidb.embeddings import EmbeddingFunction
 from pytidb.rerankers import Reranker
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import TableModel, Field
+from pytidb.datatype import Text
 
 
 @pytest.fixture(scope="module")
 def hybrid_table(db: TiDBClient):
-    text_embed_small = EmbeddingFunction("openai/text-embedding-3-small")
+    embed_fn = EmbeddingFunction("openai/text-embedding-3-small")
 
-    class Chunk(TableModel, table=True):
-        __tablename__ = "chunks_for_hybrid"
+    class Item(TableModel, table=True):
+        __tablename__ = "items_for_hybrid"
         id: int = Field(None, primary_key=True)
-        text: str = Field(None)
-        text_vec: list[float] = text_embed_small.VectorField(source_field="text")
-        user_id: int = Field(None)
+        name: str = Field()
+        description: str = Field(sa_type=Text)
+        embedding: list[float] = embed_fn.VectorField(source_field="description")
 
-    tbl = db.create_table(schema=Chunk)
+    tbl = db.create_table(schema=Item)
 
     # Prepare test data.
     tbl.delete()
     tbl.bulk_insert(
         [
-            Chunk(
+            Item(
                 id=1,
-                text="TiDB is a distributed database that supports OLTP, OLAP, HTAP and AI workloads.",
-                user_id=1,
+                name="TiDB",
+                description="TiDB is a distributed database supports HTAP and AI workloads.",
             ),
-            Chunk(
+            Item(
                 id=2,
-                text="LlamaIndex is a framework for building AI applications.",
-                user_id=2,
+                name="LlamaIndex",
+                description="LlamaIndex is a framework for building AI applications.",
             ),
-            Chunk(
+            Item(
                 id=3,
-                text="OpenAI is a company that provides a platform for building AI models.",
-                user_id=3,
+                name="GPT-4",
+                description="GPT-4 is a large language model developed by OpenAI.",
             ),
         ]
     )
 
-    if not tbl.has_fts_index("text"):
-        tbl.create_fts_index("text")
+    if not tbl.has_fts_index("description"):
+        tbl.create_fts_index("description")
 
     return tbl
 
 
-def test_hybrid_search(hybrid_table: Table):
-    # to_pydantic()
-    results = (
-        hybrid_table.search("HTAP database", search_type="hybrid")
-        .text_column("text")
+# Test case with various result formats.
+
+
+def test_hybrid_search_to_list(hybrid_table: Table):
+    expected_results = [
+        {"id": 1, "_distance": 0.46569, "_match_score": 1.75128, "_score": 0.03279},
+        {"id": 2, "_distance": 0.60269, "_match_score": 0.79679, "_score": 0.03226},
+    ]
+    actual_results = (
+        hybrid_table.search("AI database", search_type="hybrid")
+        .text_column("description")
+        .limit(2)
+        .to_list()
+    )
+
+    assert len(actual_results) == len(expected_results)
+    for actual, expected in zip(actual_results, expected_results):
+        assert actual["id"] == expected["id"]
+        # FIXME: The diff between actual and expected should be less than 1e-5.
+        assert abs(actual["_distance"] - expected["_distance"]) < 1e-3
+        assert abs(actual["_match_score"] - expected["_match_score"]) < 1
+        assert abs(actual["_score"] - expected["_score"]) < 1e-5
+
+
+def test_hybrid_search_to_rows(hybrid_table: Table):
+    expected_results = [
+        {"id": 1, "_distance": 0.46569, "_match_score": 1.75128, "_score": 0.03279},
+        {"id": 2, "_distance": 0.60269, "_match_score": 0.79679, "_score": 0.03226},
+    ]
+    actual_results = (
+        hybrid_table.search("AI database", search_type="hybrid")
+        .text_column("description")
+        .limit(2)
+        .to_rows()
+    )
+
+    assert len(actual_results) == len(expected_results)
+    for actual, expected in zip(actual_results, expected_results):
+        assert actual.id == expected["id"]
+        # FIXME: The diff between actual and expected should be less than 1e-5.
+        assert abs(actual._mapping["_distance"] - expected["_distance"]) < 1e-3
+        assert abs(actual._mapping["_match_score"] - expected["_match_score"]) < 1
+        assert abs(actual._mapping["_score"] - expected["_score"]) < 1e-5
+
+
+def test_hybrid_search_to_pydantic(hybrid_table: Table):
+    expected_results = [
+        {"id": 1, "_distance": 0.46569, "_match_score": 1.75128, "_score": 0.03279},
+        {"id": 2, "_distance": 0.60269, "_match_score": 0.79679, "_score": 0.03226},
+    ]
+    actual_results = (
+        hybrid_table.search("AI database", search_type="hybrid")
+        .text_column("description")
         .limit(2)
         .to_pydantic()
     )
-    assert len(results) == 2
-    assert "TiDB" in results[0].text
-    assert results[0].user_id == 1
-    assert results[0].distance > 0
-    assert results[0].match_score > 0
-    assert results[0].score > 0
 
-    # to_pandas()
-    results = (
-        hybrid_table.search(search_type="hybrid")
-        .text("Framework helps develop intelligent applications")
+    assert len(actual_results) == len(expected_results)
+    for actual, expected in zip(actual_results, expected_results):
+        assert actual.id == expected["id"]
+        # FIXME: The diff between actual and expected should be less than 1e-5.
+        assert abs(actual.distance - expected["_distance"]) < 1e-3
+        assert abs(actual.match_score - expected["_match_score"]) < 1
+        assert abs(actual.score - expected["_score"]) < 1e-5
+
+
+def test_hybrid_search_to_pandas(hybrid_table: Table):
+    expected_results = [
+        {"id": 1, "_distance": 0.46569, "_match_score": 1.75128, "_score": 0.03279},
+        {"id": 2, "_distance": 0.60269, "_match_score": 0.79679, "_score": 0.03226},
+    ]
+    actual_results = (
+        hybrid_table.search("AI database", search_type="hybrid")
+        .text_column("description")
         .limit(2)
         .to_pandas()
     )
-    assert results.size > 0
-    assert "LlamaIndex" in results.iloc[0]["text"]
-    assert results.iloc[0]["user_id"] == 2
-    assert results.iloc[0]["_distance"] > 0
-    assert results.iloc[0]["_match_score"] > 0
-    assert results.iloc[0]["_score"] > 0
 
-    # to_list()
-    results = (
-        hybrid_table.search(search_type="hybrid").text("OpenAI").limit(2).to_list()
-    )
-    assert len(results) > 0
-    assert "OpenAI" in results[0]["text"]
-    assert results[0]["user_id"] == 3
-    assert results[0]["_distance"] > 0
-    assert results[0]["_match_score"] > 0
-    assert results[0]["_score"] > 0
+    assert len(actual_results) == len(expected_results)
+    for actual, expected in zip(actual_results.iloc, expected_results):
+        assert actual.id == expected["id"]
+        assert abs(actual._distance - expected["_distance"]) < 1e-3
+        assert abs(actual._match_score - expected["_match_score"]) < 1
+        assert abs(actual._score - expected["_score"]) < 1e-5
+
+
+# Hybrid search with reranker.
 
 
 @pytest.fixture(scope="module")
@@ -102,11 +151,20 @@ def test_rerank(hybrid_table: Table, reranker: BaseReranker):
     reranked_results = (
         hybrid_table.search(search_type="hybrid")
         .text("An AI library to develop AI applications")
-        .rerank(reranker, "text")
-        .limit(3)
+        .text_column("description")
+        .rerank(reranker, "description")
+        .limit(2)
         .to_list()
     )
+    expected_results = [
+        {"id": 2, "name": "LlamaIndex"},
+        {"id": 1, "name": "TiDB"},
+    ]
 
-    assert len(reranked_results) > 0
-    assert "LlamaIndex" in reranked_results[0]["text"]
-    assert reranked_results[0]["_score"] > 0
+    assert len(reranked_results) == len(expected_results)
+    for actual, expected in zip(reranked_results, expected_results):
+        assert actual["id"] == expected["id"]
+        assert actual["name"] == expected["name"]
+        assert actual["_distance"] > 0
+        assert actual["_match_score"] > 0
+        assert actual["_score"] > 0

@@ -1,7 +1,7 @@
 import re
 
 from urllib.parse import quote
-from typing import Dict, Optional, Any, List, Callable, TypeVar, Tuple
+from typing import Dict, Optional, Any, List, TypeVar, Tuple
 
 import sqlalchemy
 from pydantic import AnyUrl, UrlConstraints
@@ -9,7 +9,6 @@ from sqlalchemy import BinaryExpression, Column, String
 from sqlmodel import AutoString
 from tidb_vector.sqlalchemy import VectorType
 from sqlalchemy.engine import Row
-from sqlalchemy.engine.result import result_tuple
 from sqlalchemy import Table
 from typing import Union
 
@@ -251,69 +250,3 @@ def get_row_id_from_row(row: Row, table: Table) -> Optional[RowKeyType]:
             f"Primary key column '{e.args[0]}' not found in Row. "
             f"Available: {list(row._mapping.keys())}"
         )
-
-
-def merge_result_rows(
-    rows_a: List[Row],
-    rows_b: List[Row],
-    get_row_key: Callable[[Row], RowKeyType],
-    merge_strategies: Optional[Dict[str, Callable[[Any, Any, Row, Row], Any]]] = None,
-) -> Tuple[List[str], List[Row]]:
-    """Merge two lists of result rows based on row_id.
-
-    Args:
-        rows_a: First list of result rows
-        rows_b: Second list of result rows
-        get_row_key: Function to get the key (primary key or _tidb_rowid) from a row
-        merge_strategies: Optional dictionary mapping field names to custom merge functions.
-                   Each merge function takes (value_a, value_b, row_a, row_b) as arguments
-                   and returns the merged value.
-
-    Returns:
-        List of merged result rows
-    """
-    if not rows_a and not rows_b:
-        return [], []
-    if not rows_a or len(rows_a) == 0:
-        return list(rows_b[0]._fields), rows_b
-    if not rows_b or len(rows_b) == 0:
-        return list(rows_a[0]._fields), rows_a
-
-    # Get all column names
-    fields_a = list(rows_a[0]._fields)
-    fields_b = list(rows_b[0]._fields)
-    all_fields = list(dict.fromkeys(fields_a + fields_b).keys())
-
-    # Build mapping from key to row data
-    rows_by_key_a = {get_row_key(row): row for row in rows_a}
-    rows_by_key_b = {get_row_key(row): row for row in rows_b}
-
-    # Get all unique keys
-    all_keys = set(rows_by_key_a.keys()) | set(rows_by_key_b.keys())
-
-    # Merge results
-    merged_rows = []
-    for key in all_keys:
-        row_data = []
-        row_a = rows_by_key_a.get(key)
-        row_b = rows_by_key_b.get(key)
-
-        for field in all_fields:
-            value_a = getattr(row_a, field) if row_a and field in fields_a else None
-            value_b = getattr(row_b, field) if row_b and field in fields_b else None
-
-            # Use custom merge strategy if provided
-            if merge_strategies and field in merge_strategies:
-                value = merge_strategies[field](value_a, value_b, row_a, row_b)
-            else:
-                # Default strategy: use value_a if not None, otherwise use value_b
-                value = value_a if value_a is not None else value_b
-
-            row_data.append(value)
-
-        # Create new Row object using result_tuple
-        row_factory = result_tuple(all_fields)
-        merged_row = row_factory(row_data)
-        merged_rows.append(merged_row)
-
-    return all_fields, merged_rows
