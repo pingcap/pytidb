@@ -169,14 +169,14 @@ class SearchQuery:
         return self
 
     @overload
-    def fusion(self, fusion_method: Literal["rrf"], k: int = 60) -> "SearchQuery": ...
+    def fusion(self, method: Literal["rrf"], k: int = 60) -> "SearchQuery": ...
 
-    def fusion(self, fusion_method: Literal["rrf"] = "rrf", **params) -> "SearchQuery":
+    def fusion(self, method: Literal["rrf"] = "rrf", **params) -> "SearchQuery":
         """
         Fusion the search results.
 
         Args:
-            fusion_method: The fusion method to use.
+            method: The fusion method to use.
             **params: The parameters for the fusion method.
         """
         if self._search_type != "hybrid":
@@ -185,10 +185,10 @@ class SearchQuery:
                 ".search_type(type='hybrid')"
             )
 
-        if fusion_method not in ["rrf"]:
+        if method not in ["rrf"]:
             raise ValueError("invalid fusion method, allowed fusion methods are `rrf`")
 
-        self._fusion_method = fusion_method
+        self._fusion_method = method
         self._fusion_params = params
         return self
 
