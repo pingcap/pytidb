@@ -82,7 +82,8 @@ markdown_extensions:
   - markdown.extensions.toc:
       baselevel: 1
       permalink: ""
-
+  - pymdownx.arithmatex:
+      generic: true
 
 nav:
   - Home:
@@ -132,3 +133,6 @@ extra:
 extra_css:
   - styles/extra.css
 
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js

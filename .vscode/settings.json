@@ -38,6 +38,7 @@
         "reranked",
         "reranker",
         "reranking",
+        "selectbox",
         "setuptools",
         "sqlmodel",
         "sqls",
