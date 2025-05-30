@@ -6,9 +6,11 @@ TiDB supports filtering on scalar and JSON fields, and JSON field filtering is o
 
 ## Basic Usage
 
-You can filter the queried and operated data rows by passing a `filters` dictionary as a parameter in the `table.query()`, `table.delete()`, and `table.update()` methods.
+You can filter the queried and operated data rows by passing a `filters` dictionary as a parameter in the `table.query()`, `table.delete()`, `table.update()`, and `table.search()` methods.
 
 === "Python"
+
+Sample code for `table.query()`:
 
 ```python
 table.query({
@@ -17,6 +19,22 @@ table.query({
     },
     ...
 })
+```
+
+Sample code for `table.search()`:
+
+```python
+results = (
+    table.search("<query>", search_type="vector")
+        .filter({
+            "<key>": {
+                "<operator>": <value>
+            },
+            ...
+        })
+        .limit(10)
+        .to_list()
+)
 ```
 
 - `<key>` can be the name of a column in the table, a JSON Path expression to access a JSON field (see [Metadata Filtering](#metadata-filtering) for details), or [Logical Operator](#logical-operators).
