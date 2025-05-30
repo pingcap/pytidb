@@ -162,10 +162,10 @@ For more details, please refer to the [RRF paper](https://plg.uwaterloo.ca/~gvco
 
 === "Python"
 
-    You can use `fusion()` method to specify the fusion method and parameters.
+    Use the `rerank()` method to specify a reranker that sorts search results by relevance between the query and documents. See the [Reranking](./reranking.md) section for details.
 
     ```python
-    jinaai = Reranker(
+    reranker = Reranker(
         # Using the `jina-reranker-m0` model
         model_name="jina_ai/jina-reranker-m0",
         api_key="{your-jinaai-api-key}"
