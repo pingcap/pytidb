@@ -1,17 +1,15 @@
 # Reranking
 
-Reranking is a technique used to improve search results by reordering them based on weighted algorithms or specialized models.
+Reranking is a technique used to improve the relevance and accuracy of search results by re-evaluating and reordering them using a dedicated rerank model.
 
-## Model-based Rerankers
+The search process works in two stages:
 
-Model-based reranking uses specialized models to refine vector search results. 
-
-The process works in two stages:
-
-1. **Initial Retrieval**: Vector search identifies the top k most similar documents from the collection
-2. **Reranking**: A reranking model evaluates these k documents and reorders them to produce the final top n results (where n ≤ k)
+1. **Initial Retrieval**: Vector search identifies the top `k` most similar documents from the collection
+2. **Reranking**: A reranking model evaluates these `k` documents based on the relevance between the query and the documents and reorders them to produce the final top `n` results (where `n` ≤ `k`)
 
 This two-stage retrieval approach significantly improves both document relevance and accuracy.
+
+## Basic Usage
 
 === "Python"
 
@@ -31,11 +29,11 @@ This two-stage retrieval approach significantly improves both document relevance
         table.search("{query}").rerank(reranker, "{field_to_rerank}").limit(3)
         ```
 
-### Supported Providers
+## Supported Providers
 
 Here are some examples to use reranker models from third-party providers.
 
-#### Jina AI
+### Jina AI
 
 To enable reranker provided by JinaAI, go to their [website](https://jina.ai/reranker) to create a API key.
 
