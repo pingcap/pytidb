@@ -13,7 +13,7 @@ def env():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def db(env) -> TiDBClient:
+def client(env) -> TiDBClient:
     return TiDBClient.connect(
         # database_url=os.getenv("TIDB_DATABASE_URL", None),
         host=os.getenv("TIDB_HOST", "localhost"),

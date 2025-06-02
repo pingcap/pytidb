@@ -4,9 +4,15 @@ from typing import List, Optional, Type, Generator
 
 from pydantic import PrivateAttr, BaseModel
 import sqlalchemy
-from sqlalchemy import Executable, SelectBase, text, Result, create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session
+from sqlalchemy import (
+    Executable,
+    Inspector,
+    SelectBase,
+    text,
+    Result,
+)
+from sqlalchemy.engine import Engine, create_engine
+from sqlalchemy.orm import Session, DeclarativeMeta
 
 from pytidb.base import default_registry
 from pytidb.schema import TableModel, Field
@@ -62,10 +68,12 @@ SESSION = ContextVar[Session | None]("session", default=None)
 
 class TiDBClient:
     _db_engine: Engine = PrivateAttr()
+    _inspector: Inspector = PrivateAttr()
 
     def __init__(self, db_engine: Engine):
         self._db_engine = db_engine
         self._inspector = sqlalchemy.inspect(self._db_engine)
+        self._identifier_preparer = self._db_engine.dialect.identifier_preparer
 
     @classmethod
     def connect(
@@ -97,35 +105,60 @@ class TiDBClient:
 
         return cls(db_engine)
 
-    # Notice: Since the Vector type is not in the type support list of mysql dialect, using the reflection API will cause an error.
-    # https://github.com/sqlalchemy/sqlalchemy/blob/d6f11d9030b325d5afabf87869a6e3542edda54b/lib/sqlalchemy/dialects/mysql/base.py#L1199
-    # def _load_table_metadata(self, table_names: Optional[List[str]] = None):
-    #     if not table_names:
-    #         Base.metadata.reflect(bind=self._db_engine)
-    #     else:
-    #         Base.metadata.reflect(bind=self._db_engine, only=table_names, extend_existing=True)
+    def disconnect(self) -> None:
+        self._db_engine.dispose()
 
     @property
     def db_engine(self) -> Engine:
         return self._db_engine
 
+    # Database Management API
+
+    def create_database(self, name: str, skip_exists: bool = True):
+        db_name = self._identifier_preparer.quote(name)
+        with self._db_engine.connect() as conn:
+            if skip_exists:
+                stmt = text(f"CREATE DATABASE IF NOT EXISTS {db_name};")
+            else:
+                stmt = text(f"CREATE DATABASE {db_name};")
+            return conn.execute(stmt)
+
+    def drop_database(self, name: str) -> bool:
+        db_name = self._identifier_preparer.quote(name)
+        with self._db_engine.connect() as conn:
+            stmt = text(f"DROP DATABASE IF EXISTS {db_name};")
+            result = conn.execute(stmt)
+        return result.rowcount > 0
+
+    def database_names(self) -> List[str]:
+        stmt = text("SHOW DATABASES;")
+        with self._db_engine.connect() as conn:
+            result = conn.execute(stmt)
+            return [row[0] for row in result]
+
+    def has_database(self, name: str) -> bool:
+        return name in self.database_names()
+
+    # Table Management API
+
     def create_table(self, *, schema: Optional[Type[TableModel]] = None) -> Table:
         table = Table(schema=schema, client=self)
         return table
 
-    def get_table_model(self, table_name: str):
+    def _get_table_model(self, table_name: str) -> Optional[Type[DeclarativeMeta]]:
         for m in default_registry.mappers:
             if m.persist_selectable.name == table_name:
                 return m.class_
+        return None
 
     def open_table(self, table_name: str) -> Optional[Table]:
-        table_model = self.get_table_model(table_name)
-        if table_model is None:
-            return None
-        return Table(
-            schema=table_model,
-            client=self,
-        )
+        # If the table in the mapper registry.
+        table_model = self._get_table_model(table_name)
+        if table_model is not None:
+            table = Table(schema=table_model, client=self)
+            return table
+
+        return None
 
     def table_names(self) -> List[str]:
         return self._inspector.get_table_names()
@@ -133,9 +166,10 @@ class TiDBClient:
     def has_table(self, table_name: str) -> bool:
         return self._inspector.has_table(table_name)
 
-    def drop_table(self, table_name: str):
-        table_name = self._db_engine.dialect.identifier_preparer.quote(table_name)
-        return self.execute(f"DROP TABLE IF EXISTS {table_name}")
+    def drop_table(self, table_name: str) -> bool:
+        return self._inspector.drop_table(table_name)
+
+    # Raw SQL API
 
     def execute(
         self,
@@ -170,8 +204,7 @@ class TiDBClient:
             result = session.execute(stmt, params)
             return SQLQueryResult(result)
 
-    def disconnect(self) -> None:
-        self._db_engine.dispose()
+    # Session API
 
     @contextmanager
     def session(

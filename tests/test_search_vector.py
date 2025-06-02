@@ -15,7 +15,7 @@ from pytidb.search import SCORE_LABEL
 
 
 @pytest.fixture(scope="module")
-def vector_table(db: TiDBClient):
+def vector_table(client: TiDBClient):
     class Chunk(TableModel, table=True):
         __tablename__ = "test_vector_search"
         id: int = Field(None, primary_key=True)
@@ -23,7 +23,7 @@ def vector_table(db: TiDBClient):
         text_vec: Any = Field(sa_column=Column(Vector(3)))
         user_id: int = Field(None)
 
-    tbl = db.create_table(schema=Chunk)
+    tbl = client.create_table(schema=Chunk)
 
     # Prepare test data.
     tbl.truncate()
