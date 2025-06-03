@@ -165,8 +165,9 @@ class TiDBClient:
     def has_table(self, table_name: str) -> bool:
         return self._inspector.has_table(table_name)
 
-    def drop_table(self, table_name: str) -> bool:
-        return self._inspector.drop_table(table_name)
+    def drop_table(self, table_name: str):
+        table_name = self._db_engine.dialect.identifier_preparer.quote(table_name)
+        return self.execute(f"DROP TABLE IF EXISTS {table_name}")
 
     # Raw SQL API
 
