@@ -38,7 +38,7 @@ pip install pandas
 
 ## Connect to TiDB Cloud
 
-Go to [tidbcloud.com](https://tidbcloud.com/) to create a free TiDB cluster.
+Go to [tidbcloud.com](https://tidbcloud.com/?utm_source=github&utm_campaign=pytidb_readme) to create a free TiDB cluster.
 
 ```python
 import os
