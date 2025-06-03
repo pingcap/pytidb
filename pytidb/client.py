@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import List, Optional, Type, Generator
 
-from pydantic import PrivateAttr, BaseModel
+from pydantic import PrivateAttr
 import sqlalchemy
 from sqlalchemy import (
     Executable,
@@ -15,52 +15,11 @@ from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import Session, DeclarativeMeta
 
 from pytidb.base import default_registry
-from pytidb.schema import TableModel, Field
+from pytidb.schema import TableModel
 from pytidb.table import Table
 from pytidb.utils import build_tidb_dsn
 from pytidb.logger import logger
-
-
-class SQLExecuteResult(BaseModel):
-    rowcount: int = Field(0)
-    success: bool = Field(False)
-    message: Optional[str] = Field(None)
-
-
-class SQLQueryResult:
-    _result: Result
-
-    def __init__(self, result):
-        self._result = result
-
-    def scalar(self):
-        return self._result.scalar()
-
-    def one(self):
-        return self._result.one()
-
-    def to_rows(self):
-        return self._result.fetchall()
-
-    def to_pandas(self):
-        try:
-            import pandas as pd
-        except Exception:
-            raise ImportError(
-                "Failed to import pandas, please install it with `pip install pandas`"
-            )
-        keys = self._result.keys()
-        rows = self._result.fetchall()
-        return pd.DataFrame(rows, columns=keys)
-
-    def to_list(self) -> List[dict]:
-        keys = self._result.keys()
-        rows = self._result.fetchall()
-        return [dict(zip(keys, row)) for row in rows]
-
-    def to_pydantic(self, model: Type[BaseModel]) -> List[BaseModel]:
-        ls = self.to_list()
-        return [model.model_validate(item) for item in ls]
+from pytidb.sql_result import SQLExecuteResult, SQLQueryResult
 
 
 SESSION = ContextVar[Session | None]("session", default=None)
