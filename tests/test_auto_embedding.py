@@ -7,11 +7,11 @@ from pytidb.embeddings import EmbeddingFunction
 from pytidb.schema import TableModel
 
 
-def test_auto_embedding(db: TiDBClient):
+def test_auto_embedding(client: TiDBClient):
     text_embed_small = EmbeddingFunction("openai/text-embedding-3-small")
     test_table_name = "test_auto_embedding"
 
-    db.drop_table(test_table_name)
+    client.drop_table(test_table_name)
 
     class Chunk(TableModel, table=True):
         __tablename__ = test_table_name
@@ -21,7 +21,7 @@ def test_auto_embedding(db: TiDBClient):
         text_vec: Optional[Any] = text_embed_small.VectorField(source_field="text")
         user_id: int = Field()
 
-    tbl = db.create_table(schema=Chunk)
+    tbl = client.create_table(schema=Chunk)
 
     tbl.truncate()
     tbl.insert(Chunk(id=1, text="foo", user_id=1))

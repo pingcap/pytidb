@@ -6,14 +6,14 @@ from pytidb.schema import Field, TableModel
 
 
 @pytest.fixture(scope="session")
-def player_table(db):
+def player_table(client):
     class Player(TableModel, table=True):
         __tablename__ = "players"
         id: int = Field(primary_key=True)
         name: str = Field(max_length=20)
         balance: int = Field(default=0)
 
-    table = db.create_table(schema=Player)
+    table = client.create_table(schema=Player)
     table.truncate()
     table.bulk_insert(
         [
@@ -24,33 +24,35 @@ def player_table(db):
     return table
 
 
-def test_db_client_commit(player_table: Table, db: TiDBClient):
-    with db.session():
-        initial_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
+def test_db_client_commit(player_table: Table, client: TiDBClient):
+    with client.session():
+        initial_total_balance = client.query(
+            "SELECT SUM(balance) FROM players"
+        ).scalar()
 
         # Transfer 10 coins from player 1 to player 2
         from_player_id = 1
         to_player_id = 2
         transfer_amount = 10
-        db.execute(
+        client.execute(
             "UPDATE players SET balance = balance + :inc WHERE id = :from_player_id",
             {"inc": transfer_amount, "from_player_id": from_player_id},
         )
-        db.execute(
+        client.execute(
             "UPDATE players SET balance = balance - :dec WHERE id = :to_player_id",
             {"dec": transfer_amount, "to_player_id": to_player_id},
         )
 
-        final_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
+        final_total_balance = client.query("SELECT SUM(balance) FROM players").scalar()
         assert final_total_balance == initial_total_balance
 
 
-def test_db_client_rollback(player_table: Table, db: TiDBClient):
-    with db.session() as session:
-        initial_balance_1 = db.query(
+def test_db_client_rollback(player_table: Table, client: TiDBClient):
+    with client.session() as session:
+        initial_balance_1 = client.query(
             "SELECT balance FROM players WHERE id = 1"
         ).scalar()
-        initial_balance_2 = db.query(
+        initial_balance_2 = client.query(
             "SELECT balance FROM players WHERE id = 2"
         ).scalar()
 
@@ -58,11 +60,11 @@ def test_db_client_rollback(player_table: Table, db: TiDBClient):
         from_player_id = 1
         to_player_id = 2
         transfer_amount = 10
-        db.execute(
+        client.execute(
             "UPDATE players SET balance = balance + :inc WHERE id = :from_player_id",
             {"inc": transfer_amount, "from_player_id": from_player_id},
         )
-        db.execute(
+        client.execute(
             "UPDATE players SET balance = balance - :dec WHERE id = :to_player_id",
             {"dec": transfer_amount, "to_player_id": to_player_id},
         )
@@ -70,13 +72,17 @@ def test_db_client_rollback(player_table: Table, db: TiDBClient):
         # Rollback to the initial state before the transaction beginning,
         session.rollback()
 
-        final_balance_1 = db.query("SELECT balance FROM players WHERE id = 1").scalar()
-        final_balance_2 = db.query("SELECT balance FROM players WHERE id = 2").scalar()
+        final_balance_1 = client.query(
+            "SELECT balance FROM players WHERE id = 1"
+        ).scalar()
+        final_balance_2 = client.query(
+            "SELECT balance FROM players WHERE id = 2"
+        ).scalar()
         assert initial_balance_1 == final_balance_1
         assert initial_balance_2 == final_balance_2
 
 
-def test_local_session_commit(player_table: Table, db: TiDBClient):
+def test_local_session_commit(player_table: Table, client: TiDBClient):
     player_id = 1
     player = player_table.get(player_id)
     expected_balance = player.balance + 1
@@ -92,7 +98,7 @@ def test_local_session_commit(player_table: Table, db: TiDBClient):
     assert player.balance == expected_balance
 
 
-def test_local_session_rollback(player_table: Table, db: TiDBClient):
+def test_local_session_rollback(player_table: Table, client: TiDBClient):
     player_id = 1
     player = player_table.get(player_id)
     expected_balance = player.balance
@@ -111,8 +117,8 @@ def test_local_session_rollback(player_table: Table, db: TiDBClient):
     assert player.balance == expected_balance
 
 
-def test_context_session_commit(player_table: Table, db: TiDBClient):
-    with db.session() as session:
+def test_context_session_commit(player_table: Table, client: TiDBClient):
+    with client.session() as session:
         player_id = 1
         player = player_table.get(player_id)
         expected_balance = player.balance + 1
@@ -130,8 +136,8 @@ def test_context_session_commit(player_table: Table, db: TiDBClient):
         assert player.balance == expected_balance
 
 
-def test_context_session_rollback(player_table: Table, db: TiDBClient):
-    with db.session() as session:
+def test_context_session_rollback(player_table: Table, client: TiDBClient):
+    with client.session() as session:
         player_id = 1
         player = player_table.get(player_id)
         expected_balance = player.balance
@@ -149,9 +155,9 @@ def test_context_session_rollback(player_table: Table, db: TiDBClient):
         assert player.balance == expected_balance
 
 
-def test_provided_session_commit(player_table: Table, db: TiDBClient):
-    with Session(db._db_engine) as provided_session:
-        with db.session(provided_session=provided_session):
+def test_provided_session_commit(player_table: Table, client: TiDBClient):
+    with Session(client._db_engine) as provided_session:
+        with client.session(provided_session=provided_session):
             player_id = 1
             player = player_table.get(player_id)
             expected_balance = player.balance + 1
@@ -167,9 +173,9 @@ def test_provided_session_commit(player_table: Table, db: TiDBClient):
             assert player.balance == expected_balance
 
 
-def test_provided_session_rollback(player_table: Table, db: TiDBClient):
-    with Session(db._db_engine) as provided_session:
-        with db.session(provided_session=provided_session):
+def test_provided_session_rollback(player_table: Table, client: TiDBClient):
+    with Session(client._db_engine) as provided_session:
+        with client.session(provided_session=provided_session):
             player_id = 1
             player = player_table.get(player_id)
             expected_balance = player.balance

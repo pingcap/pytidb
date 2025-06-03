@@ -10,7 +10,7 @@ from pytidb.datatype import Text
 
 
 @pytest.fixture(scope="module")
-def hybrid_table(db: TiDBClient):
+def hybrid_table(client: TiDBClient):
     embed_fn = EmbeddingFunction("openai/text-embedding-3-small")
 
     class Item(TableModel, table=True):
@@ -20,7 +20,7 @@ def hybrid_table(db: TiDBClient):
         description: str = Field(sa_type=Text)
         embedding: list[float] = embed_fn.VectorField(source_field="description")
 
-    tbl = db.create_table(schema=Item)
+    tbl = client.create_table(schema=Item)
 
     # Prepare test data.
     tbl.delete()

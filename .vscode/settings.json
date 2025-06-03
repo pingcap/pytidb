@@ -19,6 +19,7 @@
         "fulltext",
         "funcfilter",
         "getenv",
+        "ischema",
         "jina",
         "JINAAI",
         "levelname",

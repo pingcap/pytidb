@@ -8,14 +8,14 @@ from pytidb.schema import TableModel, Field
 
 
 @pytest.fixture(scope="module")
-def text_table(db: TiDBClient):
+def text_table(client: TiDBClient):
     class Chunk(TableModel, table=True):
         __tablename__ = "test_fulltext_search"
         id: int = Field(None, primary_key=True)
         text: str = Field(None)
         user_id: int = Field(None)
 
-    tbl = db.create_table(schema=Chunk)
+    tbl = client.create_table(schema=Chunk)
 
     # Prepare test data.
     tbl.delete()

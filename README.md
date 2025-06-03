@@ -1,7 +1,7 @@
 # TiDB Python SDK
 
 > [!NOTE]
-> This Python package is under rapid development and the API is subject to change, it is recommended to use a fixed version when importing, e.g. `pytidb=0.0.6`
+> This Python package is under rapid development and the API is subject to change, it is recommended to use a fixed version when importing, e.g. `pytidb==0.0.6`
 
 <p>
   <a href="https://pypi.org/project/pytidb">
