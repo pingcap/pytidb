@@ -1,4 +1,5 @@
-from pytidb.schema import TableModel, Field
+from pytidb.schema import TableModel
+from pytidb.schema import Field
 
 
 def test_open_table(client):

@@ -114,7 +114,7 @@ class TiDBClient:
 
     # Database Management API
 
-    def create_database(self, name: str, skip_exists: bool = True):
+    def create_database(self, name: str, skip_exists: bool = False):
         db_name = self._identifier_preparer.quote(name)
         with self._db_engine.connect() as conn:
             if skip_exists:
@@ -123,12 +123,11 @@ class TiDBClient:
                 stmt = text(f"CREATE DATABASE {db_name};")
             return conn.execute(stmt)
 
-    def drop_database(self, name: str) -> bool:
+    def drop_database(self, name: str):
         db_name = self._identifier_preparer.quote(name)
         with self._db_engine.connect() as conn:
             stmt = text(f"DROP DATABASE IF EXISTS {db_name};")
-            result = conn.execute(stmt)
-        return result.rowcount > 0
+            return conn.execute(stmt)
 
     def database_names(self) -> List[str]:
         stmt = text("SHOW DATABASES;")
