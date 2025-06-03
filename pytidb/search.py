@@ -370,7 +370,7 @@ class SearchQuery:
     def _execute_query(self) -> Tuple[List[str], List[Any]]:
         if self._limit is None:
             raise ValueError(
-                "limit is required for search, please specify it through " ".limit(n)"
+                "limit is required for search, please specify it through .limit(n)"
             )
 
         if self._search_type == "vector":
