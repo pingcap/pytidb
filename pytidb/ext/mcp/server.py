@@ -60,7 +60,6 @@ class TiDBConnector:
             self.username = username
             self.password = password
             self.database = database
-        self.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(self.host)
 
     def show_databases(self) -> list[dict]:
         return self.tidb_client.query("SHOW DATABASES").to_list()
@@ -97,6 +96,7 @@ class TiDBConnector:
                     results.append(result.model_dump())
         return results
 
+    @property
     def is_tidb_serverless(self) -> bool:
         return TIDB_SERVERLESS_HOST_PATTERN.match(self.host)
 
