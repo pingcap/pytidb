@@ -5,7 +5,7 @@ from typing import Dict, Optional, Any, List, TypeVar, Tuple
 
 import sqlalchemy
 from pydantic import AnyUrl, UrlConstraints
-from sqlalchemy import BinaryExpression, Column, String
+from sqlalchemy import BinaryExpression, Column, String, create_engine, make_url
 from sqlmodel import AutoString
 from tidb_vector.sqlalchemy import VectorType
 from sqlalchemy.engine import Row
@@ -34,6 +34,12 @@ JSON_FIELD_PATTERN = re.compile(
 TIDB_SERVERLESS_HOST_PATTERN = re.compile(
     r"gateway\d{2}\.(.+)\.(prod|dev|staging)\.(shared\.)?(aws|alicloud)\.tidbcloud\.com"
 )
+
+
+def create_engine_without_db(url, echo=False, **kwargs):
+    temp_db_url = make_url(url)
+    temp_db_url = temp_db_url._replace(database=None)
+    return create_engine(temp_db_url, echo=echo, **kwargs)
 
 
 class TiDBDsn(AnyUrl):

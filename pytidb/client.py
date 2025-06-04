@@ -15,9 +15,10 @@ from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import Session, DeclarativeMeta
 
 from pytidb.base import default_registry
+from pytidb.databases import create_database, database_exists
 from pytidb.schema import TableModel
 from pytidb.table import Table
-from pytidb.utils import build_tidb_dsn
+from pytidb.utils import build_tidb_dsn, create_engine_without_db
 from pytidb.logger import logger
 from pytidb.sql_result import SQLExecuteResult, SQLQueryResult
 
@@ -45,6 +46,7 @@ class TiDBClient:
         password: Optional[str] = "",
         database: Optional[str] = "test",
         enable_ssl: Optional[bool] = None,
+        ensure_db: Optional[bool] = False,
         debug: Optional[bool] = None,
         **kwargs,
     ) -> "TiDBClient":
@@ -60,6 +62,17 @@ class TiDBClient:
                 )
             )
 
+        if ensure_db:
+            try:
+                temp_engine = create_engine_without_db(
+                    database_url, echo=debug, **kwargs
+                )
+                if not database_exists(temp_engine, database):
+                    create_database(temp_engine, database)
+            except Exception as e:
+                logger.error(f"Failed to ensure database exists: {str(e)}")
+                raise
+
         db_engine = create_engine(database_url, echo=debug, **kwargs)
 
         return cls(db_engine)
@@ -74,13 +87,7 @@ class TiDBClient:
     # Database Management API
 
     def create_database(self, name: str, skip_exists: bool = False):
-        db_name = self._identifier_preparer.quote(name)
-        with self._db_engine.connect() as conn:
-            if skip_exists:
-                stmt = text(f"CREATE DATABASE IF NOT EXISTS {db_name};")
-            else:
-                stmt = text(f"CREATE DATABASE {db_name};")
-            return conn.execute(stmt)
+        return create_database(self._db_engine, name, skip_exists)
 
     def drop_database(self, name: str):
         db_name = self._identifier_preparer.quote(name)
@@ -95,7 +102,7 @@ class TiDBClient:
             return [row[0] for row in result]
 
     def has_database(self, name: str) -> bool:
-        return name in self.database_names()
+        return database_exists(self._db_engine, name)
 
     # Table Management API
 
