@@ -6,7 +6,6 @@ import pytest
 
 from pytidb.schema import TableModel, Field, VectorField, Column
 from pytidb.datatype import JSON
-from pytidb.base import Base
 
 
 logger = logging.getLogger(__name__)
@@ -15,16 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 def test_table_crud(client):
-    table_name = "test_get_data"
-    client.drop_table(table_name)
-
     class Chunk(TableModel, table=True):
-        __tablename__ = table_name
+        __tablename__ = "test_crud_table"
         id: int = Field(primary_key=True)
         text: str = Field(max_length=20)
         text_vec: Any = VectorField(dimensions=3)
 
-    tbl = client.create_table(schema=Chunk)
+    tbl = client.create_table(schema=Chunk, mode="overwrite")
 
     # CREATE
     tbl.insert(Chunk(id=1, text="foo", text_vec=[1, 2, 3]))
@@ -67,19 +63,15 @@ def test_table_crud(client):
 
 
 @pytest.fixture(scope="module")
-def table_for_test_filters(client):
-    table_name = "test_query_data"
-    client.drop_table(table_name)
-
+def test_filters_table(client):
     class ChunkWithMeta(TableModel, table=True):
-        __tablename__ = table_name
+        __tablename__ = "test_filters_table"
         id: int = Field(primary_key=True)
         text: str = Field(max_length=20)
         document_id: int = Field()
         meta: Dict[str, Any] = Field(sa_column=Column(JSON))
 
-    tbl = client.create_table(schema=ChunkWithMeta)
-    Base.metadata.create_all(client.db_engine)
+    tbl = client.create_table(schema=ChunkWithMeta, mode="overwrite")
 
     test_data = [
         ChunkWithMeta(
@@ -103,8 +95,6 @@ def table_for_test_filters(client):
     ]
 
     tbl.bulk_insert(test_data)
-    yield tbl
-    client.drop_table(table_name)
 
 
 filter_test_data = [
@@ -134,9 +124,8 @@ filter_test_data = [
     "filters,expected",
     filter_test_data,
 )
-def test_filters(table_for_test_filters, filters: Dict[str, Any], expected: List[str]):
-    tbl = table_for_test_filters
-    result = tbl.query(filters)
+def test_filters(test_filters_table, filters: Dict[str, Any], expected: List[str]):
+    result = test_filters_table.query(filters)
 
     actual = [r.text for r in result]
     assert actual == expected

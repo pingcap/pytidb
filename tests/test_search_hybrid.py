@@ -20,7 +20,7 @@ def hybrid_table(client: TiDBClient):
         description: str = Field(sa_type=Text)
         embedding: list[float] = embed_fn.VectorField(source_field="description")
 
-    tbl = client.create_table(schema=Item)
+    tbl = client.create_table(schema=Item, mode="overwrite")
 
     # Prepare test data.
     tbl.delete()

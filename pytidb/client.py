@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import List, Optional, Type, Generator
+from typing import List, Literal, Optional, Type, Generator
 
 from pydantic import PrivateAttr
 import sqlalchemy
@@ -106,8 +106,21 @@ class TiDBClient:
 
     # Table Management API
 
-    def create_table(self, *, schema: Optional[Type[TableModel]] = None) -> Table:
-        table = Table(schema=schema, client=self)
+    def create_table(
+        self,
+        *,
+        schema: Optional[Type[TableModel]] = None,
+        mode: Optional[Literal["create", "overwrite", "exist_ok"]] = "create",
+    ) -> Table:
+        if mode == "create":
+            table = Table(schema=schema, client=self)
+        elif mode == "overwrite":
+            self.drop_table(schema.__tablename__)
+            table = Table(schema=schema, client=self)
+        elif mode == "exist_ok":
+            table = Table(schema=schema, client=self, exists_ok=True)
+        else:
+            raise ValueError(f"Invalid create mode: {mode}")
         return table
 
     def _get_table_model(self, table_name: str) -> Optional[Type[DeclarativeMeta]]:
