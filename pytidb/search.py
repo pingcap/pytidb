@@ -19,9 +19,9 @@ from sqlalchemy import Row, Select, asc, desc, select, and_, text
 from pytidb.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, QueryBundle, VectorDataType, TableModel
+from pytidb.filters import build_filter_clauses
 from pytidb.utils import (
     RowKeyType,
-    build_filter_clauses,
     check_text_column,
     check_vector_column,
     get_row_id_from_row,
