@@ -21,7 +21,7 @@ def test_auto_embedding(client: TiDBClient):
         text_vec: Optional[Any] = text_embed_small.VectorField(source_field="text")
         user_id: int = Field()
 
-    tbl = client.create_table(schema=Chunk)
+    tbl = client.create_table(schema=Chunk, mode="overwrite")
 
     tbl.truncate()
     tbl.insert(Chunk(id=1, text="foo", user_id=1))

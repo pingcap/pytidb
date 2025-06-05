@@ -24,20 +24,24 @@ def test_raw_sql(client: TiDBClient):
     assert result.success
     assert result.rowcount == 3
 
+    # to_pandas
     result = client.query("SELECT id FROM test_raw_sql;")
     df = result.to_pandas()
     assert df.size == 3
 
+    # to_rows
     result = client.query("SELECT id FROM test_raw_sql;")
     rows = result.to_rows()
     ids = sorted([r[0] for r in rows])
     assert ids == [1, 2, 3]
 
+    # to_list
     result = client.query("SELECT id FROM test_raw_sql;")
     list = result.to_list()
     ids = sorted([item["id"] for item in list])
     assert ids == [1, 2, 3]
 
+    # to_pydantic
     class Record(BaseModel):
         id: int
 
@@ -46,6 +50,7 @@ def test_raw_sql(client: TiDBClient):
     ids = sorted([r.id for r in records])
     assert ids == [1, 2, 3]
 
+    # scalar
     result = client.query("SELECT COUNT(*) FROM test_raw_sql;")
     n = result.scalar()
     assert n == 3
@@ -57,7 +62,7 @@ def test_query_select_base(client: TiDBClient):
         id: int = TidbField(default=None, primary_key=True)
         name: str = TidbField(default=None)
 
-    tbl = client.create_table(schema=Record)
+    tbl = client.create_table(schema=Record, mode="overwrite")
     tbl.truncate()
 
     # Insert data via execute()

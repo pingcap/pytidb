@@ -23,7 +23,7 @@ def vector_table(client: TiDBClient):
         text_vec: Any = Field(sa_column=Column(Vector(3)))
         user_id: int = Field(None)
 
-    tbl = client.create_table(schema=Chunk)
+    tbl = client.create_table(schema=Chunk, mode="overwrite")
 
     # Prepare test data.
     tbl.truncate()

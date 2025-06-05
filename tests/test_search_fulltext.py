@@ -15,7 +15,9 @@ def text_table(client: TiDBClient):
         text: str = Field(None)
         user_id: int = Field(None)
 
-    tbl = client.create_table(schema=Chunk)
+    tbl = client.create_table(schema=Chunk, mode="overwrite")
+    if not tbl.has_fts_index("text"):
+        tbl.create_fts_index("text")
 
     # Prepare test data.
     tbl.delete()
@@ -38,9 +40,6 @@ def text_table(client: TiDBClient):
             ),
         ]
     )
-
-    if not tbl.has_fts_index("text"):
-        tbl.create_fts_index("text")
 
     return tbl
 

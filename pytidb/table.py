@@ -49,7 +49,7 @@ class Table(Generic[T]):
         vector_column: Optional[str] = None,
         text_column: Optional[str] = None,
         distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
-        checkfirst: bool = True,
+        exists_ok: bool = False,
     ):
         self._client = client
         self._db_engine = client.db_engine
@@ -81,7 +81,7 @@ class Table(Generic[T]):
         # Create table.
         self._sa_table = self._table_model.__table__
         Base.metadata.create_all(
-            self._db_engine, tables=[self._sa_table], checkfirst=checkfirst
+            self._db_engine, tables=[self._sa_table], checkfirst=exists_ok
         )
 
         # Find vector and text columns.

@@ -23,6 +23,7 @@ def test_databases(client):
     assert not client.has_database(db_name)
 
 
+# @pytest.skip(reason="skipped until it can be finished fast", allow_module_level=True)
 def test_ensure_db(client):
     db_name = "test_db"
     if client.has_database(db_name):
@@ -37,13 +38,12 @@ def test_ensure_db(client):
 
     # Without ensure_db.
     with pytest.raises(Exception):
-        client.connect(**common_kwargs, debug=True, database=db_name)
+        client.connect(**common_kwargs, database=db_name)
 
     # With ensure_db.
     temp_client = client.connect(
         **common_kwargs,
         database=db_name,
         ensure_db=True,
-        debug=True,
     )
     assert temp_client is not None
