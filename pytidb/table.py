@@ -10,13 +10,16 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from sqlalchemy import Engine, delete, update
-from sqlalchemy.orm import Session, DeclarativeMeta
+from sqlalchemy import Engine
+from sqlalchemy.orm import DeclarativeMeta
+from sqlmodel import Session
 from sqlmodel.main import SQLModelMetaclass
 from tidb_vector.sqlalchemy import VectorAdaptor
 from typing_extensions import Generic
 
 from pytidb.base import Base
+from pytidb.filters import build_filter_clauses
+from pytidb.sql import select, update, delete
 from pytidb.schema import (
     QueryBundle,
     VectorDataType,
@@ -25,8 +28,8 @@ from pytidb.schema import (
     ColumnInfo,
 )
 from pytidb.search import SearchType, SearchQuery
+from pytidb.result import QueryResult, SQLModelQueryResult
 from pytidb.utils import (
-    build_filter_clauses,
     check_text_column,
     check_vector_column,
     filter_text_columns,
@@ -272,15 +275,47 @@ class Table(Generic[T]):
             stmt = f"SELECT COUNT(*) FROM {table_name};"
             return self._client.query(stmt).scalar()
 
-    def query(self, filters: Optional[Dict[str, Any]] = None) -> List[T]:
+    def query(
+        self,
+        filters: Optional[Dict[str, Any] | Any] = None,
+        order_by: Optional[List[Any] | str | Dict[str, Any]] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> QueryResult:
         with Session(self._db_engine) as db_session:
-            query = db_session.query(self._table_model)
-            if filters:
+            stmt = select(self._table_model)
+
+            # Apply filters.
+            if filters is not None:
                 filter_clauses = build_filter_clauses(
                     filters, self._columns, self._table_model
                 )
-                query = query.filter(*filter_clauses)
-            return query.all()
+                stmt = stmt.filter(*filter_clauses)
+
+            # Apply order by.
+            if isinstance(order_by, list):
+                stmt = stmt.order_by(*order_by)
+            elif isinstance(order_by, str):
+                stmt = stmt.order_by(self._columns[order_by])
+            elif isinstance(order_by, dict):
+                for key, value in order_by.items():
+                    if value == "desc":
+                        stmt = stmt.order_by(self._columns[key].desc())
+                    elif value == "asc":
+                        stmt = stmt.order_by(self._columns[key])
+                    else:
+                        raise ValueError(
+                            f"Invalid order direction value (allowed: 'desc', 'asc'): {value}"
+                        )
+
+            # Pagination.
+            if limit is not None:
+                stmt = stmt.limit(limit)
+            if offset is not None:
+                stmt = stmt.offset(offset)
+
+            result = db_session.exec(stmt).all()
+            return SQLModelQueryResult(result)
 
     def search(
         self,

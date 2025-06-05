@@ -20,7 +20,7 @@ from pytidb.schema import TableModel
 from pytidb.table import Table
 from pytidb.utils import build_tidb_dsn, create_engine_without_db
 from pytidb.logger import logger
-from pytidb.sql_result import SQLExecuteResult, SQLQueryResult
+from pytidb.result import SQLExecuteResult, SQLQueryResult
 
 
 SESSION = ContextVar[Session | None]("session", default=None)
