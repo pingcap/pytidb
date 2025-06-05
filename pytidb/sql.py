@@ -1,5 +1,5 @@
 # Basic SQL operations
-from sqlmodel.sql.expression import select
+from sqlmodel.sql.expression import select as select
 from sqlalchemy.sql import insert as insert
 from sqlalchemy.sql import update as update
 from sqlalchemy.sql import delete as delete
