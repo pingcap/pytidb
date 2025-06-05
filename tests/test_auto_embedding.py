@@ -32,11 +32,7 @@ def test_auto_embedding(client: TiDBClient):
             Chunk(id=4, text="qux", user_id=4),
         ]
     )
-    chunks = tbl.query(
-        filters={
-            "user_id": 3,
-        }
-    )
+    chunks = tbl.query(filters=Chunk.user_id == 3).to_pydantic()
     assert len(chunks) == 1
     assert chunks[0].text == "baz"
     assert len(chunks[0].text_vec) == 1536
