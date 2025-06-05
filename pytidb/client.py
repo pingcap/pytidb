@@ -133,7 +133,7 @@ class TiDBClient:
         # If the table in the mapper registry.
         table_model = self._get_table_model(table_name)
         if table_model is not None:
-            table = Table(schema=table_model, client=self)
+            table = Table(schema=table_model, client=self, exists_ok=True)
             return table
 
         return None
