@@ -20,7 +20,7 @@ Python SDK of TiDB as an unified data platform for developers to build GenAI app
 - 💱 Transaction support
 - 🔌 [Model Context Protocol (MCP) support](https://pingcap.github.io/pytidb/integrations/mcp)
 
-Documentation: https://pingcap.github.io/pytidb/
+Documentation: https://pingcap.github.io/ai/
 
 Quick Start Guide: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
 
