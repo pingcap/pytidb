@@ -54,6 +54,7 @@ class Table(Generic[T]):
         self._client = client
         self._db_engine = client.db_engine
         self._identifier_preparer = self._db_engine.dialect.identifier_preparer
+        self.distance_metric = distance_metric
 
         # Init table model.
         if type(schema) is SQLModelMetaclass:
@@ -87,13 +88,6 @@ class Table(Generic[T]):
         # Find vector and text columns.
         self._vector_columns = filter_vector_columns(self._columns)
         self._text_columns = filter_text_columns(self._columns)
-
-        # Create vector index automatically.
-        vector_adaptor = VectorAdaptor(self._db_engine)
-        for col in self._vector_columns:
-            if vector_adaptor.has_vector_index(col):
-                continue
-            vector_adaptor.create_vector_index(col, distance_metric)
 
         # Determine default vector column for vector search.
         if vector_column is not None:
@@ -339,3 +333,10 @@ class Table(Generic[T]):
             f"WITH PARSER MULTILINGUAL;"
         )
         self._client.execute(create_index_stmt, raise_error=True)
+
+    def create_vector_index(self):
+        vector_adaptor = VectorAdaptor(self._db_engine)
+        for col in self._vector_columns:
+            if vector_adaptor.has_vector_index(col):
+                continue
+            vector_adaptor.create_vector_index(col, self.distance_metric)

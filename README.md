@@ -78,6 +78,7 @@ class Chunk(TableModel, table=True):
     user_id: int = Field()
 
 table = db.create_table(schema=Chunk)
+table.create_vector_index() # creator vector index for the table
 ```
 
 **Bulk insert data**:
