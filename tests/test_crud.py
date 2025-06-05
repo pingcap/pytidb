@@ -15,7 +15,7 @@ def test_table_crud(client):
         text: str = Field(max_length=20)
         text_vec: Any = VectorField(dimensions=3)
 
-    tbl = client.create_table(schema=Chunk, mode="overwrite")
+    tbl = client.create_table(schema=Chunk, mode="exist_ok")
 
     # CREATE
     tbl.insert(Chunk(id=1, text="foo", text_vec=[1, 2, 3]))
@@ -55,13 +55,13 @@ def test_table_crud(client):
 
 
 def test_table_query(client):
-    class Chunk(TableModel, table=True):
+    class Chunk(TableModel):
         __tablename__ = "test_query_table"
         id: int = Field(primary_key=True)
         text: str = Field(max_length=20)
         text_vec: Any = VectorField(dimensions=3)
 
-    tbl = client.create_table(schema=Chunk, mode="overwrite")
+    tbl = client.create_table(schema=Chunk, mode="exist_ok")
     tbl.insert(Chunk(id=1, text="foo", text_vec=[1, 2, 3]))
     tbl.insert(Chunk(id=2, text="bar", text_vec=[4, 5, 6]))
     tbl.insert(Chunk(id=3, text="biz", text_vec=[7, 8, 9]))

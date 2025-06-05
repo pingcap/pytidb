@@ -9,13 +9,13 @@ from pytidb.schema import TableModel, Field
 
 @pytest.fixture(scope="module")
 def text_table(client: TiDBClient):
-    class Chunk(TableModel, table=True):
+    class Chunk(TableModel):
         __tablename__ = "test_fulltext_search"
         id: int = Field(None, primary_key=True)
         text: str = Field(None)
         user_id: int = Field(None)
 
-    tbl = client.create_table(schema=Chunk, mode="overwrite")
+    tbl = client.create_table(schema=Chunk, mode="exist_ok")
     if not tbl.has_fts_index("text"):
         tbl.create_fts_index("text")
 

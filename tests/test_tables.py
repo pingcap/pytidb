@@ -4,12 +4,12 @@ from pytidb.schema import Field
 
 
 def test_open_table(client):
-    class TestOpenTable(TableModel, table=True):
+    class TestOpenTable(TableModel):
         __tablename__ = "test_open_table"
         id: int = Field(primary_key=True)
         name: str
 
-    table = client.create_table(schema=TestOpenTable, mode="overwrite")
+    table = client.create_table(schema=TestOpenTable, mode="exist_ok")
     table.truncate()
     table.insert(TestOpenTable(id=1, name="foo"))
     table = client.open_table("test_open_table")
@@ -19,7 +19,7 @@ def test_open_table(client):
 def test_create_table_mode(client):
     test_table_name = "test_create_table"
 
-    class TestCreateTable(TableModel, table=True):
+    class TestCreateTable(TableModel):
         __tablename__ = test_table_name
         id: int = Field(primary_key=True)
         name: str

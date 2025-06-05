@@ -7,13 +7,13 @@ from pytidb.schema import Field, TableModel
 
 @pytest.fixture(scope="session")
 def player_table(client):
-    class Player(TableModel, table=True):
+    class Player(TableModel):
         __tablename__ = "players"
         id: int = Field(primary_key=True)
         name: str = Field(max_length=20)
         balance: int = Field(default=0)
 
-    table = client.create_table(schema=Player, mode="overwrite")
+    table = client.create_table(schema=Player, mode="exist_ok")
     table.truncate()
     table.bulk_insert(
         [

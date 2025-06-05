@@ -15,7 +15,7 @@ class FilterTestCase:
         self.expected = expected
 
 
-class ChunkWithMeta(TableModel, table=True):
+class ChunkWithMeta(TableModel):
     __tablename__ = "test_filters_table"
     id: int = Field(primary_key=True)
     text: str = Field(max_length=20)
@@ -25,7 +25,7 @@ class ChunkWithMeta(TableModel, table=True):
 
 @pytest.fixture(scope="module")
 def test_filters_table(client):
-    tbl = client.create_table(schema=ChunkWithMeta, mode="overwrite")
+    tbl = client.create_table(schema=ChunkWithMeta, mode="exist_ok")
 
     test_data = [
         ChunkWithMeta(

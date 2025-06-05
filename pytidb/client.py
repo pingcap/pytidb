@@ -118,7 +118,7 @@ class TiDBClient:
             self.drop_table(schema.__tablename__)
             table = Table(schema=schema, client=self)
         elif mode == "exist_ok":
-            table = Table(schema=schema, client=self, exists_ok=True)
+            table = Table(schema=schema, client=self, exist_ok=True)
         else:
             raise ValueError(f"Invalid create mode: {mode}")
         return table
@@ -133,7 +133,7 @@ class TiDBClient:
         # If the table in the mapper registry.
         table_model = self._get_table_model(table_name)
         if table_model is not None:
-            table = Table(schema=table_model, client=self, exists_ok=True)
+            table = Table(schema=table_model, client=self, exist_ok=True)
             return table
 
         return None
