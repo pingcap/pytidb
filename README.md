@@ -17,12 +17,16 @@ Python SDK of TiDB as an unified data platform for developers to build GenAI app
 - 🔍 Support various search modes: vector search, fulltext search, hybrid search
 - 🔄 Automatic embedding generation
 - 🎯 Advanced filtering capabilities
+- 🥇 Tuning search results with Reranker
 - 💱 Transaction support
-- 🔌 [Model Context Protocol (MCP) support](https://pingcap.github.io/pytidb/integrations/mcp)
 
 Documentation: https://pingcap.github.io/ai/
 
 Quick Start Guide: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
+
+Install TiDB MCP Server (Docs: https://pingcap.github.io/ai/integrations/mcp): 
+
+[![Install TiDB MCP Server](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=TiDB&config=eyJjb21tYW5kIjoidXZ4IC0tZnJvbSBweXRpZGJbbWNwXSB0aWRiLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiVElEQl9EQVRBQkFTRSI6Im1jcF90ZXN0IiwiVElEQl9IT1NUIjoibG9jYWxob3N0IiwiVElEQl9QT1JUIjoiNDAwMCIsIlRJREJfVVNFUk5BTUUiOiJyb290IiwiVElEQl9QQVNTV09SRCI6IiJ9fQ%3D%3D)
 
 ## Installation
 
