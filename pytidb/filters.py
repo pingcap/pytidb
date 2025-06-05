@@ -1,21 +1,20 @@
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import sqlalchemy
 from sqlalchemy import BinaryExpression, text
 
 from pytidb.schema import TableModel
 
-JSON_FIELD_PATTERN = re.compile(
-    r"^(?P<column>[a-zA-Z_][a-zA-Z0-9_]*)\.(?P<json_field>[a-zA-Z_][a-zA-Z0-9_]*)$"
-)
+
+Filters = Union[Dict[str, Any], str, BinaryExpression]
 
 
 # SQL filter operators:
 
 
 def build_filter_clauses(
-    filters: Dict[str, Any] | Any, columns: Dict, table_model: TableModel
+    filters: Filters, columns: Dict, table_model: TableModel
 ) -> List[BinaryExpression]:
     if isinstance(filters, dict):
         filter_clauses = build_dict_filter_clauses(filters, columns, table_model)
@@ -42,6 +41,10 @@ AND, OR, IN, NIN, GT, GTE, LT, LTE, EQ, NE = (
 )
 
 COMPARE_OPERATOR = [IN, NIN, GT, GTE, LT, LTE, EQ, NE]
+
+JSON_FIELD_PATTERN = re.compile(
+    r"^(?P<column>[a-zA-Z_][a-zA-Z0-9_]*)\.(?P<json_field>[a-zA-Z_][a-zA-Z0-9_]*)$"
+)
 
 
 def build_dict_filter_clauses(

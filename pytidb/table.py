@@ -18,7 +18,7 @@ from tidb_vector.sqlalchemy import VectorAdaptor
 from typing_extensions import Generic
 
 from pytidb.base import Base
-from pytidb.filters import build_filter_clauses
+from pytidb.filters import Filters, build_filter_clauses
 from pytidb.sql import select, update, delete
 from pytidb.schema import (
     QueryBundle,
@@ -213,7 +213,7 @@ class Table(Generic[T]):
                 db_session.refresh(item)
             return data
 
-    def update(self, values: dict, filters: Optional[Dict[str, Any]] = None) -> object:
+    def update(self, values: dict, filters: Optional[Filters] = None) -> object:
         # Auto embedding.
         for field_name, config in self._vector_field_configs.items():
             if field_name in values:
@@ -234,7 +234,7 @@ class Table(Generic[T]):
             stmt = update(self._table_model).filter(*filter_clauses).values(values)
             db_session.execute(stmt)
 
-    def delete(self, filters: Optional[Dict[str, Any]] = None):
+    def delete(self, filters: Optional[Filters] = None):
         """
         Delete data from the TiDB table.
 
@@ -277,7 +277,7 @@ class Table(Generic[T]):
 
     def query(
         self,
-        filters: Optional[Dict[str, Any] | Any] = None,
+        filters: Optional[Filters] = None,
         order_by: Optional[List[Any] | str | Dict[str, Any]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
@@ -296,9 +296,14 @@ class Table(Generic[T]):
             if isinstance(order_by, list):
                 stmt = stmt.order_by(*order_by)
             elif isinstance(order_by, str):
+                if order_by not in self._columns:
+                    raise KeyError(f"Unknown order by column: {order_by}")
                 stmt = stmt.order_by(self._columns[order_by])
             elif isinstance(order_by, dict):
                 for key, value in order_by.items():
+                    if key not in self._columns:
+                        raise KeyError(f"Unknown order by column: {key}")
+
                     if value == "desc":
                         stmt = stmt.order_by(self._columns[key].desc())
                     elif value == "asc":

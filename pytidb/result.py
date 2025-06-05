@@ -77,13 +77,6 @@ class SQLQueryResult(QueryResult):
         rows = self._result.fetchall()
         return [dict(zip(keys, row)) for row in rows]
 
-    def to_pydantic(self, model: Optional[Type[BaseModel]] = None) -> List[BaseModel]:
-        if model is None:
-            model = self._pydantic_model
-        if model is None:
-            raise ValueError(
-                "to_pydantic() method missing 1 required argument: 'model'"
-            )
-
+    def to_pydantic(self, model: Type[BaseModel]) -> List[BaseModel]:
         items = self.to_list()
         return [model.model_validate(item) for item in items]
