@@ -1,11 +1,9 @@
 from typing import Any, Dict, List
 
 import pytest
-from pydantic import Field
-from sqlalchemy import JSON
-from sqlalchemy.orm import Column
 
-from pytidb.schema import TableModel
+from pytidb.schema import TableModel, Field, Column
+from pytidb.datatype import JSON
 
 
 class FilterTestCase:
