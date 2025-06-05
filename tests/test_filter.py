@@ -25,7 +25,7 @@ class ChunkWithMeta(TableModel):
 
 @pytest.fixture(scope="module")
 def test_filters_table(client):
-    tbl = client.create_table(schema=ChunkWithMeta, mode="exist_ok")
+    tbl = client.create_table(schema=ChunkWithMeta, mode="overwrite")
 
     test_data = [
         ChunkWithMeta(

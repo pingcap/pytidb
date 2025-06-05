@@ -9,7 +9,7 @@ def test_open_table(client):
         id: int = Field(primary_key=True)
         name: str
 
-    table = client.create_table(schema=TestOpenTable, mode="exist_ok")
+    table = client.create_table(schema=TestOpenTable, mode="overwrite")
     table.truncate()
     table.insert(TestOpenTable(id=1, name="foo"))
     table = client.open_table("test_open_table")
