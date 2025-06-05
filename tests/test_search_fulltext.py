@@ -20,7 +20,6 @@ def text_table(client: TiDBClient):
         tbl.create_fts_index("text")
 
     # Prepare test data.
-    tbl.delete()
     tbl.bulk_insert(
         [
             Chunk(

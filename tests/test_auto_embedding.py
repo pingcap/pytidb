@@ -21,7 +21,6 @@ def test_auto_embedding(client: TiDBClient):
 
     tbl = client.create_table(schema=Chunk, mode="overwrite")
 
-    tbl.truncate()
     tbl.insert(Chunk(id=1, text="foo", user_id=1))
     tbl.bulk_insert(
         [

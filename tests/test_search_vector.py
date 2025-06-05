@@ -26,7 +26,6 @@ def vector_table(client: TiDBClient):
     tbl = client.create_table(schema=Chunk, mode="overwrite")
 
     # Prepare test data.
-    tbl.truncate()
     tbl.bulk_insert(
         [
             Chunk(id=1, text="foo", text_vec=[4, 5, 6], user_id=1),

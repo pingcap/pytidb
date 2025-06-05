@@ -53,6 +53,10 @@ def test_table_crud(client):
     assert columns[1].column_name == "text"
     assert columns[2].column_name == "text_vec"
 
+    # Truncate
+    tbl.truncate()
+    assert tbl.rows() == 0
+
 
 def test_table_query(client):
     class Chunk(TableModel):
@@ -63,7 +67,6 @@ def test_table_query(client):
 
     tbl = client.create_table(schema=Chunk, mode="overwrite")
 
-    tbl.truncate()
     tbl.insert(Chunk(id=1, text="foo", text_vec=[1, 2, 3]))
     tbl.insert(Chunk(id=2, text="bar", text_vec=[4, 5, 6]))
     tbl.insert(Chunk(id=3, text="biz", text_vec=[7, 8, 9]))
