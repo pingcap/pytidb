@@ -51,6 +51,23 @@ plugins:
   - search
   # - autorefs
   # - mkdocs-jupyter
+  - redirects:
+      redirect_maps:
+        "index.md": "https://pingcap.github.io/ai"
+        "quickstart.md": "https://pingcap.github.io/ai/quickstart"
+        "concepts/vector-search.md": "https://pingcap.github.io/ai/concepts/vector-search"
+        "guides/connect.md": "https://pingcap.github.io/ai/guides/connect"
+        "guides/tables.md": "https://pingcap.github.io/ai/guides/tables"
+        "guides/vector-search.md": "https://pingcap.github.io/ai/guides/vector-search"
+        "guides/fulltext-search.md": "https://pingcap.github.io/ai/guides/fulltext-search"
+        "guides/hybrid-search.md": "https://pingcap.github.io/ai/guides/hybrid-search"
+        "guides/auto-embedding.md": "https://pingcap.github.io/ai/guides/auto-embedding"
+        "guides/reranking.md": "https://pingcap.github.io/ai/guides/reranking"
+        "guides/filtering.md": "https://pingcap.github.io/ai/guides/filtering"
+        "guides/transaction.md": "https://pingcap.github.io/ai/guides/transaction"
+        "guides/raw-queries.md": "https://pingcap.github.io/ai/guides/raw-queries"
+        "guides/joins.md": "https://pingcap.github.io/ai/guides/joins"
+        "integrations/mcp.md": "https://pingcap.github.io/ai/integrations/mcp"
 
 markdown_extensions:
   - admonition
