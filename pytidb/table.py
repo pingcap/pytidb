@@ -22,6 +22,7 @@ from pytidb.filters import Filters, build_filter_clauses
 from pytidb.sql import select, update, delete
 from pytidb.schema import (
     QueryBundle,
+    TableModelMeta,
     VectorDataType,
     TableModel,
     DistanceMetric,
@@ -52,19 +53,22 @@ class Table(Generic[T]):
         vector_column: Optional[str] = None,
         text_column: Optional[str] = None,
         distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
-        exists_ok: bool = False,
+        exist_ok: bool = False,
     ):
         self._client = client
         self._db_engine = client.db_engine
         self._identifier_preparer = self._db_engine.dialect.identifier_preparer
 
         # Init table model.
-        if type(schema) is SQLModelMetaclass:
-            self._table_model = schema
-        elif type(schema) is DeclarativeMeta:
+        if (
+            type(schema) is TableModelMeta
+            or type(schema) is SQLModelMetaclass
+            or type(schema) is DeclarativeMeta
+        ):
             self._table_model = schema
         else:
             raise TypeError(f"Invalid schema type: {type(schema)}")
+
         self._columns = self._table_model.__table__.columns
 
         # Field for auto embedding.
@@ -84,7 +88,7 @@ class Table(Generic[T]):
         # Create table.
         self._sa_table = self._table_model.__table__
         Base.metadata.create_all(
-            self._db_engine, tables=[self._sa_table], checkfirst=exists_ok
+            self._db_engine, tables=[self._sa_table], checkfirst=exist_ok
         )
 
         # Find vector and text columns.

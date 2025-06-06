@@ -15,7 +15,7 @@ class FilterTestCase:
         self.expected = expected
 
 
-class ChunkWithMeta(TableModel, table=True):
+class ChunkWithMeta(TableModel):
     __tablename__ = "test_filters_table"
     id: int = Field(primary_key=True)
     text: str = Field(max_length=20)

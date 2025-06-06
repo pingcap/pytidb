@@ -7,7 +7,7 @@ from pytidb.schema import Field, TableModel
 
 @pytest.fixture(scope="session")
 def player_table(client):
-    class Player(TableModel, table=True):
+    class Player(TableModel):
         __tablename__ = "players"
         id: int = Field(primary_key=True)
         name: str = Field(max_length=20)

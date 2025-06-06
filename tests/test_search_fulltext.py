@@ -9,7 +9,7 @@ from pytidb.schema import TableModel, Field
 
 @pytest.fixture(scope="module")
 def text_table(client: TiDBClient):
-    class Chunk(TableModel, table=True):
+    class Chunk(TableModel):
         __tablename__ = "test_fulltext_search"
         id: int = Field(None, primary_key=True)
         text: str = Field(None)
@@ -20,7 +20,6 @@ def text_table(client: TiDBClient):
         tbl.create_fts_index("text")
 
     # Prepare test data.
-    tbl.delete()
     tbl.bulk_insert(
         [
             Chunk(

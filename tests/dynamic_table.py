@@ -5,7 +5,7 @@ from pytidb.schema import TableModel, Field, VectorField
 
 def test_dynamic_table_creation(db):
     def get_chunk_model(tbl_name: str, dims: int) -> Type[TableModel]:
-        class Chunk(TableModel, table=True):
+        class Chunk(TableModel):
             __tablename__ = tbl_name
             id: int = Field(primary_key=True)
             text: str = Field(max_length=20)

@@ -23,7 +23,6 @@ def hybrid_table(client: TiDBClient):
     tbl = client.create_table(schema=Item, mode="overwrite")
 
     # Prepare test data.
-    tbl.delete()
     tbl.bulk_insert(
         [
             Item(

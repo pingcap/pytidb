@@ -11,9 +11,7 @@ def test_auto_embedding(client: TiDBClient):
     text_embed_small = EmbeddingFunction("openai/text-embedding-3-small")
     test_table_name = "test_auto_embedding"
 
-    client.drop_table(test_table_name)
-
-    class Chunk(TableModel, table=True):
+    class Chunk(TableModel):
         __tablename__ = test_table_name
         id: int = Field(primary_key=True)
         text: str = Field()
@@ -23,7 +21,6 @@ def test_auto_embedding(client: TiDBClient):
 
     tbl = client.create_table(schema=Chunk, mode="overwrite")
 
-    tbl.truncate()
     tbl.insert(Chunk(id=1, text="foo", user_id=1))
     tbl.bulk_insert(
         [

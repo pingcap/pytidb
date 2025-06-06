@@ -4,7 +4,7 @@ from typing import Literal, Optional, TYPE_CHECKING, List, TypedDict
 from pydantic import BaseModel
 from sqlalchemy import Column
 from sqlmodel import SQLModel, Field, Relationship
-from sqlmodel.main import FieldInfo, RelationshipInfo
+from sqlmodel.main import FieldInfo, RelationshipInfo, SQLModelMetaclass
 from tidb_vector.sqlalchemy import VectorType
 
 if TYPE_CHECKING:
@@ -21,7 +21,14 @@ class QueryBundle(TypedDict):
     query_vector: Optional[VectorDataType]
 
 
-class TableModel(SQLModel):
+class TableModelMeta(SQLModelMetaclass):
+    def __new__(mcs, name, bases, namespace, **kwargs):
+        if name != "TableModel":
+            kwargs.setdefault("table", True)
+        return super().__new__(mcs, name, bases, namespace, **kwargs)
+
+
+class TableModel(SQLModel, metaclass=TableModelMeta):
     pass
 
 
