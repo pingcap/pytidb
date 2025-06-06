@@ -39,4 +39,4 @@ jobs:
       - name: Install dependencies
         run: uv sync
       - name: Deploy docs
-        run: mkdocs gh-deploy --force
+        run: uv run mkdocs gh-deploy --force
