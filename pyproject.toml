@@ -12,16 +12,14 @@ dependencies = [
     "sqlmodel>=0.0.14",
     "tidb-vector>=0.0.14",
     "pymysql>=1.1.1",
+    "mcp[cli]>=1.6.0",
+    "mcp",
 ]
 
 [project.scripts]
 tidb-mcp-server = "pytidb.ext.mcp:main"
 
 [project.optional-dependencies]
-mcp = [
-    "mcp[cli]>=1.6.0",
-    "mcp",
-]
 pandas = [
     "pandas"
 ]
@@ -44,6 +42,7 @@ dev = [
     "mypy>=1.15.0",
     "mcp[cli]>=1.6.0",
     "mcp",
+    "click>=8.2.1",
 ]
 
 # Test
