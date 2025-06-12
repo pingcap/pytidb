@@ -12,7 +12,7 @@
   </a>
 </p>
 
-Python SDK of TiDB as an unified data platform for developers to build GenAI applications.
+Python SDK for TiDB AI: A unified data platform designed to empower developers in building next-generation AI applications.
 
 - 🔍 Support various search modes: vector search, fulltext search, hybrid search
 - 🔄 Automatic embedding generation
