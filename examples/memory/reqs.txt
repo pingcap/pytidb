@@ -2,3 +2,4 @@ pytidb
 pymysql
 python-dotenv
 openai
+litellm
