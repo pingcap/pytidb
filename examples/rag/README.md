@@ -20,7 +20,7 @@ Follow the [installation docs](https://ollama.com/download) to install Ollama, t
 
 ```bash
 ollama pull mxbai-embed-large
-ollama pull ollama/llama3.2:3b
+ollama pull llama3.2:3b
 ollama run llama3.2:3b
 ```
 
