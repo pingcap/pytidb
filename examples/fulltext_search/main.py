@@ -90,7 +90,7 @@ st.write(
 )
 
 
-query_text = st.text_input("", "")
+query_text = st.text_input("Search query", "", label_visibility="collapsed")
 
 if st.button("Search") and query_text:
     with st.spinner("Searching documents containing the keyword..."):
