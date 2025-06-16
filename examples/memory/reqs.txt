@@ -1,4 +1,4 @@
 pytidb
-pymysql
-python-dotenv
+pytidb[models]
 openai
+python-dotenv
