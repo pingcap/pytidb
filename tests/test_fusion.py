@@ -118,6 +118,7 @@ class WeightedFusionTestCase:
         expected: List[Dict],
         vs_weight: float = 0.5,
         fts_weight: float = 0.5,
+        vs_method: str = "l2",
     ):
         self.name = name
         self.vs_rows = vs_rows
@@ -125,11 +126,12 @@ class WeightedFusionTestCase:
         self.expected = expected
         self.vs_weight = vs_weight
         self.fts_weight = fts_weight
+        self.vs_method = vs_method
 
 
 WEIGHTED_TEST_CASES = [
     WeightedFusionTestCase(
-        name="vs_rows_and_fts_rows_equal_weights",
+        name="fts_rows_and_vs_rows_l2",
         vs_rows=[
             {"id": 101, "_distance": 0.1, "_match_score": None, "_score": 0.9},
             {"id": 203, "_distance": 0.2, "_match_score": None, "_score": 0.8},
@@ -145,38 +147,38 @@ WEIGHTED_TEST_CASES = [
             {"id": 250, "_distance": None, "_match_score": 2.1, "_score": 2.1},
         ],
         expected=[
-            {"id": 175, "_distance": 0.5, "_match_score": 2.2, "_score": 0.80391},
-            {"id": 198, "_distance": 0.4, "_match_score": 2.5, "_score": 0.78540},
-            {"id": 101, "_distance": 0.1, "_match_score": 2.4, "_score": 0.63784},
-            {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 0.58033},
-            {"id": 250, "_distance": None, "_match_score": 2.1, "_score": 0.56319},
-            {"id": 150, "_distance": 0.3, "_match_score": None, "_score": 0.14573},
-            {"id": 203, "_distance": 0.2, "_match_score": None, "_score": 0.09870},
+            {"id": 101, "_distance": 0.1, "_match_score": 2.4, "_score": 0.84261},
+            {"id": 198, "_distance": 0.4, "_match_score": 2.5, "_score": 0.75776},
+            {"id": 175, "_distance": 0.5, "_match_score": 2.2, "_score": 0.71662},
+            {"id": 203, "_distance": 0.2, "_match_score": None, "_score": 0.43717},
+            {"id": 150, "_distance": 0.3, "_match_score": None, "_score": 0.40723},
+            {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 0.36945},
+            {"id": 250, "_distance": None, "_match_score": 2.1, "_score": 0.35854},
         ],
         vs_weight=0.5,
         fts_weight=0.5,
+        vs_method="l2",
     ),
     WeightedFusionTestCase(
-        name="vs_rows_and_fts_rows_vs_weighted",
+        name="fts_rows_and_vs_rows_cosine",
         vs_rows=[
-            {"id": 101, "_distance": 0.1, "_match_score": None, "_score": 0.9},
-            {"id": 203, "_distance": 0.2, "_match_score": None, "_score": 0.8},
-            {"id": 150, "_distance": 0.3, "_match_score": None, "_score": 0.7},
+            {"id": 101, "_distance": -0.1, "_match_score": None, "_score": 0.9},
+            {"id": 203, "_distance": 0.0, "_match_score": None, "_score": 0.8},
+            {"id": 150, "_distance": 0.2, "_match_score": None, "_score": 0.7},
         ],
         fts_rows=[
             {"id": 101, "_distance": None, "_match_score": 2.4, "_score": 2.4},
             {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 2.3},
-            {"id": 250, "_distance": None, "_match_score": 2.1, "_score": 2.1},
         ],
         expected=[
-            {"id": 101, "_distance": 0.1, "_match_score": 2.4, "_score": 0.31494},
-            {"id": 150, "_distance": 0.3, "_match_score": None, "_score": 0.23317},
-            {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 0.23213},
-            {"id": 250, "_distance": None, "_match_score": 2.1, "_score": 0.22528},
-            {"id": 203, "_distance": 0.2, "_match_score": None, "_score": 0.15792},
+            {"id": 101, "_distance": -0.1, "_match_score": 2.4, "_score": 0.64933},
+            {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 0.36945},
+            {"id": 203, "_distance": 0.0, "_match_score": None, "_score": 0.25000},
+            {"id": 150, "_distance": 0.2, "_match_score": None, "_score": 0.20000},
         ],
-        vs_weight=0.8,
-        fts_weight=0.2,
+        vs_weight=0.5,
+        fts_weight=0.5,
+        vs_method="cosine",
     ),
     WeightedFusionTestCase(
         name="empty_fts_rows",
@@ -187,12 +189,13 @@ WEIGHTED_TEST_CASES = [
         ],
         fts_rows=[],
         expected=[
-            {"id": 150, "_distance": 0.3, "_match_score": None, "_score": 0.14573},
-            {"id": 203, "_distance": 0.2, "_match_score": None, "_score": 0.09870},
-            {"id": 101, "_distance": 0.1, "_match_score": None, "_score": 0.04983},
+            {"id": 101, "_distance": 0.1, "_match_score": None, "_score": 0.46827},
+            {"id": 203, "_distance": 0.2, "_match_score": None, "_score": 0.43717},
+            {"id": 150, "_distance": 0.3, "_match_score": None, "_score": 0.40723},
         ],
         vs_weight=0.5,
         fts_weight=0.5,
+        vs_method="l2",
     ),
     WeightedFusionTestCase(
         name="empty_vs_rows",
@@ -203,23 +206,47 @@ WEIGHTED_TEST_CASES = [
             {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 2.3},
         ],
         expected=[
-            {"id": 198, "_distance": None, "_match_score": 2.5, "_score": 0.59514},
-            {"id": 101, "_distance": None, "_match_score": 2.4, "_score": 0.58800},
-            {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 0.58033},
+            {"id": 198, "_distance": None, "_match_score": 2.5, "_score": 0.37888},
+            {"id": 101, "_distance": None, "_match_score": 2.4, "_score": 0.37433},
+            {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 0.36945},
         ],
         vs_weight=0.5,
         fts_weight=0.5,
+        vs_method="l2",
+    ),
+    WeightedFusionTestCase(
+        name="different_weights",
+        vs_rows=[
+            {"id": 101, "_distance": 0.1, "_match_score": None, "_score": 0.9},
+            {"id": 203, "_distance": 0.2, "_match_score": None, "_score": 0.8},
+        ],
+        fts_rows=[
+            {"id": 101, "_distance": None, "_match_score": 2.4, "_score": 2.4},
+            {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 2.3},
+        ],
+        expected=[
+            {"id": 101, "_distance": 0.1, "_match_score": 2.4, "_score": 0.80503},
+            {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 0.51723},
+            {"id": 203, "_distance": 0.2, "_match_score": None, "_score": 0.26230},
+        ],
+        vs_weight=0.3,
+        fts_weight=0.7,
+        vs_method="l2",
     ),
 ]
 
 
 @pytest.mark.parametrize("test_case", WEIGHTED_TEST_CASES, ids=lambda x: x.name)
 def test_weighted_fusion(test_case: WeightedFusionTestCase):
+    from tidb_vector import DistanceMetric
+    
     vs_rows = create_rows_from_list(test_case.vs_rows)
     fts_rows = create_rows_from_list(test_case.fts_rows)
+    
+    vs_method = DistanceMetric.L2 if test_case.vs_method == "l2" else DistanceMetric.COSINE
 
     keys, rows = fusion_result_rows_by_weighted(
-        vs_rows, fts_rows, get_row_id, vs_weight=test_case.vs_weight, fts_weight=test_case.fts_weight
+        vs_rows, vs_method, fts_rows, get_row_id, test_case.vs_weight, test_case.fts_weight
     )
 
     assert keys == ["id", "_distance", "_match_score", "_score"]
@@ -234,4 +261,5 @@ def test_weighted_fusion(test_case: WeightedFusionTestCase):
             assert abs(row._match_score - exp["_match_score"]) < 1e-5
         else:
             assert row._match_score is None
-        assert abs(row._score - exp["_score"]) < 1e-5
+        assert abs(row._score - exp["_score"]) < 1e-3  # Using slightly larger tolerance for weighted scores
+

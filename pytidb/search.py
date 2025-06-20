@@ -96,8 +96,6 @@ class SearchQuery:
         self._fusion_method = "rrf"
         self._fusion_params = {
             "k": 60,
-            "vs_weight": 0.5,
-            "fts_weight": 0.5,
         }
 
         # Query.
@@ -174,7 +172,10 @@ class SearchQuery:
         return self
 
     @overload
-    def fusion(self, method: FusionMethod, k: int = 60) -> "SearchQuery": ...
+    def fusion(self, method: Literal["rrf"], k: int = 60) -> "SearchQuery": ...
+
+    @overload
+    def fusion(self, method: Literal["weighted"], vs_weight: float = 0.5, fts_weight: float = 0.5) -> "SearchQuery": ...
 
     def fusion(self, method: FusionMethod = "rrf", **params) -> "SearchQuery":
         """
@@ -459,7 +460,15 @@ class SearchQuery:
         elif self._fusion_method == "weighted":
             vs_weight = self._fusion_params.get("vs_weight", 0.5)
             fts_weight = self._fusion_params.get("fts_weight", 0.5)
-            return fusion_result_rows_by_weighted(vs_rows, fts_rows, get_row_id, vs_weight=vs_weight, fts_weight=fts_weight)
+            vs_method = self._distance_metric
+            return fusion_result_rows_by_weighted(
+                vs_rows=vs_rows,
+                fts_rows=fts_rows,
+                get_row_id=get_row_id,
+                vs_weight=vs_weight,
+                fts_weight=fts_weight,
+                vs_method=vs_method
+            )
         else:
             raise ValueError(f"invalid fusion method: {self._fusion_method}")
 

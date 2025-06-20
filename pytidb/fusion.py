@@ -1,8 +1,9 @@
 import math
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
 
 from sqlalchemy import result_tuple
 from sqlalchemy.engine import Row
+from tidb_vector import DistanceMetric
 
 from pytidb.utils import RowKeyType
 
@@ -136,6 +137,7 @@ def fusion_result_rows_by_rrf(
 
 def fusion_result_rows_by_weighted(
     vs_rows: List[Row],
+    vs_method: DistanceMetric,
     fts_rows: List[Row],
     get_row_key: Callable[[Row], RowKeyType],
     vs_weight: Optional[float] = 0.5,
@@ -167,14 +169,21 @@ def fusion_result_rows_by_weighted(
     # Process first list
     for i, row in enumerate(vs_rows):
         vs_distance = row._mapping["_distance"]
-        normalized_vs_distance = math.atan(vs_distance)
+
+        if vs_method == DistanceMetric.COSINE:
+            normalized_vs_distance = _normalize_score(vs_distance, "cosine")
+        elif vs_method == DistanceMetric.L2:
+            normalized_vs_distance = _normalize_score(vs_distance, "l2")
+        else:
+            raise ValueError("Invalid distance metric")
+
         key = get_row_key(row)
         weighted_scores[key] = normalized_vs_distance * vs_weight
 
     # Process second list and add scores
     for i, row in enumerate(fts_rows):
         row_score = row._mapping["_match_score"]
-        normalized_row_score = math.atan(row_score)
+        normalized_row_score = _normalize_score(row_score, "full_text")
         key = get_row_key(row)
         if key in weighted_scores:
             weighted_scores[key] += normalized_row_score * fts_weight
@@ -195,3 +204,33 @@ def fusion_result_rows_by_weighted(
     )
 
     return all_fields, sorted_rows
+
+def _normalize_score(original_value: float, score_type: Literal["l2", "cosine", "full_text"]) -> float:
+    """Normalize the score to a value between 0 and 1.
+
+    Args:
+        original_value: The score to normalize
+        score_type: The type of score to normalize
+
+    Returns:
+        The normalized score
+    """
+
+    if score_type == "cosine":
+        # The input value is the cosine distance, the original range is [-1, 1].
+        # Then we convert it to a score between [0, 1].
+        # Note that the smaller the distance, the higher the score.
+        # So we need to flip the score.
+        return 1.0 - ((original_value + 1.0) / 2.0)
+    elif score_type == "l2":
+        # The input value is the L2 distance, the original range is [0, +infinity).
+        # Then we convert it to a score between [0, 1].
+        # Note that the smaller the distance, the higher the score.
+        # So we need to flip the score.
+        return 1.0 - (2.0 * math.atan(original_value) / math.pi)
+    elif score_type == "full_text":
+        # The input value is the match score(BM25), the original range is [0, +infinity).
+        # Then we convert it to a score between [0, 1) .
+        return 2.0 * math.atan(original_value) / math.pi
+    else:
+        raise ValueError("Invalid score type")
