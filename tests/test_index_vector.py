@@ -65,6 +65,18 @@ class TestCreateVectorIndex:
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         assert tbl.has_vector_index("text_vec")
 
+    def test_create_with_field_and_index_cls_l2(self):
+        class Chunk(TableModel):
+            __tablename__ = "test_vector_index_create_with_field_and_index_cls_l2"
+            __table_args__ = (
+                VectorIndex("vec_idx_on_text_vec", "text_vec", distance_metric="L2"),
+            )
+            id: int = Field(primary_key=True)
+            text_vec: list[float] = VectorField(dimensions=3, index=True)
+
+        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
+        assert tbl.has_vector_index("text_vec")
+
     def test_manual_create_with_vector_index(self):
         class Chunk(TableModel):
             __tablename__ = "test_vector_index_manual_create"

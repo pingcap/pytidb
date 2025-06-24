@@ -68,7 +68,7 @@ def VectorField(
     )
 
 
-def TextField(
+def FullTextField(
     index: Optional[bool] = True,
     fts_parser: Optional[str] = "MULTILINGUAL",
     **kwargs,

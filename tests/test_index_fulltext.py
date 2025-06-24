@@ -1,7 +1,7 @@
 import pytest
 from pytidb import TiDBClient
 from pytidb.orm.indexes import FullTextIndex
-from pytidb.schema import TableModel, Field, TextField
+from pytidb.schema import TableModel, Field, FullTextField
 
 
 # Fulltext Index
@@ -25,7 +25,7 @@ class TestCreateFullTextIndex:
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_auto_create"
             id: int = Field(primary_key=True)
-            text: str = TextField()
+            text: str = FullTextField()
 
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         assert tbl.has_fts_index("text")
@@ -34,7 +34,7 @@ class TestCreateFullTextIndex:
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_auto_create_standard_parser"
             id: int = Field(primary_key=True)
-            text: str = TextField(index=True, fts_parser="STANDARD")
+            text: str = FullTextField(index=True, fts_parser="STANDARD")
 
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         assert tbl.has_fts_index("text")
@@ -43,7 +43,7 @@ class TestCreateFullTextIndex:
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_skip_auto_create"
             id: int = Field(primary_key=True)
-            text: str = TextField(index=False)
+            text: str = FullTextField(index=False)
 
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         assert not tbl.has_fts_index("text")
@@ -53,7 +53,7 @@ class TestCreateFullTextIndex:
             __tablename__ = "test_fts_index_create_with_index_cls"
             __table_args__ = (FullTextIndex("fts_idx_on_text", "text"),)
             id: int = Field(primary_key=True)
-            text: str = TextField(index=False)
+            text: str = FullTextField(index=False)
 
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         assert tbl.has_fts_index("text")
@@ -63,7 +63,7 @@ class TestCreateFullTextIndex:
             __tablename__ = "test_fts_index_create_with_field_and_index_cls"
             __table_args__ = (FullTextIndex("fts_idx_on_text", "text"),)
             id: int = Field(primary_key=True)
-            text: str = TextField(index=True)
+            text: str = FullTextField(index=True)
 
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         assert tbl.has_fts_index("text")
@@ -72,7 +72,7 @@ class TestCreateFullTextIndex:
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_manual_create"
             id: int = Field(primary_key=True)
-            text: str = TextField(index=False)
+            text: str = FullTextField(index=False)
 
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         fts_idx = FullTextIndex("fts_idx_on_text", Chunk.text)
