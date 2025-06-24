@@ -34,6 +34,7 @@ from pytidb.utils import (
     check_vector_column,
     filter_text_columns,
     filter_vector_columns,
+    get_index_type,
 )
 
 if TYPE_CHECKING:
@@ -149,7 +150,7 @@ class Table(Generic[T]):
     def _setup_auto_embedding(self, vector_fields):
         """Setup auto embedding configurations for fields with embed_fn."""
         self._auto_embedding_configs = {}
-        for column_name, field in vector_fields.items():
+        for vector_field_name, field in vector_fields.items():
             embed_fn = field._attributes_set.get("embed_fn", None)
             if embed_fn is None:
                 continue
@@ -158,37 +159,39 @@ class Table(Generic[T]):
             if source_field_name is None:
                 continue
 
-            self._auto_embedding_configs[column_name] = {
+            self._auto_embedding_configs[vector_field_name] = {
                 "embed_fn": embed_fn,
                 "vector_field": field,
+                "vector_field_name": vector_field_name,
                 "source_field_name": source_field_name,
             }
 
     def _auto_create_vector_index(self, vector_fields):
-        for column_name, field in vector_fields.items():
-            disable_index = field._attributes_set.get("disable_index", False)
-            if disable_index:
+        for field_name, field in vector_fields.items():
+            column_name = field_name
+            skip_index = field._attributes_set.get("skip_index", False)
+            if skip_index:
                 continue
 
             distance_metric = field._attributes_set.get("distance_metric", "COSINE")
             algorithm = field._attributes_set.get("algorithm", "HNSW")
+
+            # Check if the metric on the column is already defined in vector indexes
             distance_expression = format_distance_expression(
                 column_name, distance_metric
             )
-
-            # Check if the metric on the column is already defined in vector indexes
-            expressions_defined_index = [
+            indexed_expressions = [
                 index.expressions[0].text
                 for index in self._sa_table.indexes
-                if isinstance(index, VectorIndex)
+                if get_index_type(index) == "vector"
             ]
-            if distance_expression in expressions_defined_index:
+            if distance_expression in indexed_expressions:
                 continue
 
             # Create vector index automatically, if not defined
             self._sa_table.append_constraint(
                 VectorIndex(
-                    f"vec_idx_{column_name}_{distance_metric}",
+                    f"vec_idx_{column_name}_{distance_metric.lower()}",
                     column_name,
                     distance_metric=distance_metric,
                     algorithm=algorithm,
@@ -196,25 +199,28 @@ class Table(Generic[T]):
             )
 
     def _auto_create_fulltext_index(self, text_fields):
-        for column_name, field in text_fields.items():
-            disable_index = field._attributes_set.get("disable_index", False)
-            if disable_index:
+        for text_field_name, field in text_fields.items():
+            skip_index = field._attributes_set.get("skip_index", False)
+            if skip_index:
                 continue
 
-            # Check if the column is already defined in fulltext indexes
-            columns_defined_index = [
+            # Check if the column is already defined a fulltext index.
+            column_name = text_field_name
+            indexed_columns = [
                 index.columns[0].name
                 for index in self._sa_table.indexes
-                if isinstance(index, FullTextIndex)
+                if get_index_type(index) == "fulltext"
             ]
-            if column_name in columns_defined_index:
+            if column_name in indexed_columns:
                 continue
 
             # Create fulltext index automatically, if not defined
+            fts_parser = field._attributes_set.get("fts_parser", "MULTILINGUAL")
             self._sa_table.append_constraint(
                 FullTextIndex(
                     f"fts_idx_{column_name}",
                     column_name,
+                    fts_parser=fts_parser,
                 )
             )
 

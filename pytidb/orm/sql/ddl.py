@@ -6,6 +6,7 @@ from sqlalchemy.sql import elements, operators, functions
 
 @compiles(CreateIndex, "mysql")
 def compile_create_index(create, compiler, **kw):
+    # Copy from sqlalchemy.dialects.mysql.base.MySQLCompiler::visit_create_index
     index = create.element
     compiler._verify_index_table(index)
     preparer = compiler.preparer

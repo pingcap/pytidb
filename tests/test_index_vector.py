@@ -20,7 +20,7 @@ class TestCreateVectorIndex:
 
     def test_auto_create_with_vector_field(self):
         class Chunk(TableModel):
-            __tablename__ = "test_vector_index"
+            __tablename__ = "test_vector_index_auto_create"
             id: int = Field(primary_key=True)
             text_vec: list[float] = VectorField(dimensions=3)
 
@@ -29,25 +29,25 @@ class TestCreateVectorIndex:
 
     def test_auto_create_with_vector_field_l2(self):
         class Chunk(TableModel):
-            __tablename__ = "test_vector_index"
+            __tablename__ = "test_vector_index_auto_create_l2"
             id: int = Field(primary_key=True)
             text_vec: list[float] = VectorField(dimensions=3, distance_metric="L2")
 
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         assert tbl.has_vector_index("text_vec")
 
-    def test_disable_auto_create_with_vector_field(self):
+    def test_skip_auto_create_with_vector_field(self):
         class Chunk(TableModel):
-            __tablename__ = "test_vector_index"
+            __tablename__ = "test_vector_index_skip_auto_create"
             id: int = Field(primary_key=True)
             text_vec: list[float] = VectorField(dimensions=3, index=False)
 
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         assert not tbl.has_vector_index("text_vec")
 
-    def test_create_with_vector_index(self):
+    def test_create_with_index_cls(self):
         class Chunk(TableModel):
-            __tablename__ = "test_vector_index"
+            __tablename__ = "test_vector_index_create_with_index_cls"
             __table_args__ = (VectorIndex("vec_idx_on_text_vec", "text_vec"),)
             id: int = Field(primary_key=True)
             text_vec: list[float] = VectorField(dimensions=3, index=False)
@@ -55,9 +55,9 @@ class TestCreateVectorIndex:
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         assert tbl.has_vector_index("text_vec")
 
-    def test_create_with_vector_field_and_index(self):
+    def test_create_with_field_and_index_cls(self):
         class Chunk(TableModel):
-            __tablename__ = "test_vector_index"
+            __tablename__ = "test_vector_index_create_with_field_and_index_cls"
             __table_args__ = (VectorIndex("vec_idx_on_text_vec", "text_vec"),)
             id: int = Field(primary_key=True)
             text_vec: list[float] = VectorField(dimensions=3, index=True)
@@ -67,7 +67,7 @@ class TestCreateVectorIndex:
 
     def test_manual_create_with_vector_index(self):
         class Chunk(TableModel):
-            __tablename__ = "test_vector_index"
+            __tablename__ = "test_vector_index_manual_create"
             id: int = Field(primary_key=True)
             text_vec: list[float] = VectorField(dimensions=3, index=False)
 

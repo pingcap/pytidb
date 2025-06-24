@@ -4,7 +4,7 @@ from urllib.parse import quote
 from typing import Dict, Optional, Any, List, TypeVar, Tuple
 
 from pydantic import AnyUrl, UrlConstraints
-from sqlalchemy import Column, String, create_engine, make_url
+from sqlalchemy import Column, Index, String, create_engine, make_url
 from sqlmodel import AutoString
 from tidb_vector.sqlalchemy import VectorType
 from sqlalchemy.engine import Row
@@ -137,3 +137,7 @@ def get_row_id_from_row(row: Row, table: Table) -> Optional[RowKeyType]:
             f"Primary key column '{e.args[0]}' not found in Row. "
             f"Available: {list(row._mapping.keys())}"
         )
+
+
+def get_index_type(index: Index) -> str:
+    return index.dialect_kwargs.get("mysql_prefix", "").lower()

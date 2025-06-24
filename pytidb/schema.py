@@ -60,7 +60,7 @@ def VectorField(
             "embed_fn": embed_fn,
             "source_field": source_field,
             # Vector index related.
-            "disable_index": not index,
+            "skip_index": not index,
             "distance_metric": distance_metric,
             "algorithm": algorithm,
         },
@@ -70,12 +70,15 @@ def VectorField(
 
 def TextField(
     index: Optional[bool] = True,
+    fts_parser: Optional[str] = "MULTILINGUAL",
     **kwargs,
 ):
     return Field(
         schema_extra={
             "field_type": "text",
-            "disable_index": not index,
+            # Fulltext index related.
+            "skip_index": not index,
+            "fts_parser": fts_parser,
         },
         **kwargs,
     )
