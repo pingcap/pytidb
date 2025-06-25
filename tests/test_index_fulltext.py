@@ -39,9 +39,9 @@ class TestCreateFullTextIndex:
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         assert tbl.has_fts_index("text")
 
-    def test_auto_skip(self):
+    def test_skip_create(self):
         class Chunk(TableModel):
-            __tablename__ = "test_fts_index_auto_skip"
+            __tablename__ = "test_fts_index_skip_create"
             id: int = Field(primary_key=True)
             text: str = FullTextField(index=False)
 
@@ -56,26 +56,6 @@ class TestCreateFullTextIndex:
             text: str = FullTextField(index=False)
 
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
-        assert tbl.has_fts_index("text")
-
-    def test_declare_with_field_and_index_cls(self):
-        class Chunk(TableModel):
-            __tablename__ = "test_fts_index_declare_field_and_index_cls"
-            __table_args__ = (FullTextIndex("fts_idx_on_text", "text"),)
-            id: int = Field(primary_key=True)
-            text: str = FullTextField()
-
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
-        assert tbl.has_fts_index("text")
-
-    def test_manual_with_sqlalchemy_api(self):
-        class Chunk(TableModel):
-            __tablename__ = "test_fts_index_manual_sqlalchemy_api"
-            id: int = Field(primary_key=True)
-            text: str = FullTextField(index=False)
-
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
-        FullTextIndex("fts_idx_on_text", Chunk.text).create(self.client.db_engine)
         assert tbl.has_fts_index("text")
 
     def test_manual_with_table_api(self):

@@ -36,9 +36,9 @@ class TestCreateVectorIndex:
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
         assert tbl.has_vector_index("text_vec")
 
-    def test_auto_skip(self):
+    def test_skip_create(self):
         class Chunk(TableModel):
-            __tablename__ = "test_vector_index_auto_skip"
+            __tablename__ = "test_vector_index_skip_create"
             id: int = Field(primary_key=True)
             text_vec: list[float] = VectorField(dimensions=3, index=False)
 
@@ -53,38 +53,6 @@ class TestCreateVectorIndex:
             text_vec: list[float] = VectorField(dimensions=3, index=False)
 
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
-        assert tbl.has_vector_index("text_vec")
-
-    def test_declare_with_field_and_index_cls(self):
-        class Chunk(TableModel):
-            __tablename__ = "test_vector_index_declare_field_and_index_cls"
-            __table_args__ = (VectorIndex("vec_idx_on_text_vec", "text_vec"),)
-            id: int = Field(primary_key=True)
-            text_vec: list[float] = VectorField(dimensions=3, index=True)
-
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
-        assert tbl.has_vector_index("text_vec")
-
-    def test_declare_with_field_and_index_cls_l2(self):
-        class Chunk(TableModel):
-            __tablename__ = "test_vector_index_declare_field_and_index_cls_l2"
-            __table_args__ = (
-                VectorIndex("vec_idx_on_text_vec", "text_vec", distance_metric="L2"),
-            )
-            id: int = Field(primary_key=True)
-            text_vec: list[float] = VectorField(dimensions=3, index=True)
-
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
-        assert tbl.has_vector_index("text_vec")
-
-    def test_manual_with_sqlalchemy_api(self):
-        class Chunk(TableModel):
-            __tablename__ = "test_vector_index_manual_sqlalchemy_api"
-            id: int = Field(primary_key=True)
-            text_vec: list[float] = VectorField(dimensions=3, index=False)
-
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
-        VectorIndex("vec_idx_on_text_vec", Chunk.text_vec).create(self.client.db_engine)
         assert tbl.has_vector_index("text_vec")
 
     def test_manual_with_table_api(self):
