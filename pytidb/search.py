@@ -16,7 +16,7 @@ from typing import (
 
 from pydantic import BaseModel, Field
 from sqlalchemy import Row, Select, asc, desc, select, and_, text
-from pytidb.functions import fts_match_word
+from pytidb.orm.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, QueryBundle, VectorDataType, TableModel
 from pytidb.filters import build_filter_clauses
@@ -228,12 +228,12 @@ class SearchQuery:
 
         # Auto embedding
         if self._query_vector is None:
-            if vector_column.name not in self._table.vector_field_configs:
+            if vector_column.name not in self._table.auto_embedding_configs:
                 raise ValueError(
                     "query should be a vector, because the vector column didn't configure the embed_fn parameter"
                 )
 
-            config = self._table.vector_field_configs[vector_column.name]
+            config = self._table.auto_embedding_configs[vector_column.name]
             self._query_vector = config["embed_fn"].get_query_embedding(
                 self._query_text
             )
@@ -499,7 +499,7 @@ class SearchQuery:
 
         if self._search_type in ["vector", "hybrid"]:
             if self._vector_column is not None:
-                vector_field = self._table.vector_field_configs[
+                vector_field = self._table.auto_embedding_configs[
                     self._vector_column.name
                 ]
                 return vector_field["source_field_name"]

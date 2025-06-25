@@ -9,23 +9,23 @@ from typing import (
     Union,
     TYPE_CHECKING,
 )
+import warnings
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, Table as SaTable
 from sqlalchemy.orm import DeclarativeMeta
 from sqlmodel import Session
 from sqlmodel.main import SQLModelMetaclass
-from tidb_vector.sqlalchemy import VectorAdaptor
 from typing_extensions import Generic
 
 from pytidb.base import Base
 from pytidb.filters import Filters, build_filter_clauses
+from pytidb.orm.indexes import FullTextIndex, VectorIndex, format_distance_expression
 from pytidb.sql import select, update, delete
 from pytidb.schema import (
     QueryBundle,
     TableModelMeta,
     VectorDataType,
     TableModel,
-    DistanceMetric,
     ColumnInfo,
 )
 from pytidb.search import SearchType, SearchQuery
@@ -35,6 +35,7 @@ from pytidb.utils import (
     check_vector_column,
     filter_text_columns,
     filter_vector_columns,
+    get_index_type,
 )
 
 if TYPE_CHECKING:
@@ -52,7 +53,6 @@ class Table(Generic[T]):
         schema: Optional[Type[T]] = None,
         vector_column: Optional[str] = None,
         text_column: Optional[str] = None,
-        distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
         exist_ok: bool = False,
     ):
         self._client = client
@@ -69,38 +69,30 @@ class Table(Generic[T]):
         else:
             raise TypeError(f"Invalid schema type: {type(schema)}")
 
+        self._sa_table: SaTable = self._table_model.__table__
         self._columns = self._table_model.__table__.columns
-
-        # Field for auto embedding.
-        self._vector_field_configs = {}
-        if hasattr(schema, "__pydantic_fields__"):
-            for name, field in schema.__pydantic_fields__.items():
-                # FIXME: using field custom attributes instead of it.
-                if "embed_fn" in field._attributes_set:
-                    embed_fn = field._attributes_set["embed_fn"]
-                    source_field_name = field._attributes_set["source_field"]
-                    self._vector_field_configs[name] = {
-                        "embed_fn": embed_fn,
-                        "vector_field": field,
-                        "source_field_name": source_field_name,
-                    }
-
-        # Create table.
-        self._sa_table = self._table_model.__table__
-        Base.metadata.create_all(
-            self._db_engine, tables=[self._sa_table], checkfirst=exist_ok
-        )
-
-        # Find vector and text columns.
         self._vector_columns = filter_vector_columns(self._columns)
         self._text_columns = filter_text_columns(self._columns)
 
-        # Create vector index automatically.
-        vector_adaptor = VectorAdaptor(self._db_engine)
-        for col in self._vector_columns:
-            if vector_adaptor.has_vector_index(col):
-                continue
-            vector_adaptor.create_vector_index(col, distance_metric)
+        # Setup auto embedding.
+        if hasattr(schema, "__pydantic_fields__"):
+            vector_fields = {}
+            text_fields = {}
+
+            for field_name, field_info in self._table_model.__pydantic_fields__.items():
+                if field_info._attributes_set.get("field_type", None) == "vector":
+                    vector_fields[field_name] = field_info
+                elif field_info._attributes_set.get("field_type", None) == "text":
+                    text_fields[field_name] = field_info
+
+            self._setup_auto_embedding(vector_fields)
+            self._auto_create_vector_index(vector_fields)
+            self._auto_create_fulltext_index(text_fields)
+
+        # Create table.
+        Base.metadata.create_all(
+            self._db_engine, tables=[self._sa_table], checkfirst=exist_ok
+        )
 
         # Determine default vector column for vector search.
         if vector_column is not None:
@@ -153,8 +145,85 @@ class Table(Generic[T]):
         return self._text_columns
 
     @property
-    def vector_field_configs(self):
-        return self._vector_field_configs
+    def auto_embedding_configs(self):
+        return self._auto_embedding_configs
+
+    def _setup_auto_embedding(self, vector_fields):
+        """Setup auto embedding configurations for fields with embed_fn."""
+        self._auto_embedding_configs = {}
+        for vector_field_name, field in vector_fields.items():
+            embed_fn = field._attributes_set.get("embed_fn", None)
+            if embed_fn is None:
+                continue
+
+            source_field_name = field._attributes_set.get("source_field", None)
+            if source_field_name is None:
+                continue
+
+            self._auto_embedding_configs[vector_field_name] = {
+                "embed_fn": embed_fn,
+                "vector_field": field,
+                "vector_field_name": vector_field_name,
+                "source_field_name": source_field_name,
+            }
+
+    def _auto_create_vector_index(self, vector_fields):
+        for field_name, field in vector_fields.items():
+            column_name = field_name
+            skip_index = field._attributes_set.get("skip_index", False)
+            if skip_index:
+                continue
+
+            distance_metric = field._attributes_set.get("distance_metric", "COSINE")
+            algorithm = field._attributes_set.get("algorithm", "HNSW")
+
+            # Check if the metric on the column is already defined in vector indexes
+            distance_expression = format_distance_expression(
+                column_name, distance_metric
+            )
+            indexed_expressions = [
+                index.expressions[0].text
+                for index in self._sa_table.indexes
+                if get_index_type(index) == "vector"
+            ]
+            if distance_expression in indexed_expressions:
+                continue
+
+            # Create vector index automatically, if not defined
+            self._sa_table.append_constraint(
+                VectorIndex(
+                    f"vec_idx_{column_name}_{distance_metric.lower()}",
+                    column_name,
+                    distance_metric=distance_metric,
+                    algorithm=algorithm,
+                )
+            )
+
+    def _auto_create_fulltext_index(self, text_fields):
+        for text_field_name, field in text_fields.items():
+            skip_index = field._attributes_set.get("skip_index", False)
+            if skip_index:
+                continue
+
+            # Check if the column is already defined a fulltext index.
+            column_name = text_field_name
+            indexed_columns = [
+                index.columns[0].name
+                for index in self._sa_table.indexes
+                if get_index_type(index) == "fulltext"
+            ]
+            if column_name in indexed_columns:
+                continue
+
+            # Create fulltext index automatically, if not defined
+            fts_parser = field._attributes_set.get("fts_parser", "MULTILINGUAL")
+            self._sa_table.append_constraint(
+                FullTextIndex(
+                    f"fts_idx_{column_name}",
+                    column_name,
+                    fts_parser=fts_parser,
+                )
+            )
 
     def get(self, id: Any) -> T:
         with self._client.session() as db_session:
@@ -162,7 +231,7 @@ class Table(Generic[T]):
 
     def insert(self, data: T) -> T:
         # Auto embedding.
-        for field_name, config in self._vector_field_configs.items():
+        for field_name, config in self._auto_embedding_configs.items():
             if getattr(data, field_name) is not None:
                 # Vector embeddings is provided.
                 continue
@@ -182,7 +251,7 @@ class Table(Generic[T]):
 
     def bulk_insert(self, data: List[T]) -> List[T]:
         # Auto embedding.
-        for field_name, config in self._vector_field_configs.items():
+        for field_name, config in self._auto_embedding_configs.items():
             items_need_embedding = []
             sources_to_embedding = []
 
@@ -219,7 +288,7 @@ class Table(Generic[T]):
 
     def update(self, values: dict, filters: Optional[Filters] = None) -> object:
         # Auto embedding.
-        for field_name, config in self._vector_field_configs.items():
+        for field_name, config in self._auto_embedding_configs.items():
             if field_name in values:
                 # Vector embeddings is provided.
                 continue
@@ -363,23 +432,27 @@ class Table(Generic[T]):
             )
             return res.scalar()
 
+    def has_vector_index(self, column_name: str) -> bool:
+        return self._has_tiflash_index(column_name, "Vector")
+
     def has_fts_index(self, column_name: str) -> bool:
         return self._has_tiflash_index(column_name, "FullText")
 
-    def create_fts_index(self, column_name: str, name: Optional[str] = None):
-        _name = self._identifier_preparer.quote(name or f"fts_idx_{column_name}")
-        _column_name = self._identifier_preparer.format_column(
-            self._columns[column_name]
+    def create_vector_index(self, column_name: str, name: Optional[str] = None):
+        # TODO: Support exist_ok.
+        warnings.warn(
+            "table.create_vector_index() is an experimental API, use VectorField instead."
         )
+        index_name = name or f"vec_idx_{column_name}"
+        vec_idx = VectorIndex(index_name, self._columns[column_name])
+        vec_idx.create(self.client.db_engine)
 
-        add_tiflash_replica_stmt = (
-            f"ALTER TABLE {self.table_name} SET TIFLASH REPLICA 1;"
+    def create_fts_index(
+        self, column_name: str, name: Optional[str] = None, exist_ok: bool = False
+    ):
+        warnings.warn(
+            "table.create_fts_index() is an experimental API, use FullTextField instead."
         )
-        self._client.execute(add_tiflash_replica_stmt, raise_error=True)
-
-        create_index_stmt = (
-            f"CREATE FULLTEXT INDEX {_name} ON "
-            f"{self.table_name} ({_column_name}) "
-            f"WITH PARSER MULTILINGUAL;"
-        )
-        self._client.execute(create_index_stmt, raise_error=True)
+        index_name = name or f"fts_idx_{column_name}"
+        fts_idx = FullTextIndex(index_name, self._columns[column_name])
+        fts_idx.create(self.client.db_engine, checkfirst=exist_ok)

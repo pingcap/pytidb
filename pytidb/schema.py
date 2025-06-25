@@ -2,10 +2,12 @@ import enum
 from typing import Literal, Optional, TYPE_CHECKING, List, TypedDict
 
 from pydantic import BaseModel
-from sqlalchemy import Column
+from sqlalchemy import Column, Index
 from sqlmodel import SQLModel, Field, Relationship
 from sqlmodel.main import FieldInfo, RelationshipInfo, SQLModelMetaclass
 from tidb_vector.sqlalchemy import VectorType
+
+from pytidb.orm.indexes import VectorIndexAlgorithm, DistanceMetric
 
 if TYPE_CHECKING:
     from pytidb.embeddings.base import BaseEmbeddingFunction
@@ -13,7 +15,7 @@ if TYPE_CHECKING:
 VectorDataType = List[float]
 
 
-IndexType = Literal["vector", "fulltext"]
+IndexType = Literal["vector", "fulltext", "scalar"]
 
 
 class QueryBundle(TypedDict):
@@ -35,6 +37,7 @@ class TableModel(SQLModel, metaclass=TableModelMeta):
 Field = Field
 Relationship = Relationship
 Column = Column
+Index = Index
 FieldInfo = FieldInfo
 RelationshipInfo = RelationshipInfo
 
@@ -43,14 +46,39 @@ def VectorField(
     dimensions: int,
     source_field: Optional[str] = None,
     embed_fn: Optional["BaseEmbeddingFunction"] = None,
+    index: Optional[bool] = True,
+    distance_metric: Optional[DistanceMetric] = "COSINE",
+    algorithm: Optional[VectorIndexAlgorithm] = "HNSW",
     **kwargs,
 ):
     return Field(
         sa_column=Column(VectorType(dimensions)),
         schema_extra={
-            "embed_fn": embed_fn,
+            "field_type": "vector",
             "dimensions": dimensions,
+            # Auto embedding related.
+            "embed_fn": embed_fn,
             "source_field": source_field,
+            # Vector index related.
+            "skip_index": not index,
+            "distance_metric": distance_metric,
+            "algorithm": algorithm,
+        },
+        **kwargs,
+    )
+
+
+def FullTextField(
+    index: Optional[bool] = True,
+    fts_parser: Optional[str] = "MULTILINGUAL",
+    **kwargs,
+):
+    return Field(
+        schema_extra={
+            "field_type": "text",
+            # Fulltext index related.
+            "skip_index": not index,
+            "fts_parser": fts_parser,
         },
         **kwargs,
     )
