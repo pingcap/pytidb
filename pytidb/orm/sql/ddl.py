@@ -1,4 +1,3 @@
-from sqlalchemy.schema import DDLElement
 from sqlalchemy.sql.ddl import SchemaGenerator, CreateIndex
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import elements, operators, functions
@@ -88,9 +87,9 @@ def compile_create_index(create, compiler, **kw):
     return text
 
 
-class CreateVectorIndex(DDLElement):
-    def __init__(self, index):
-        self.index = index
+class CreateVectorIndex(CreateIndex):
+    def __init__(self, element, if_not_exists=False):
+        super().__init__(element, if_not_exists=if_not_exists)
 
 
 class TiDBSchemaGenerator(SchemaGenerator):

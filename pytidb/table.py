@@ -9,6 +9,7 @@ from typing import (
     Union,
     TYPE_CHECKING,
 )
+import warnings
 
 from sqlalchemy import Engine, Table as SaTable
 from sqlalchemy.orm import DeclarativeMeta
@@ -438,11 +439,20 @@ class Table(Generic[T]):
         return self._has_tiflash_index(column_name, "FullText")
 
     def create_vector_index(self, column_name: str, name: Optional[str] = None):
+        # TODO: Support exist_ok.
+        warnings.warn(
+            "table.create_vector_index() is an experimental API, use VectorField instead."
+        )
         index_name = name or f"vec_idx_{column_name}"
         vec_idx = VectorIndex(index_name, self._columns[column_name])
         vec_idx.create(self.client.db_engine)
 
-    def create_fts_index(self, column_name: str, name: Optional[str] = None):
+    def create_fts_index(
+        self, column_name: str, name: Optional[str] = None, exist_ok: bool = False
+    ):
+        warnings.warn(
+            "table.create_fts_index() is an experimental API, use FullTextField instead."
+        )
         index_name = name or f"fts_idx_{column_name}"
         fts_idx = FullTextIndex(index_name, self._columns[column_name])
-        fts_idx.create(self.client.db_engine)
+        fts_idx.create(self.client.db_engine, checkfirst=exist_ok)
