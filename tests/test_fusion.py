@@ -239,8 +239,6 @@ WEIGHTED_TEST_CASES = [
 
 @pytest.mark.parametrize("test_case", WEIGHTED_TEST_CASES, ids=lambda x: x.name)
 def test_weighted_fusion(test_case: WeightedFusionTestCase):
-    from tidb_vector import DistanceMetric
-    
     vs_rows = create_rows_from_list(test_case.vs_rows)
     fts_rows = create_rows_from_list(test_case.fts_rows)
     
