@@ -137,7 +137,7 @@ def fusion_result_rows_by_rrf(
 
 def fusion_result_rows_by_weighted(
     vs_rows: List[Row],
-    vs_method: DistanceMetric,
+    vs_metric: DistanceMetric,
     fts_rows: List[Row],
     get_row_key: Callable[[Row], RowKeyType],
     vs_weight: Optional[float] = 0.5,
@@ -170,9 +170,9 @@ def fusion_result_rows_by_weighted(
     for i, row in enumerate(vs_rows):
         vs_distance = row._mapping["_distance"]
 
-        if vs_method == DistanceMetric.COSINE:
+        if vs_metric == DistanceMetric.COSINE:
             normalized_vs_distance = _normalize_score(vs_distance, "cosine")
-        elif vs_method == DistanceMetric.L2:
+        elif vs_metric == DistanceMetric.L2:
             normalized_vs_distance = _normalize_score(vs_distance, "l2")
         else:
             raise ValueError("Invalid distance metric")
@@ -183,7 +183,7 @@ def fusion_result_rows_by_weighted(
     # Process second list and add scores
     for i, row in enumerate(fts_rows):
         row_score = row._mapping["_match_score"]
-        normalized_row_score = _normalize_score(row_score, "full_text")
+        normalized_row_score = _normalize_score(row_score, "bm25")
         key = get_row_key(row)
         if key in weighted_scores:
             weighted_scores[key] += normalized_row_score * fts_weight
@@ -205,32 +205,32 @@ def fusion_result_rows_by_weighted(
 
     return all_fields, sorted_rows
 
-def _normalize_score(original_value: float, score_type: Literal["l2", "cosine", "full_text"]) -> float:
+def _normalize_score(score: float, metric_type: Literal["l2", "cosine", "bm25"]) -> float:
     """Normalize the score to a value between 0 and 1.
 
     Args:
-        original_value: The score to normalize
-        score_type: The type of score to normalize
+        score: The score to normalize
+        metric_type: The type of score to normalize
 
     Returns:
         The normalized score
     """
 
-    if score_type == "cosine":
+    if metric_type == "cosine":
         # The input value is the cosine distance, the original range is [-1, 1].
         # Then we convert it to a score between [0, 1].
         # Note that the smaller the distance, the higher the score.
         # So we need to flip the score.
-        return 1.0 - ((original_value + 1.0) / 2.0)
-    elif score_type == "l2":
+        return 1.0 - ((score + 1.0) / 2.0)
+    elif metric_type == "l2":
         # The input value is the L2 distance, the original range is [0, +infinity).
         # Then we convert it to a score between [0, 1].
         # Note that the smaller the distance, the higher the score.
         # So we need to flip the score.
-        return 1.0 - (2.0 * math.atan(original_value) / math.pi)
-    elif score_type == "full_text":
+        return 1.0 - (2.0 * math.atan(score) / math.pi)
+    elif metric_type == "bm25":
         # The input value is the match score(BM25), the original range is [0, +infinity).
         # Then we convert it to a score between [0, 1) .
-        return 2.0 * math.atan(original_value) / math.pi
+        return 2.0 * math.atan(score) / math.pi
     else:
-        raise ValueError("Invalid score type")
+        raise ValueError(f"Invalid metric type for score normalization: {metric_type}")

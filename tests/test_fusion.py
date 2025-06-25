@@ -1,6 +1,7 @@
 from typing import List, Dict
 import pytest
 from sqlalchemy import Row
+from tidb_vector import DistanceMetric
 
 from pytidb.fusion import fusion_result_rows_by_rrf, fusion_result_rows_by_weighted
 from tests.utils import create_rows_from_list
@@ -118,7 +119,7 @@ class WeightedFusionTestCase:
         expected: List[Dict],
         vs_weight: float = 0.5,
         fts_weight: float = 0.5,
-        vs_method: str = "l2",
+        vs_metric: DistanceMetric = DistanceMetric.L2,
     ):
         self.name = name
         self.vs_rows = vs_rows
@@ -126,7 +127,7 @@ class WeightedFusionTestCase:
         self.expected = expected
         self.vs_weight = vs_weight
         self.fts_weight = fts_weight
-        self.vs_method = vs_method
+        self.vs_metric = vs_metric
 
 
 WEIGHTED_TEST_CASES = [
@@ -157,7 +158,7 @@ WEIGHTED_TEST_CASES = [
         ],
         vs_weight=0.5,
         fts_weight=0.5,
-        vs_method="l2",
+        vs_metric=DistanceMetric.L2,
     ),
     WeightedFusionTestCase(
         name="fts_rows_and_vs_rows_cosine",
@@ -178,7 +179,7 @@ WEIGHTED_TEST_CASES = [
         ],
         vs_weight=0.5,
         fts_weight=0.5,
-        vs_method="cosine",
+        vs_metric=DistanceMetric.COSINE,
     ),
     WeightedFusionTestCase(
         name="empty_fts_rows",
@@ -195,7 +196,7 @@ WEIGHTED_TEST_CASES = [
         ],
         vs_weight=0.5,
         fts_weight=0.5,
-        vs_method="l2",
+        vs_metric=DistanceMetric.L2,
     ),
     WeightedFusionTestCase(
         name="empty_vs_rows",
@@ -212,7 +213,7 @@ WEIGHTED_TEST_CASES = [
         ],
         vs_weight=0.5,
         fts_weight=0.5,
-        vs_method="l2",
+        vs_metric=DistanceMetric.L2,
     ),
     WeightedFusionTestCase(
         name="different_weights",
@@ -231,7 +232,7 @@ WEIGHTED_TEST_CASES = [
         ],
         vs_weight=0.3,
         fts_weight=0.7,
-        vs_method="l2",
+        vs_metric=DistanceMetric.L2,
     ),
 ]
 
@@ -243,10 +244,8 @@ def test_weighted_fusion(test_case: WeightedFusionTestCase):
     vs_rows = create_rows_from_list(test_case.vs_rows)
     fts_rows = create_rows_from_list(test_case.fts_rows)
     
-    vs_method = DistanceMetric.L2 if test_case.vs_method == "l2" else DistanceMetric.COSINE
-
     keys, rows = fusion_result_rows_by_weighted(
-        vs_rows, vs_method, fts_rows, get_row_id, test_case.vs_weight, test_case.fts_weight
+        vs_rows, test_case.vs_metric, fts_rows, get_row_id, test_case.vs_weight, test_case.fts_weight
     )
 
     assert keys == ["id", "_distance", "_match_score", "_score"]
