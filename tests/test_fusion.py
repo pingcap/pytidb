@@ -163,7 +163,7 @@ WEIGHTED_TEST_CASES = [
     WeightedFusionTestCase(
         name="fts_rows_and_vs_rows_cosine",
         vs_rows=[
-            {"id": 101, "_distance": -0.1, "_match_score": None, "_score": 0.9},
+            {"id": 101, "_distance": 0.1, "_match_score": None, "_score": 0.9},
             {"id": 203, "_distance": 0.0, "_match_score": None, "_score": 0.8},
             {"id": 150, "_distance": 0.2, "_match_score": None, "_score": 0.7},
         ],
@@ -172,10 +172,10 @@ WEIGHTED_TEST_CASES = [
             {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 2.3},
         ],
         expected=[
-            {"id": 101, "_distance": -0.1, "_match_score": 2.4, "_score": 0.64933},
+            {"id": 101, "_distance": 0.1, "_match_score": 2.4, "_score": 0.84933},
+            {"id": 203, "_distance": 0.0, "_match_score": None, "_score": 0.50000},
+            {"id": 150, "_distance": 0.2, "_match_score": None, "_score": 0.45000},
             {"id": 110, "_distance": None, "_match_score": 2.3, "_score": 0.36945},
-            {"id": 203, "_distance": 0.0, "_match_score": None, "_score": 0.25000},
-            {"id": 150, "_distance": 0.2, "_match_score": None, "_score": 0.20000},
         ],
         vs_weight=0.5,
         fts_weight=0.5,

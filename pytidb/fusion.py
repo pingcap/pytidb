@@ -217,11 +217,11 @@ def _normalize_score(score: float, metric_type: Literal["l2", "cosine", "bm25"])
     """
 
     if metric_type == "cosine":
-        # The input value is the cosine distance, the original range is [-1, 1].
+        # The input value is the cosine distance, the original range is [0, 2].
         # Then we convert it to a score between [0, 1].
         # Note that the smaller the distance, the higher the score.
         # So we need to flip the score.
-        return 1.0 - ((score + 1.0) / 2.0)
+        return 1.0 - (score / 2.0)
     elif metric_type == "l2":
         # The input value is the L2 distance, the original range is [0, +infinity).
         # Then we convert it to a score between [0, 1].
