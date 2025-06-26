@@ -6,13 +6,13 @@ This example demonstrates how to use PyTiDB to build a minimal RAG application.
 * Use Streamlit to build a Web UI for the RAG application
 * Use PyTiDB to build a minimal RAG application
 
-![RAG Demo based on TiDB](https://github.com/user-attachments/assets/dfd85672-65ce-4a46-8dd2-9f77d826363e)
+![PyTiDB RAG Demo](https://github.com/user-attachments/assets/dfd85672-65ce-4a46-8dd2-9f77d826363e)
 
 ## Prerequisites
 
-* Python 3.10+
-* Ollama, you can install it from [Ollama ↗️](https://ollama.com/download)
-* A TiDB Cloud Serverless cluster, you can create a free cluster here: [TiDB Cloud ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)
+- **Python 3.10+**
+- **A TiDB Cloud Serverless cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)
+- **Ollama**: You can install it from [Ollama ↗️](https://ollama.com/download)
 
 ## How to run
 

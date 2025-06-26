@@ -8,8 +8,8 @@ This example demonstrates basic CRUD (Create, Read, Update, Delete) operations w
 
 ## Prerequisites
 
-* Python 3.10+
-* A TiDB Cloud Serverless cluster
+- **Python 3.10+**
+- **A TiDB Cloud Serverless cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)
 
 ## How to run
 
