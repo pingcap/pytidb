@@ -26,10 +26,7 @@ from pytidb.utils import (
     check_vector_column,
     get_row_id_from_row,
 )
-from pytidb.fusion import (
-    fusion_result_rows_by_rrf, 
-    fusion_result_rows_by_weighted
-)
+from pytidb.fusion import fusion_result_rows_by_rrf, fusion_result_rows_by_weighted
 from pytidb.logger import logger
 
 
@@ -175,7 +172,12 @@ class SearchQuery:
     def fusion(self, method: Literal["rrf"], k: int = 60) -> "SearchQuery": ...
 
     @overload
-    def fusion(self, method: Literal["weighted"], vs_weight: float = 0.5, fts_weight: float = 0.5) -> "SearchQuery": ...
+    def fusion(
+        self,
+        method: Literal["weighted"],
+        vs_weight: float = 0.5,
+        fts_weight: float = 0.5,
+    ) -> "SearchQuery": ...
 
     def fusion(self, method: FusionMethod = "rrf", **params) -> "SearchQuery":
         """
@@ -192,7 +194,9 @@ class SearchQuery:
             )
 
         if method not in ["rrf", "weighted"]:
-            raise ValueError("invalid fusion method, allowed fusion methods are `rrf` and `weighted`")
+            raise ValueError(
+                "invalid fusion method, allowed fusion methods are `rrf` and `weighted`"
+            )
 
         self._fusion_method = method
         self._fusion_params = params
@@ -458,16 +462,16 @@ class SearchQuery:
             k = self._fusion_params.get("k", self._limit)
             return fusion_result_rows_by_rrf(vs_rows, fts_rows, get_row_id, k=k)
         elif self._fusion_method == "weighted":
+            vs_metric = self._distance_metric
             vs_weight = self._fusion_params.get("vs_weight", 0.5)
             fts_weight = self._fusion_params.get("fts_weight", 0.5)
-            vs_method = self._distance_metric
             return fusion_result_rows_by_weighted(
                 vs_rows=vs_rows,
                 fts_rows=fts_rows,
-                get_row_id=get_row_id,
+                get_row_key=get_row_id,
+                vs_metric=vs_metric,
                 vs_weight=vs_weight,
                 fts_weight=fts_weight,
-                vs_method=vs_method
             )
         else:
             raise ValueError(f"invalid fusion method: {self._fusion_method}")
