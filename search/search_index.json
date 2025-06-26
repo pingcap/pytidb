@@ -1,0 +1,1 @@
+{"config":{"lang":["en"],"separator":"[\\s\\-]+","pipeline":["stopWordFilter"]},"docs":[{"location":"","title":"TiDB for AI","text":"<p>[!WARNING] This documentation had been migrated from https://pingcap.github.io/pytidb to https://pingcap.github.io/ai, and if you want to contribute to the documentation, please go to repository pingcap/pingcap.github.io.</p>"}]}
