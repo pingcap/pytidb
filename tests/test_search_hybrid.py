@@ -5,7 +5,7 @@ from pytidb import TiDBClient, Table
 from pytidb.embeddings import EmbeddingFunction
 from pytidb.rerankers import Reranker
 from pytidb.rerankers.base import BaseReranker
-from pytidb.schema import TableModel, Field
+from pytidb.schema import TableModel, Field, DistanceMetric
 from pytidb.datatype import Text
 
 
@@ -167,3 +167,49 @@ def test_rerank(hybrid_table: Table, reranker: BaseReranker):
         assert actual["_distance"] > 0
         assert actual["_match_score"] > 0
         assert actual["_score"] > 0
+
+
+# Test cases for weighted fusion.
+
+
+def test_hybrid_search_weighted_fusion(hybrid_table: Table):
+    expected_results = [
+        {"id": 1, "_distance": 0.46570, "_match_score": 1.409642, "_score": 0.687175},
+        {"id": 2, "_distance": 0.60275, "_match_score": 0.499176, "_score": 0.496705},
+    ]
+    actual_results = (
+        hybrid_table.search("AI database", search_type="hybrid")
+        .text_column("description")
+        .fusion("weighted", vs_weight=0.5, fts_weight=0.5)
+        .limit(2)
+        .to_list()
+    )
+
+    assert len(actual_results) == len(expected_results)
+    for actual, expected in zip(actual_results, expected_results):
+        assert actual["id"] == expected["id"]
+        assert abs(actual["_distance"] - expected["_distance"]) < 1e-3
+        assert abs(actual["_match_score"] - expected["_match_score"]) < 1
+        assert abs(actual["_score"] - expected["_score"]) < 1e-3
+
+
+def test_hybrid_search_weighted_fusion_l2(hybrid_table: Table):
+    expected_results = [
+        {"id": 1, "_distance": 0.965127, "_match_score": 1.409642, "_score": 0.559248},
+        {"id": 2, "_distance": 1.098019, "_match_score": 0.499176, "_score": 0.382513},
+    ]
+    actual_results = (
+        hybrid_table.search("AI database", search_type="hybrid")
+        .text_column("description")
+        .distance_metric(DistanceMetric.L2)
+        .fusion("weighted", vs_weight=0.5, fts_weight=0.5)
+        .limit(2)
+        .to_list()
+    )
+
+    assert len(actual_results) == len(expected_results)
+    for actual, expected in zip(actual_results, expected_results):
+        assert actual["id"] == expected["id"]
+        assert abs(actual["_distance"] - expected["_distance"]) < 1e-3
+        assert abs(actual["_match_score"] - expected["_match_score"]) < 1
+        assert abs(actual["_score"] - expected["_score"]) < 1e-3

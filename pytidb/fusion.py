@@ -1,9 +1,12 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple
+import math
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
 
 from sqlalchemy import result_tuple
 from sqlalchemy.engine import Row
 
+
 from pytidb.utils import RowKeyType
+from pytidb.schema import DistanceMetric
 
 
 FusionFunction = Callable[[Any, Any, Row, Row, Optional[RowKeyType]], Any]
@@ -132,3 +135,107 @@ def fusion_result_rows_by_rrf(
     )
 
     return all_fields, sorted_rows
+
+
+def fusion_result_rows_by_weighted(
+    vs_rows: List[Row],
+    fts_rows: List[Row],
+    get_row_key: Callable[[Row], RowKeyType],
+    vs_metric: DistanceMetric,
+    vs_weight: float = 0.5,
+    fts_weight: float = 0.5,
+) -> Tuple[List[str], List[Row]]:
+    """
+    Fusion the search results by weights.
+
+    Args:
+        vs_rows: Vector search list of result rows
+        fts_rows: Full text search list of result rows
+        get_row_key: Function to get the key (primary key or _tidb_rowid) from a row
+        vs_metric: The metric type of vector search.
+        vs_weight: The weight of the vector search results. Must be a number between 0 and 1. Default is 0.5.
+        fts_weight: The weight of the full text search results. Must be a number between 0 and 1. Default is 0.5.
+    Returns:
+        Tuple containing:
+        - List of field names
+        - List of fused result rows sorted by RRF score
+    """
+    if not vs_rows and not fts_rows:
+        return [], []
+
+    if vs_weight <= 0 or vs_weight >= 1 or fts_weight <= 0 or fts_weight >= 1:
+        raise ValueError("weight must be a number between 0 and 1")
+    if vs_weight + fts_weight == 0:
+        raise ValueError("At least one weight must be greater than 0")
+
+    # Calculate weighted scores for each result in both lists
+    weighted_scores = {}
+
+    # Process first list
+    for i, row in enumerate(vs_rows):
+        vs_distance = row._mapping["_distance"]
+
+        if vs_metric == DistanceMetric.COSINE:
+            normalized_vs_distance = _normalize_score(vs_distance, "cosine")
+        elif vs_metric == DistanceMetric.L2:
+            normalized_vs_distance = _normalize_score(vs_distance, "l2")
+        else:
+            raise ValueError("Invalid distance metric")
+
+        key = get_row_key(row)
+        weighted_scores[key] = normalized_vs_distance * vs_weight
+
+    # Process second list and add scores
+    for i, row in enumerate(fts_rows):
+        match_score = row._mapping["_match_score"]
+        normalized_match_score = _normalize_score(match_score, "bm25")
+        key = get_row_key(row)
+        if key in weighted_scores:
+            weighted_scores[key] += normalized_match_score * fts_weight
+        else:
+            weighted_scores[key] = normalized_match_score * fts_weight
+
+    # Merge rows.
+    fusion_strategies = {
+        "_score": lambda a, b, row_a, row_b, key: weighted_scores[key],
+    }
+    all_fields, merged_rows = merge_result_rows(
+        vs_rows, fts_rows, get_row_key, fusion_strategies
+    )
+
+    # Sort rows by weighted score.
+    sorted_rows = sorted(
+        merged_rows, key=lambda row: row._mapping["_score"] or 0, reverse=True
+    )
+
+    return all_fields, sorted_rows
+
+
+def _normalize_score(
+    score: float, metric_type: Literal["l2", "cosine", "bm25"]
+) -> float:
+    """Normalize the score to [0, 1] range and ensure that the higher normalized values
+    correspond to greater similarity.
+
+    Args:
+        score: The score to normalize.
+        metric_type: The metric type of score.
+
+    Returns:
+        The normalized score between 0 and 1.
+    """
+
+    if metric_type == "cosine":
+        # Cosine distance range is [0, 2] and smaller values indicate higher
+        # similarity (need inverted).
+        return 1.0 - (score / 2.0)
+    elif metric_type == "l2":
+        # L2 distance range is [0, +infinity) and smaller values indicate higher
+        # similarity (need inverted).
+        return 1.0 - (2.0 * math.atan(score) / math.pi)
+    elif metric_type == "bm25":
+        # BM25 score range is [0, +infinity) and larger values indicate higher
+        # match degree (no need to invert).
+        return 2.0 * math.atan(score) / math.pi
+    else:
+        raise ValueError(f"Invalid metric type for score normalization: {metric_type}")
