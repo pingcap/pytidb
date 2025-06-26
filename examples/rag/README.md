@@ -1,51 +1,55 @@
 # RAG Example based on Vector Search
 
-* Use `pytidb` to connect to TiDB
-* Use `ollama` to deploy local embedding model
-* Use Streamlit as web ui
+This example demonstrates how to use PyTiDB to build a minimal RAG application.
 
-![Image](https://github.com/user-attachments/assets/b5c9a700-1298-4556-a14a-8a4ee0c6b4f1)
+* Use Ollama to deploy local embedding model and LLM model
+* Use Streamlit to build a Web UI for the RAG application
+* Use PyTiDB to build a minimal RAG application
+
+![PyTiDB RAG Demo](https://github.com/user-attachments/assets/dfd85672-65ce-4a46-8dd2-9f77d826363e)
 
 ## Prerequisites
-* Python 3.8+
-* Ollama
-* TiDB server connection string, either local or TiDB Cloud
 
+- **Python 3.10+**
+- **A TiDB Cloud Serverless cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)
+- **Ollama**: You can install it from [Ollama ↗️](https://ollama.com/download)
 
 ## How to run
 
-**Step0**: Install ollama and start embedding service
+**Step 1**: Prepare the inference API
 
-Follow the [installation docs](https://ollama.com/download) to install Ollama, then pull the embedding service and llm model like this:
+Pull the embedding and LLM model via ollama CLI:
 
 ```bash
 ollama pull mxbai-embed-large
-ollama pull llama3.2:3b
-ollama run llama3.2:3b
+ollama pull gemma3:4b
+ollama run gemma3:4b
 ```
 
-Test the embedding service and llm model to make sure they are running:
+Test the `/embed` and `/generate` endpoints to make sure they are running:
 
 ```bash
 curl http://localhost:11434/api/embed -d '{
   "model": "mxbai-embed-large",
   "input": "Llamas are members of the camelid family"
 }'
+```
 
+```bash
 curl http://localhost:11434/api/generate -d '{
-  "model": "llama3.2:3b",
+  "model": "gemma3:4b",
   "prompt": "Hello, Who are you?"
 }'
 ```
 
-**Step1**: Clone the repo
+**Step 2**: Clone the repository to local
 
 ```bash
 git clone https://github.com/pingcap/pytidb.git
 cd pytidb/examples/rag/;
 ```
 
-**Step2**: Install the required packages and setup environment
+**Step 3**: Install the required packages and setup environment
 
 ```bash
 python -m venv .venv
@@ -53,31 +57,30 @@ source .venv/bin/activate
 pip install -r reqs.txt
 ```
 
-**Step3**: Set up environment to connect to storage
-If you are using TiDB Cloud, you'd better set up the environment variable `DATABASE_URL` to connect to the TiDB Cloud database. You can find the connection string in the [TiDB Cloud console](https://tidbcloud.com/).
+**Step 4**: Set up environment to connect to database
+
+Go to [TiDB Cloud console](https://tidbcloud.com/clusters) and get the connection parameters, then set up the environment variable like this:
 
 ```bash
 cat > .env <<EOF
-DATABASE_URL="mysql+pymysql://<username>:<password>@<host>:4000/test?ssl_verify_cert=true&ssl_verify_identity=true"
-EOF
-```
-
-If you are using a local TiDB server, you can set up the environment variable like this:
-
-```bash
-cat > .env <<EOF
-TIDB_HOST=localhost
+TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
-TIDB_USERNAME=root
-TIDB_PASSWORD=
+TIDB_USERNAME={prefix}.root
+TIDB_PASSWORD={password}
 TIDB_DATABASE=test
 EOF
 ```
 
-**Step4**: Run the Streamlit app
+**Step 5**: Run the Streamlit app
 
 ```bash
 streamlit run main.py
 ```
 
-**Step5**: open the browser and visit `http://localhost:8501`
+**Step 6**: Open the browser and visit `http://localhost:8501`
+
+## Troubleshooting
+
+### `502 Bad Gateway` Error
+
+Try to disable the global proxy settings.

@@ -29,13 +29,13 @@ print("Embedding function defined")
 print("\n=== Define table schema ===")
 
 
-class Chunk(TableModel, table=True):
+class Chunk(TableModel):
     id: int = Field(primary_key=True)
     text: str = Field(sa_type=Text)
     text_vec: list[float] = embed_func.VectorField(source_field="text")
 
 
-table = db.create_table(schema=Chunk)
+table = db.create_table(schema=Chunk, mode="overwrite")
 print("Table created")
 
 # Truncate table

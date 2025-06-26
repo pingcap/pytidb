@@ -2,23 +2,25 @@
 
 This example demonstrates basic CRUD (Create, Read, Update, Delete) operations with PyTiDB.
 
-* Use `pytidb` to connect to TiDB
+* Use PyTiDB Client to connect to TiDB
+* Create a table with text, vector, and JSON columns
 * Perform basic CRUD operations on data
 
 ## Prerequisites
-* Python 3.8+
-* TiDB server connection string (local or TiDB Cloud)
+
+- **Python 3.10+**
+- **A TiDB Cloud Serverless cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)
 
 ## How to run
 
-**Step1**: Clone the repo
+**Step 1**: Clone the repository to local
 
 ```bash
 git clone https://github.com/pingcap/pytidb.git
 cd pytidb/examples/basic/
 ```
 
-**Step2**: Install the required packages
+**Step 2**: Install the required packages
 
 ```bash
 python -m venv .venv
@@ -26,10 +28,9 @@ source .venv/bin/activate
 pip install -r reqs.txt
 ```
 
+**Step 3**: Set up environment to connect to database
 
-**Step3**: Set up environment to connect to storage
-
-If you are using TiDB Cloud, you can find the connection parameters in the [TiDB Cloud console](https://tidbcloud.com/) and set up the environment variable like this:
+Go to [TiDB Cloud console](https://tidbcloud.com/clusters) and get the connection parameters, then set up the environment variable like this:
 
 ```bash
 cat > .env <<EOF
@@ -41,19 +42,7 @@ TIDB_DATABASE=test
 EOF
 ```
 
-If you are using a local TiDB server, you can set up the environment variable like this:
-
-```bash
-cat > .env <<EOF
-TIDB_HOST=localhost
-TIDB_PORT=4000
-TIDB_USERNAME=root
-TIDB_PASSWORD=
-TIDB_DATABASE=test
-EOF
-```
-
-**Step4**: Run the demo
+**Step 4**: Run the demo
 
 ```bash
 python main.py
