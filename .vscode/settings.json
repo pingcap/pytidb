@@ -28,6 +28,7 @@
         "mysqlconnector",
         "mysqldb",
         "OLAP",
+        "Ollama",
         "OLTP",
         "outerjoin",
         "prefilter",

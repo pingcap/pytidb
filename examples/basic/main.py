@@ -1,5 +1,6 @@
 import os
 import dotenv
+
 from pytidb import TiDBClient
 from pytidb.schema import TableModel, Field, VectorField
 from pytidb.datatype import JSON, Text
@@ -22,21 +23,19 @@ db = TiDBClient.connect(
 #     database_url=os.getenv("TIDB_DATABASE_URL"),
 # )
 
-
 # Define table schema
-class Item(TableModel, table=True):
-    __tablename__ = "items_in_basic_example"
-    __table_args__ = {"extend_existing": True}
-
-    id: int = Field(primary_key=True)
-    content: str = Field(sa_type=Text)  # text
-    embedding: list[float] = VectorField(dimensions=3)  # vector embedding
-    meta: dict = Field(sa_type=JSON, default_factory=dict)  # metadata
-
-
-# Create table
 print("=== CREATE TABLE ===")
-table = db.create_table(schema=Item)
+
+
+class Item(TableModel):
+    __tablename__ = "items_in_basic_example"
+    id: int = Field(primary_key=True)
+    content: str = Field(sa_type=Text)
+    embedding: list[float] = VectorField(dimensions=3)
+    meta: dict = Field(sa_type=JSON, default_factory=dict)
+
+
+table = db.create_table(schema=Item, mode="overwrite")
 print("Table created")
 
 # Truncate table
@@ -74,7 +73,7 @@ print("Created 3 items")
 
 # Read: Query all items
 print("\n=== READ ===")
-items = table.query()
+items = table.query(limit=10).to_pydantic()
 for item in items:
     print(f"ID: {item.id}, Content: {item.content}, Metadata: {item.meta}")
 
@@ -92,7 +91,7 @@ table.update(
 print(f"Updated item #{item_id_to_update}")
 
 # Read again to verify update
-updated_item = table.query(filters={"id": item_id_to_update})[0]
+updated_item = table.query(filters={"id": item_id_to_update}).to_pydantic()[0]
 print(
     f"After update - ID: {updated_item.id}, Content: {updated_item.content}, Metadata: {updated_item.meta}"
 )
@@ -105,12 +104,9 @@ print(f"Deleted item #{item_id_to_delete}")
 
 # Read again to verify deletion
 print("\n=== FINAL STATE ===")
-remaining_items = table.query()
-if remaining_items:
-    for item in remaining_items:
-        print(f"ID: {item.id}, Content: {item.content}, Metadata: {item.meta}")
-else:
-    print("No items remaining.")
+remaining_items = table.query(limit=10).to_pydantic()
+for item in remaining_items:
+    print(f"ID: {item.id}, Content: {item.content}, Metadata: {item.meta}")
 
 # Count rows
 print("\n=== COUNT ROWS ===")
