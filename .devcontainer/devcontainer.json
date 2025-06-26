@@ -1,0 +1,22 @@
+{
+    "name": "pytidb-dev",
+    "image": "mcr.microsoft.com/devcontainers/python:3.11",
+    "features": {
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.defaultInterpreterPath": "/workspaces/pytidb/.venv/bin/python3"
+            },
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-toolsai.jupyter"
+            ]
+        }
+    },
+    "postCreateCommand": "pip install uv && uv sync --dev",
+    "remoteUser": "vscode"
+}
