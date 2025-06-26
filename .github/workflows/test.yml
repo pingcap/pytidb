@@ -4,9 +4,19 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'pytidb/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
   pull_request:
     branches:
       - main
+    paths:
+      - 'pytidb/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
 
 
 jobs:
