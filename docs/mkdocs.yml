@@ -105,37 +105,6 @@ markdown_extensions:
 nav:
   - Home:
     - TiDB for AI: index.md
-    - 🚀 Quickstart: quickstart.md
-    - 📖 Concepts:
-      - Vector Search: concepts/vector-search.md
-    - 📚 Guides:
-      - Connect to database: guides/connect.md
-      - Working with tables: guides/tables.md
-      - Vector Search: guides/vector-search.md
-      - Fulltext Search: guides/fulltext-search.md
-      - Hybrid Search: guides/hybrid-search.md
-      - Auto Embedding: guides/auto-embedding.md
-      - Reranking: guides/reranking.md
-      - Filtering: guides/filtering.md
-    - 🔌 Integrations:
-      - MCP: integrations/mcp.md
-  - Concepts:
-    - Vector Search: concepts/vector-search.md
-  - Guides:
-    - Connect to database: guides/connect.md
-    - Working with tables: guides/tables.md
-    - Vector Search: guides/vector-search.md
-    - Fulltext Search: guides/fulltext-search.md
-    - Hybrid Search: guides/hybrid-search.md
-    - Auto Embedding: guides/auto-embedding.md
-    - Reranking: guides/reranking.md
-    - Filtering: guides/filtering.md
-    - Transaction: guides/transaction.md
-    - Raw Queries: guides/raw-queries.md
-    - Multiple Table Joins: guides/joins.md
-  - Integrations:
-    - MCP: integrations/mcp.md
-  # - Examples:
 
 
 extra:
@@ -150,6 +119,3 @@ extra:
 extra_css:
   - styles/extra.css
 
-extra_javascript:
-  - javascripts/mathjax.js
-  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
