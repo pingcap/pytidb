@@ -1,4 +1,4 @@
-# RAG Example based on Vector Search
+# RAG Example
 
 This example demonstrates how to use PyTiDB to build a minimal RAG application.
 
@@ -6,7 +6,10 @@ This example demonstrates how to use PyTiDB to build a minimal RAG application.
 * Use Streamlit to build a Web UI for the RAG application
 * Use PyTiDB to build a minimal RAG application
 
-![PyTiDB RAG Demo](https://github.com/user-attachments/assets/dfd85672-65ce-4a46-8dd2-9f77d826363e)
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/dfd85672-65ce-4a46-8dd2-9f77d826363e" alt="RAG application built with PyTiDB" width="600" />
+  <p align="center"><i>RAG application built with PyTiDB</i></p>
+</p>
 
 ## Prerequisites
 
