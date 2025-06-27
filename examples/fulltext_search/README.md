@@ -1,12 +1,9 @@
 # Fulltext Search Example
 
-This example shows how to use fulltext search with TiDB.
-
-* Use `pytidb` client to perform fulltext search.
-* Use Streamlit as web UI
+This example demonstrates how to build a E-commerce product search application using TiDB's full-text search feature with multilingual support. Users can search for products by keywords in their preferred language.
 
 <p align="center">
-  <img width="600" alt="TiDB Fulltext Search Demo" src="https://github.com/user-attachments/assets/c81ddad4-f996-4b1f-85c0-5cbb55bc2a3a" />
+  <img width="700" alt="TiDB Fulltext Search Demo" src="https://github.com/user-attachments/assets/c81ddad4-f996-4b1f-85c0-5cbb55bc2a3a" />
 </p>
 
 ## Prerequisites
