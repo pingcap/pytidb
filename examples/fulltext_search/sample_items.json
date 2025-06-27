@@ -1,0 +1,302 @@
+[
+    {
+      "id": 101,
+      "title": "5G Smartphone, 6.7-inch AMOLED, 108MP camera, 8GB+256GB, Black",
+      "language": "en"
+    },
+    {
+      "id": 102,
+      "title": "Flagship 5G Phone, 200MP triple camera, 6.8-inch OLED, 12GB+256GB, Blue",
+      "language": "en"
+    },
+    {
+      "id": 103,
+      "title": "Foldable Phone, 7.2-inch AMOLED, Leica dual camera, 16GB+512GB, Rose Gold",
+      "language": "en"
+    },
+    {
+      "id": 104,
+      "title": "Rugged Phone, 6000mAh battery, 6.5-inch Gorilla Glass, IP68, 8GB+128GB, Black",
+      "language": "en"
+    },
+    {
+      "id": 105,
+      "title": "Senior Phone, Large font, SOS, Long battery, Blue, Easy operation, Big buttons",
+      "language": "en"
+    },
+    {
+      "id": 106,
+      "title": "Gaming Phone, 165Hz AMOLED, Adreno 730 GPU, Liquid cooling, Phantom Black",
+      "language": "en"
+    },
+    {
+      "id": 107,
+      "title": "Dual SIM Android, 108MP triple camera, 6.6-inch FHD+, 8GB+512GB, Gray",
+      "language": "en"
+    },
+    {
+      "id": 108,
+      "title": "Ultra Thin 5G, 6.7-inch AMOLED, Long battery, 120Hz, 12GB+256GB, Silver",
+      "language": "en"
+    },
+    {
+      "id": 109,
+      "title": "Business Phone, 6.5-inch FHD+, Fast fingerprint, 8GB+256GB, Long battery, Black",
+      "language": "en"
+    },
+    {
+      "id": 110,
+      "title": "Student Phone, Slim, 6.4-inch HD+ screen, Long battery, 6GB+128GB, Blue",
+      "language": "en"
+    },
+    {
+      "id": 111,
+      "title": "Ultra Slim Laptop, 14-inch HD, 16GB RAM, 512GB SSD, Long battery life",
+      "language": "en"
+    },
+    {
+      "id": 112,
+      "title": "Business Laptop, 15.6-inch HD, Intel i7, 32GB+1TB, Fingerprint, Metal, Light",
+      "language": "en"
+    },
+    {
+      "id": 113,
+      "title": "2-in-1 Laptop, 13-inch HD touchscreen, Stylus, 360° hinge, Lightweight",
+      "language": "en"
+    },
+    {
+      "id": 114,
+      "title": "Gaming Laptop, 17-inch, RTX 4060 16GB, 32GB+1TB, RGB keyboard",
+      "language": "en"
+    },
+    {
+      "id": 115,
+      "title": "Student Laptop, 15-inch HD, AMD Ryzen 5, 16GB+512GB, Ultra-slim",
+      "language": "en"
+    },
+    {
+      "id": 116,
+      "title": "Bluetooth Earphones, HiFi sound, 48h battery, Fast charge, Low latency, Music/Game",
+      "language": "en"
+    },
+    {
+      "id": 117,
+      "title": "Bluetooth 5.3 Headphones, Noise Cancelling, Immersive sound, Comfortable",
+      "language": "en"
+    },
+    {
+      "id": 118,
+      "title": "IPX7 Waterproof Earbuds, Sport ready, Touch control, High-quality music",
+      "language": "en"
+    },
+    {
+      "id": 119,
+      "title": "Sports Earbuds, Secure fit, Sweatproof, Long battery, Workout support",
+      "language": "en"
+    },
+    {
+      "id": 120,
+      "title": "Wired Headphones, Studio-grade, HD sound, Comfortable, Pro music experience",
+      "language": "en"
+    },
+    {
+      "id": 201,
+      "title": "5Gスマートフォン 6.7インチAMOLED 108MPカメラ 8GB+256GB 黒",
+      "language": "ja"
+    },
+    {
+      "id": 202,
+      "title": "フラッグシップ5Gスマホ 200MPトリプルカメラ 6.8インチOLED 12GB+256GB 青",
+      "language": "ja"
+    },
+    {
+      "id": 203,
+      "title": "フォルダブルスマホ 7.2インチAMOLED ライカデュアルカメラ 16GB+512GB 金",
+      "language": "ja"
+    },
+    {
+      "id": 204,
+      "title": "タフスマホ 6000mAhバッテリー 6.5インチゴリラガラス IP68 8GB+128GB 黒",
+      "language": "ja"
+    },
+    {
+      "id": 205,
+      "title": "シニア携帯 大きな文字 SOS 長持ちバッテリー 青 簡単操作 大ボタン",
+      "language": "ja"
+    },
+    {
+      "id": 206,
+      "title": "ゲーミングスマホ 165Hz AMOLED Adreno 730 VC液冷 ファントムブラック",
+      "language": "ja"
+    },
+    {
+      "id": 207,
+      "title": "デュアルSIM Android 108MPトリプルカメラ 6.6インチFHD+ 8GB+512GB 灰",
+      "language": "ja"
+    },
+    {
+      "id": 208,
+      "title": "超薄型5G 6.7インチAMOLED 長持ちバッテリー 120Hz 12GB+256GB 銀",
+      "language": "ja"
+    },
+    {
+      "id": 209,
+      "title": "ビジネススマホ 6.5インチFHD+ 高速指紋 8GB+256GB 長持ちバッテリー 黒",
+      "language": "ja"
+    },
+    {
+      "id": 210,
+      "title": "学生向けスマホ スリム 6.4インチHD+ 長持ちバッテリー 6GB+128GB 青",
+      "language": "ja"
+    },
+    {
+      "id": 211,
+      "title": "超薄型ノートPC 14インチHD 16GBメモリ 512GB SSD 長持ちバッテリー",
+      "language": "ja"
+    },
+    {
+      "id": 212,
+      "title": "ビジネスノートPC 15.6インチHD Intel i7 32GB+1TB 指紋 メタル 軽量",
+      "language": "ja"
+    },
+    {
+      "id": 213,
+      "title": "2in1ノートPC 13インチHDタッチ スタイラス 360°ヒンジ 軽量",
+      "language": "ja"
+    },
+    {
+      "id": 214,
+      "title": "ゲーミングノートPC 17インチ RTX4060 16GB 32GB+1TB RGBキーボード",
+      "language": "ja"
+    },
+    {
+      "id": 215,
+      "title": "学生ノートPC 15インチHD AMD Ryzen5 16GB+512GB 超薄型",
+      "language": "ja"
+    },
+    {
+      "id": 216,
+      "title": "Bluetoothイヤホン HiFi音質 48hバッテリー 急速充電 低遅延 音楽/ゲーム",
+      "language": "ja"
+    },
+    {
+      "id": 217,
+      "title": "Bluetooth5.3ヘッドホン ノイズキャンセリング 没入サウンド 快適装着",
+      "language": "ja"
+    },
+    {
+      "id": 218,
+      "title": "IPX7防水イヤホン スポーツ対応 タッチ操作 高音質音楽",
+      "language": "ja"
+    },
+    {
+      "id": 219,
+      "title": "スポーツイヤホン 安定装着 防汗 長持ちバッテリー ワークアウト対応",
+      "language": "ja"
+    },
+    {
+      "id": 220,
+      "title": "有線ヘッドホン スタジオ級 HDサウンド 快適装着 プロ音楽体験",
+      "language": "ja"
+    },
+    {
+      "id": 301,
+      "title": "5G智能手机 6.7英寸AMOLED屏 108MP相机 双卡双待 8GB+256GB 午夜黑",
+      "language": "zh"
+    },
+    {
+      "id": 302,
+      "title": "旗舰5G手机 蔡司200MP三摄 6.8英寸OLED 屏下指纹 12GB+256GB 宇宙蓝",
+      "language": "zh"
+    },
+    {
+      "id": 303,
+      "title": "时尚折叠屏手机 7.2英寸柔性AMOLED 徕卡双摄 5G全网通 16GB+512GB 玫瑰金",
+      "language": "zh"
+    },
+    {
+      "id": 304,
+      "title": "户外三防手机 6000mAh超长续航 IP68防水 支持卫星电话 8GB+128GB 黑色",
+      "language": "zh"
+    },
+    {
+      "id": 305,
+      "title": "老人专用手机 大字体大音量 一键SOS 长续航 蓝色机身 简易操作 大按键防误触",
+      "language": "zh"
+    },
+    {
+      "id": 306,
+      "title": "旗舰电竞手机 165Hz超高刷新AMOLED屏 Adreno 730旗舰GPU VC液冷散热 幻影黑",
+      "language": "zh"
+    },
+    {
+      "id": 307,
+      "title": "双卡双待安卓手机 108MP超清三摄 6.6英寸FHD+炫彩全面屏 8GB+512GB 太空灰",
+      "language": "zh"
+    },
+    {
+      "id": 308,
+      "title": "超薄5G旗舰手机 6.7英寸AMOLED全面屏 超长续航 120Hz高刷 12GB+256GB 银色",
+      "language": "zh"
+    },
+    {
+      "id": 309,
+      "title": "商务旗舰手机 6.5英寸FHD+全面屏 超快指纹解锁 8GB+256GB 超长续航 黑色",
+      "language": "zh"
+    },
+    {
+      "id": 310,
+      "title": "学生专用手机 轻薄机身 6.4英寸HD+护眼屏 超长续航 学习娱乐两不误 6GB+128GB 蓝色",
+      "language": "zh"
+    },
+    {
+      "id": 311,
+      "title": "超薄轻便笔记本 14英寸高清屏 16GB内存 512GB高速SSD 学习办公娱乐全能 长续航",
+      "language": "zh"
+    },
+    {
+      "id": 312,
+      "title": "商务笔记本 15.6英寸高清屏 Intel i7 32GB+1TB 指纹解锁 金属机身 轻薄便携",
+      "language": "zh"
+    },
+    {
+      "id": 313,
+      "title": "二合一翻转笔记本 13英寸高清触控屏 支持4096级压感手写笔 360°全景转轴 轻薄便携",
+      "language": "zh"
+    },
+    {
+      "id": 314,
+      "title": "高性能电竞笔记本 17英寸巨幕沉浸体验 RTX 4060 16GB GDDR6独显 32GB+1TB RGB键盘",
+      "language": "zh"
+    },
+    {
+      "id": 315,
+      "title": "学生专属笔记本 15英寸高清大屏 AMD Ryzen 5 16GB+512GB 超轻薄机身 高效学习娱乐",
+      "language": "zh"
+    },
+    {
+      "id": 316,
+      "title": "无线蓝牙耳机 HiFi音质 48小时超长续航 快速充电 低延迟 游戏音乐双模式",
+      "language": "zh"
+    },
+    {
+      "id": 317,
+      "title": "蓝牙5.3降噪头戴式耳机 杜比全景声 沉浸音效 舒适佩戴 畅享静谧音乐时光",
+      "language": "zh"
+    },
+    {
+      "id": 318,
+      "title": "IPX7防水真无线耳机 运动无忧 智能触控 随时畅听高品质音乐",
+      "language": "zh"
+    },
+    {
+      "id": 319,
+      "title": "运动专用耳机 稳固佩戴 防汗设计 超长续航 低延迟音频 高清通话",
+      "language": "zh"
+    },
+    {
+      "id": 320,
+      "title": "录音室级有线耳机 高清音质 舒适佩戴 可拆卸线材 多设备兼容 降噪麦克风",
+      "language": "zh"
+    }
+]

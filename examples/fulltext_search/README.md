@@ -1,24 +1,29 @@
-# Fulltext Search Examples
+# Fulltext Search Example
 
-* Use `pytidb` to connect to TiDB
+This example shows how to use fulltext search with TiDB.
+
+* Use `pytidb` client to perform fulltext search.
 * Use Streamlit as web UI
+
+<p align="center">
+  <img width="600" alt="TiDB Fulltext Search Demo" src="https://github.com/user-attachments/assets/c81ddad4-f996-4b1f-85c0-5cbb55bc2a3a" />
+</p>
 
 ## Prerequisites
 
-* Python 3.10+
-* TiDB server connection string
-
+- **Python 3.10+**
+- **A TiDB Cloud Serverless cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)
 
 ## How to run
 
-**Step1**: Clone the repo
+**Step 1**: Clone the repository to local
 
 ```bash
 git clone https://github.com/pingcap/pytidb.git
 cd pytidb/examples/fulltext_search/;
 ```
 
-**Step2**: Install the required packages and setup environment
+**Step 2**: Install the required packages and setup environment
 
 ```bash
 python -m venv .venv
@@ -26,7 +31,7 @@ source .venv/bin/activate
 pip install -r reqs.txt
 ```
 
-**Step3**: Set up environment to connect to database
+**Step 3**: Set up environment to connect to database
 
 Go to the [TiDB Cloud console](https://tidbcloud.com/), create a new cluster if you don't have one, and then get the connection parameters on the connection dialog.
 
@@ -36,14 +41,14 @@ TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USERNAME={prefix}.root
 TIDB_PASSWORD={password}
-TIDB_DATABASE=test
+TIDB_DATABASE=pytidb_fulltext_demo
 EOF
 ```
 
-**Step4**: Run the Streamlit app
+**Step 4**: Run the Streamlit app
 
 ```bash
-streamlit run main.py
+streamlit run app.py
 ```
 
-**Step5**: open the browser and visit `http://localhost:8501`
+**Step 5**: open the browser and visit `http://localhost:8501`
