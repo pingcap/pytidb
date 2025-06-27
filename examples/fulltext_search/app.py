@@ -39,18 +39,14 @@ if table is None:
                 sample_items = json.load(f)
             table.bulk_insert([Item(**item) for item in sample_items])
 
-# Initialize UI.
-st.logo("../assets/logo-full.svg", size="large", link="https://pingcap.github.io/ai/")
 
-st.markdown(
-    '<h3 style="text-align: center; padding-top: 40px;">E-commerce Product Search</h3>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    '<p style="text-align: center;">Search for phones, laptops, headphones, and more products</p>',
-    unsafe_allow_html=True,
-)
+# Initialize UI.
+
+# Sidebar.
 with st.sidebar:
+    st.logo(
+        "../assets/logo-full.svg", size="large", link="https://pingcap.github.io/ai/"
+    )
     st.markdown("""#### Overview
 
 **Full-text search** is a technique that finds documents or data by matching keywords or phrases
@@ -67,8 +63,27 @@ built-in **multilingual support**.
     )[1]
 
 
-def render_recommended_keywords(keywords):
-    html = "<span style='color:gray'>Try searching for:</span>"
+# Main content.
+st.markdown(
+    '<h3 style="text-align: center; padding-top: 40px;">E-commerce Product Search</h3>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    '<p style="text-align: center;">Search for phones, laptops, headphones, and more products</p>',
+    unsafe_allow_html=True,
+)
+
+# Recommended keywords.
+recommended_keywords = {
+    "en": ["Bluetooth Headphone", "Gaming Laptop", "Senior Phone"],
+    "ja": ["Bluetoothイヤホン", "ゲーミングノート", "シニア携帯"],
+    "zh": ["蓝牙耳机", "游戏笔记本", "老年手机"],
+}
+
+
+def render_recommended_keywords(language):
+    html = "<span style='color:gray'>Try searching for: </span>"
+    keywords = recommended_keywords[language]
     for keyword in keywords:
         html += f'<b>"{keyword}"</b>'
         if keyword != keywords[-1]:
@@ -81,18 +96,11 @@ with st.form("search_form"):
     col1, col2 = st.columns([6, 1])
     with col1:
         query_text = st.text_input(
-            " ", placeholder="Enter your search query", label_visibility="collapsed"
+            "Keywords:",
+            placeholder="Enter your search query",
+            label_visibility="collapsed",
         )
-        if language == "en":
-            render_recommended_keywords(
-                ["Bluetooth Headphone", "Gaming Laptop", "Senior Phone"]
-            )
-        elif language == "ja":
-            render_recommended_keywords(
-                ["Bluetoothイヤホン", "ゲーミングノート", "シニア携帯"]
-            )
-        elif language == "zh":
-            render_recommended_keywords(["蓝牙耳机", "游戏笔记本", "老年手机"])
+        render_recommended_keywords(language)
     with col2:
         submitted = st.form_submit_button("Search")
 
@@ -108,7 +116,7 @@ if submitted:
             .to_pandas()
         )
 
-        if df.size > 0:
+        if len(df) > 0:
             st.markdown(
                 f'Found <b>{len(df)}</b> results for <b>"{query_text}"</b>',
                 unsafe_allow_html=True,
