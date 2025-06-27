@@ -4,7 +4,7 @@ This example demonstrates how to build a E-commerce product search application u
 
 <p align="center">
   <img width="700" alt="E-commerce product search with full-text search" src="https://github.com/user-attachments/assets/c81ddad4-f996-4b1f-85c0-5cbb55bc2a3a" />
-  <p style="text-align: center;">E-commerce product search with full-text search</p>
+  <p align="center"><i>E-commerce product search with full-text search</i></p>
 </p>
 
 ## Prerequisites
