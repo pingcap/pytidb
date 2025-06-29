@@ -275,6 +275,7 @@ class SearchQuery:
             select(
                 *selected_columns,
                 distance_column,
+                (1 - distance_column).label(SCORE_LABEL),
             )
             
             .order_by(asc(DISTANCE_LABEL))
@@ -283,7 +284,7 @@ class SearchQuery:
         
         # Distance range.
         having = []
-        if self._distance_lower_bound and self._distance_upper_bound:
+        if self._distance_lower_bound is not None and self._distance_upper_bound is not None:
             having.append(distance_column >= self._distance_lower_bound)
             having.append(distance_column <= self._distance_upper_bound)
 
@@ -296,7 +297,7 @@ class SearchQuery:
 
         if self._filters is not None:
             filter_clauses = build_filter_clauses(
-                self._filters, selected_columns, table_model
+                self._filters, columns, table_model
             )
             stmt = stmt.filter(*filter_clauses)
 
@@ -334,7 +335,7 @@ class SearchQuery:
 
         # Distance range.
         having = []
-        if self._distance_lower_bound and self._distance_upper_bound:
+        if self._distance_lower_bound is not None and self._distance_upper_bound is not None:
             having.append(distance_column >= self._distance_lower_bound)
             having.append(distance_column <= self._distance_upper_bound)
 
