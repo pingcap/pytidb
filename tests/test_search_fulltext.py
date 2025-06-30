@@ -100,3 +100,59 @@ def test_rerank(text_table: Table, reranker: BaseReranker):
     assert reranked_results[0]["name"] == "LlamaIndex"
     assert "LlamaIndex" in reranked_results[0]["description"]
     assert reranked_results[0]["_score"] > 0
+
+
+def test_with_multiple_text_fields(client: TiDBClient):
+    class Article(TableModel):
+        __tablename__ = "test_fts_with_multi_text_fields"
+        id: int = Field(primary_key=True)
+        title: str = FullTextField()
+        body: str = FullTextField()
+
+    tbl = client.create_table(schema=Article, mode="overwrite")
+    tbl.bulk_insert(
+        [
+            Article(
+                id=1,
+                title="TiDB",
+                body="TiDB is a distributed SQL database compatible with MySQL.",
+            ),
+            Article(
+                id=2,
+                title="LlamaIndex",
+                body="LlamaIndex is a framework for building AI applications.",
+            ),
+            Article(
+                id=3,
+                title="OpenAI",
+                body="OpenAI provides APIs for building AI models and applications.",
+            ),
+        ]
+    )
+
+    with pytest.raises(ValueError):
+        tbl.search("TiDB", search_type="fulltext").limit(2).to_list()
+
+    results = (
+        tbl.search("TiDB", search_type="fulltext")
+        .text_column("title")
+        .limit(2)
+        .to_list()
+    )
+    assert len(results) == 1
+    assert results[0]["title"] == "TiDB"
+    assert "TiDB" in results[0]["body"]
+    assert results[0]["_match_score"] > 0
+    assert results[0]["_score"] == results[0]["_match_score"]
+
+    results = (
+        tbl.search("AI framework", search_type="fulltext")
+        .text_column("body")
+        .limit(2)
+        .to_list()
+    )
+    assert len(results) == 1
+    assert results[0]["title"] == "LlamaIndex"
+    assert "LlamaIndex" in results[0]["body"]
+    assert results[0]["_match_score"] > 0
+    assert results[0]["_score"] == results[0]["_match_score"]
