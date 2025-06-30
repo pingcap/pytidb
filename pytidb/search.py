@@ -88,8 +88,8 @@ class SearchQuery:
         self._sa_table = table._sa_table
         self._client = table.client
         self._columns = table._columns
-        self._vector_column = table.vector_column
-        self._text_column = table.text_column
+        self._default_vector_column = table._default_vector_column
+        self._default_text_column = table._default_text_column
         self._fusion_method = "rrf"
         self._fusion_params = {
             "k": 60,
@@ -134,7 +134,7 @@ class SearchQuery:
         return self
 
     def text_column(self, column_name: str):
-        self._text_column = check_text_column(self._columns, column_name)
+        self._default_text_column = check_text_column(self._columns, column_name)
         return self
 
     def distance_metric(self, metric: DistanceMetric) -> "SearchQuery":
@@ -327,20 +327,21 @@ class SearchQuery:
                 ".text('<your query string>')"
             )
 
-        if self._text_column is None:
+        # Determine the text column.
+        if self._default_text_column is None:
             if len(self._table.text_columns) == 0:
                 raise ValueError(
                     "no text column found in the table, fulltext search cannot be executed"
                 )
             elif len(self._table.text_columns) >= 1:
                 raise ValueError(
-                    "more than two text columns in the table, need to specify one through"
+                    "more than two text columns in the table, need to specify one through "
                     ".text_column('<your text column name>')"
                 )
             else:
                 text_column = self._table.text_columns[0]
         else:
-            text_column = self._text_column
+            text_column = self._default_text_column
 
         table_model = self._table.table_model
         columns = table_model.__table__.c
@@ -348,7 +349,6 @@ class SearchQuery:
         if self._sa_table.primary_key is None:
             select_columns.insert(0, text("_tidb_rowid"))
 
-        # TODO: support return score after fts_match_word is supported.
         table_name = self._table.table_name
         stmt = select(
             *select_columns,
@@ -360,9 +360,7 @@ class SearchQuery:
             filter_clauses = build_filter_clauses(self._filters, columns, table_model)
             stmt = stmt.filter(*filter_clauses)
 
-        stmt = stmt.order_by(desc(fts_match_word(self._query_text, text_column))).limit(
-            self._limit
-        )
+        stmt = stmt.order_by(desc(MATCH_SCORE_LABEL)).limit(self._limit)
 
         # Debug.
         if self._debug:
@@ -527,8 +525,8 @@ class SearchQuery:
                 return vector_field["source_field_name"]
 
         if self._search_type == "fulltext":
-            if self._text_column is not None:
-                return self._text_column
+            if self._default_text_column is not None:
+                return self._default_text_column
 
         raise ValueError(
             "Please specify the rerank field name through .rerank(reranker, rerank_field_name)"
