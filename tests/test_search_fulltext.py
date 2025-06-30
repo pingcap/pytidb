@@ -151,7 +151,7 @@ def test_with_multiple_text_fields(client: TiDBClient):
         .limit(2)
         .to_list()
     )
-    assert len(results) == 1
+    assert len(results) == 2
     assert results[0]["title"] == "LlamaIndex"
     assert "LlamaIndex" in results[0]["body"]
     assert results[0]["_match_score"] > 0
