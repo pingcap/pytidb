@@ -88,8 +88,8 @@ class SearchQuery:
         self._sa_table = table._sa_table
         self._client = table.client
         self._columns = table._columns
-        self._default_vector_column = table._default_vector_column
-        self._default_text_column = table._default_text_column
+        self._vector_column = table._default_vector_column
+        self._text_column = table._default_text_column
         self._fusion_method = "rrf"
         self._fusion_params = {
             "k": 60,
@@ -134,7 +134,7 @@ class SearchQuery:
         return self
 
     def text_column(self, column_name: str):
-        self._default_text_column = check_text_column(self._columns, column_name)
+        self._text_column = check_text_column(self._columns, column_name)
         return self
 
     def distance_metric(self, metric: DistanceMetric) -> "SearchQuery":
@@ -328,7 +328,7 @@ class SearchQuery:
             )
 
         # Determine the text column.
-        if self._default_text_column is None:
+        if self._text_column is None:
             if len(self._table.text_columns) == 0:
                 raise ValueError(
                     "no text column found in the table, fulltext search cannot be executed"
@@ -341,7 +341,7 @@ class SearchQuery:
             else:
                 text_column = self._table.text_columns[0]
         else:
-            text_column = self._default_text_column
+            text_column = self._text_column
 
         table_model = self._table.table_model
         columns = table_model.__table__.c
@@ -525,8 +525,8 @@ class SearchQuery:
                 return vector_field["source_field_name"]
 
         if self._search_type == "fulltext":
-            if self._default_text_column is not None:
-                return self._default_text_column
+            if self._text_column is not None:
+                return self._text_column
 
         raise ValueError(
             "Please specify the rerank field name through .rerank(reranker, rerank_field_name)"
