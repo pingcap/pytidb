@@ -84,12 +84,15 @@ def filter_vector_columns(columns: Dict) -> List[Column]:
 
 
 def check_vector_column(columns: Dict, column_name: str) -> Optional[str]:
+    if not isinstance(column_name, str):
+        raise ValueError(f"Invalid vector column name: {column_name}")
+
     if column_name not in columns:
         raise ValueError(f"Non-exists vector column: {column_name}")
 
     vector_column = columns[column_name]
     if not isinstance(vector_column.type, VectorType):
-        raise ValueError(f"Invalid vector column: {vector_column}")
+        raise ValueError(f"Invalid vector column: {column_name}")
 
     return vector_column
 
@@ -140,7 +143,7 @@ def get_row_id_from_row(row: Row, table: Table) -> Optional[RowKeyType]:
 
 
 def get_index_type(index: Index) -> str:
-    dialect_kwargs = getattr(index, 'dialect_kwargs', None)
+    dialect_kwargs = getattr(index, "dialect_kwargs", None)
     if dialect_kwargs is None:
         return ""
     mysql_prefix = dialect_kwargs.get("mysql_prefix", "")
