@@ -260,9 +260,22 @@ class SearchQuery:
             )
 
         if self._prefilter:
-            return self._build_pre_filter_vector_query(distance_column=distance_column)
+            stmt = self._build_pre_filter_vector_query(distance_column=distance_column)
         else:
-            return self._build_post_filter_vector_query(distance_column=distance_column)
+            stmt = self._build_post_filter_vector_query(distance_column=distance_column)
+        
+        # Debug.
+        if self._debug:
+            db_engine = self._table.db_engine
+            table_name = self._table.table_name
+            compiled_sql = stmt.compile(
+                dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
+            )
+            logger.info(
+                f"Build vector search query on table <{table_name}>:\n{compiled_sql}"
+            )
+
+        return stmt
 
     def _build_pre_filter_vector_query(self, distance_column: Column) -> Select:
         table_model = self._table.table_model
@@ -300,17 +313,6 @@ class SearchQuery:
                 self._filters, columns, table_model
             )
             stmt = stmt.filter(*filter_clauses)
-
-        # Debug.
-        if self._debug:
-            db_engine = self._table.db_engine
-            table_name = self._table.table_name
-            compiled_sql = stmt.compile(
-                dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
-            )
-            logger.info(
-                f"Build vector search query on table <{table_name}>:\n{compiled_sql}"
-            )
 
         return stmt
 
@@ -365,17 +367,6 @@ class SearchQuery:
             stmt = stmt.filter(*filter_clauses)
 
         stmt = stmt.order_by(asc(DISTANCE_LABEL)).limit(self._limit)
-
-        # Debug.
-        if self._debug:
-            db_engine = self._table.db_engine
-            table_name = self._table.table_name
-            compiled_sql = stmt.compile(
-                dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
-            )
-            logger.info(
-                f"Build vector search query on table <{table_name}>:\n{compiled_sql}"
-            )
 
         return stmt
 
