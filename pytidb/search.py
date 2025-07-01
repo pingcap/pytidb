@@ -159,7 +159,7 @@ class SearchQuery:
 
     def filter(self, filters: Optional[Dict[str, Any]] = None, prefilter: bool = False) -> "SearchQuery":
         self._filters = filters
-        # Default model is the post-filter.
+        # Default mode is post-filter.
         self._prefilter = prefilter
         return self
 
