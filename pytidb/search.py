@@ -88,8 +88,8 @@ class SearchQuery:
         self._sa_table = table._sa_table
         self._client = table.client
         self._columns = table._columns
-        self._vector_column = table.vector_column
-        self._text_column = table.text_column
+        self._vector_column = table._default_vector_column
+        self._text_column = table._default_text_column
         self._fusion_method = "rrf"
         self._fusion_params = {
             "k": 60,
@@ -327,6 +327,7 @@ class SearchQuery:
                 ".text('<your query string>')"
             )
 
+        # Determine the text column.
         if self._text_column is None:
             if len(self._table.text_columns) == 0:
                 raise ValueError(
@@ -334,7 +335,7 @@ class SearchQuery:
                 )
             elif len(self._table.text_columns) >= 1:
                 raise ValueError(
-                    "more than two text columns in the table, need to specify one through"
+                    "more than two text columns in the table, need to specify one through "
                     ".text_column('<your text column name>')"
                 )
             else:
@@ -348,7 +349,6 @@ class SearchQuery:
         if self._sa_table.primary_key is None:
             select_columns.insert(0, text("_tidb_rowid"))
 
-        # TODO: support return score after fts_match_word is supported.
         table_name = self._table.table_name
         stmt = select(
             *select_columns,
@@ -360,9 +360,7 @@ class SearchQuery:
             filter_clauses = build_filter_clauses(self._filters, columns, table_model)
             stmt = stmt.filter(*filter_clauses)
 
-        stmt = stmt.order_by(desc(fts_match_word(self._query_text, text_column))).limit(
-            self._limit
-        )
+        stmt = stmt.order_by(desc(MATCH_SCORE_LABEL)).limit(self._limit)
 
         # Debug.
         if self._debug:

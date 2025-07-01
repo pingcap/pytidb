@@ -51,8 +51,6 @@ class Table(Generic[T]):
         *,
         client: "TiDBClient",
         schema: Optional[Type[T]] = None,
-        vector_column: Optional[str] = None,
-        text_column: Optional[str] = None,
         exist_ok: bool = False,
     ):
         self._client = client
@@ -71,8 +69,18 @@ class Table(Generic[T]):
 
         self._sa_table: SaTable = self._table_model.__table__
         self._columns = self._table_model.__table__.columns
+
+        # Determine default vector column for vector search.
+        self._default_vector_column = None
         self._vector_columns = filter_vector_columns(self._columns)
+        if len(self._vector_columns) == 1:
+            self._default_vector_column = self._vector_columns[0]
+
+        # Determine default text column for fulltext search.
+        self._default_text_column = None
         self._text_columns = filter_text_columns(self._columns)
+        if len(self._text_columns) == 1:
+            self._default_text_column = self._text_columns[0]
 
         # Setup auto embedding.
         if hasattr(schema, "__pydantic_fields__"):
@@ -85,6 +93,17 @@ class Table(Generic[T]):
                 elif field_info._attributes_set.get("field_type", None) == "text":
                     text_fields[field_name] = field_info
 
+            if len(vector_fields) == 1 and self._default_vector_column is None:
+                vector_field_name = list(vector_fields.keys())[0]
+                self._default_vector_column = check_vector_column(
+                    self._columns, vector_field_name
+                )
+            if len(text_fields) == 1 and self._default_text_column is None:
+                text_field_name = list(text_fields.keys())[0]
+                self._default_text_column = check_text_column(
+                    self._columns, text_field_name
+                )
+
             self._setup_auto_embedding(vector_fields)
             self._auto_create_vector_index(vector_fields)
             self._auto_create_fulltext_index(text_fields)
@@ -93,24 +112,6 @@ class Table(Generic[T]):
         Base.metadata.create_all(
             self._db_engine, tables=[self._sa_table], checkfirst=exist_ok
         )
-
-        # Determine default vector column for vector search.
-        if vector_column is not None:
-            self._vector_column = check_vector_column(self._columns, vector_column)
-        else:
-            if len(self._vector_columns) == 1:
-                self._vector_column = self._vector_columns[0]
-            else:
-                self._vector_column = None
-
-        # Determine default text column for fulltext search.
-        if text_column is not None:
-            self._text_column = check_text_column(self._columns, text_column)
-        else:
-            if len(self._text_columns) == 1:
-                self._text_column = self._text_columns[0]
-            else:
-                self._text_column = None
 
     @property
     def table_model(self) -> T:
@@ -129,16 +130,8 @@ class Table(Generic[T]):
         return self._db_engine
 
     @property
-    def vector_column(self):
-        return self._vector_column
-
-    @property
     def vector_columns(self):
         return self._vector_columns
-
-    @property
-    def text_column(self):
-        return self._text_column
 
     @property
     def text_columns(self):
