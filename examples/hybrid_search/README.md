@@ -45,7 +45,7 @@ TIDB_HOST=localhost
 TIDB_PORT=4000
 TIDB_USERNAME=root
 TIDB_PASSWORD=
-TIDB_DATABASE=test
+TIDB_DATABASE=pytidb_hybrid_demo
 OPENAI_API_KEY=<your-openai-api-key>
 EOF
 ```
@@ -67,7 +67,7 @@ Open the browser and visit `http://localhost:8501`
 If you want to check the demo with a script, you can run the following command:
 
 ```bash
-python main.py
+python example.py
 ```
 
 Expected output:
