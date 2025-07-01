@@ -15,7 +15,7 @@ from typing import (
 )
 
 from pydantic import BaseModel, Field
-from sqlalchemy import Row, Select, asc, desc, select, and_, text
+from sqlalchemy import Column, Row, Select, asc, desc, select, and_, text
 from pytidb.orm.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, QueryBundle, VectorDataType, TableModel
@@ -111,7 +111,8 @@ class SearchQuery:
         self._distance_lower_bound = None
         self._distance_upper_bound = None
         self._filters = None
-        self._num_candidate = 20
+        self._prefilter = False
+        self._num_candidate = None
 
         # Reranker.
         self._reranker = None
@@ -156,8 +157,10 @@ class SearchQuery:
         self._num_candidate = num_candidate
         return self
 
-    def filter(self, filters: Optional[Dict[str, Any]] = None) -> "SearchQuery":
+    def filter(self, filters: Optional[Dict[str, Any]] = None, prefilter: bool = False) -> "SearchQuery":
         self._filters = filters
+        # Default mode is post-filter.
+        self._prefilter = prefilter
         return self
 
     def limit(self, k: int) -> "SearchQuery":
@@ -220,8 +223,6 @@ class SearchQuery:
         return self
 
     def _build_vector_query(self) -> Select:
-        num_candidate = self._num_candidate if self._num_candidate else self._limit * 10
-
         if self._vector_column is None:
             if len(self._table.vector_columns) == 0:
                 raise ValueError(
@@ -258,6 +259,66 @@ class SearchQuery:
                 DISTANCE_LABEL
             )
 
+        if self._prefilter:
+            stmt = self._build_pre_filter_vector_query(distance_column=distance_column)
+        else:
+            stmt = self._build_post_filter_vector_query(distance_column=distance_column)
+        
+        # Debug.
+        if self._debug:
+            db_engine = self._table.db_engine
+            table_name = self._table.table_name
+            compiled_sql = stmt.compile(
+                dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
+            )
+            logger.info(
+                f"Build vector search query on table <{table_name}>:\n{compiled_sql}"
+            )
+
+        return stmt
+
+    def _build_pre_filter_vector_query(self, distance_column: Column) -> Select:
+        table_model = self._table.table_model
+        columns = table_model.__table__.c
+        selected_columns = list(columns)
+        if self._sa_table.primary_key is None:
+            selected_columns.insert(0, text("_tidb_rowid"))
+
+        stmt = (
+            select(
+                *selected_columns,
+                distance_column,
+                (1 - distance_column).label(SCORE_LABEL),
+            )
+            
+            .order_by(asc(DISTANCE_LABEL))
+            .limit(self._limit)
+        )
+        
+        # Distance range.
+        having = []
+        if self._distance_lower_bound is not None and self._distance_upper_bound is not None:
+            having.append(distance_column >= self._distance_lower_bound)
+            having.append(distance_column <= self._distance_upper_bound)
+
+        # Distance threshold.
+        if self._distance_threshold:
+            having.append(distance_column <= self._distance_threshold)
+
+        if len(having) > 0:
+            stmt = stmt.having(and_(*having))
+
+        if self._filters is not None:
+            filter_clauses = build_filter_clauses(
+                self._filters, columns, table_model
+            )
+            stmt = stmt.filter(*filter_clauses)
+
+        return stmt
+
+    def _build_post_filter_vector_query(self, distance_column: Column) -> Select:
+        num_candidate = self._num_candidate if self._num_candidate else self._limit * 10
+
         # Inner query for ANN search
         table_model = self._table.table_model
         columns = table_model.__table__.c
@@ -267,7 +328,7 @@ class SearchQuery:
 
         subquery_stmt = (
             select(
-                *columns,
+                *inner_select_columns,
                 distance_column,
             )
             .order_by(asc(DISTANCE_LABEL))
@@ -276,7 +337,7 @@ class SearchQuery:
 
         # Distance range.
         having = []
-        if self._distance_lower_bound and self._distance_upper_bound:
+        if self._distance_lower_bound is not None and self._distance_upper_bound is not None:
             having.append(distance_column >= self._distance_lower_bound)
             having.append(distance_column <= self._distance_upper_bound)
 
@@ -306,17 +367,6 @@ class SearchQuery:
             stmt = stmt.filter(*filter_clauses)
 
         stmt = stmt.order_by(asc(DISTANCE_LABEL)).limit(self._limit)
-
-        # Debug.
-        if self._debug:
-            db_engine = self._table.db_engine
-            table_name = self._table.table_name
-            compiled_sql = stmt.compile(
-                dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
-            )
-            logger.info(
-                f"Build vector search query on table <{table_name}>:\n{compiled_sql}"
-            )
 
         return stmt
 
