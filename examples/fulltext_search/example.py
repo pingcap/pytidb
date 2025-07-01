@@ -16,7 +16,7 @@ db = TiDBClient.connect(
     port=int(os.getenv("TIDB_PORT", "4000")),
     username=os.getenv("TIDB_USERNAME", "root"),
     password=os.getenv("TIDB_PASSWORD", ""),
-    database=os.getenv("TIDB_DATABASE", "pytidb_fulltext_search_example"),
+    database=os.getenv("TIDB_DATABASE", "pytidb_fulltext_example"),
     ensure_db=True,
 )
 print("Database connected\n")
@@ -86,6 +86,7 @@ table.bulk_insert(
 )
 print("Data inserted\n")
 
+
 # Search data
 print("=== SEARCH DATA ===")
 results = (
@@ -93,8 +94,8 @@ results = (
 )
 print(json.dumps(results, indent=2, ensure_ascii=False))
 
-# Search data in other language
 
+# Search data in other language
 print("\n=== SEARCH DATA IN OTHER LANGUAGE ===")
 results = table.search("蓝牙耳机", search_type="fulltext").limit(3).to_list()
 print(json.dumps(results, indent=2, ensure_ascii=False))
