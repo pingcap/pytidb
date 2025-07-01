@@ -14,7 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import Session, DeclarativeMeta
 
-from pytidb.base import default_registry
+from pytidb.base import Base, default_registry
 from pytidb.databases import create_database, database_exists
 from pytidb.schema import TableModel
 from pytidb.table import Table
@@ -145,8 +145,10 @@ class TiDBClient:
         return self._inspector.has_table(table_name)
 
     def drop_table(self, table_name: str):
-        table_name = self._db_engine.dialect.identifier_preparer.quote(table_name)
-        return self.execute(f"DROP TABLE IF EXISTS {table_name}")
+        table = sqlalchemy.Table(
+            table_name, Base.metadata, autoload_with=self._db_engine
+        )
+        return table.drop(self._db_engine)
 
     # Raw SQL API
 
