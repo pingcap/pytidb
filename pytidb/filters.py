@@ -4,8 +4,6 @@ from typing import Any, Dict, List, Optional, Union
 import sqlalchemy
 from sqlalchemy import BinaryExpression, text
 
-from pytidb.schema import TableModel
-
 
 Filters = Union[Dict[str, Any], str, BinaryExpression]
 
@@ -13,11 +11,9 @@ Filters = Union[Dict[str, Any], str, BinaryExpression]
 # SQL filter operators:
 
 
-def build_filter_clauses(
-    filters: Filters, columns: Dict, table_model: TableModel
-) -> List[BinaryExpression]:
+def build_filter_clauses(filters: Filters, columns: Dict) -> List[BinaryExpression]:
     if isinstance(filters, dict):
-        filter_clauses = build_dict_filter_clauses(filters, columns, table_model)
+        filter_clauses = build_dict_filter_clauses(filters, columns)
         return filter_clauses
     elif isinstance(filters, str):
         return [text(filters)]
@@ -48,7 +44,7 @@ JSON_FIELD_PATTERN = re.compile(
 
 
 def build_dict_filter_clauses(
-    filters: Dict[str, Any] | None, columns: Dict, table_model: TableModel
+    filters: Dict[str, Any] | None, columns: Dict
 ) -> List[BinaryExpression]:
     if filters is None:
         return []
@@ -62,7 +58,7 @@ def build_dict_filter_clauses(
                 )
             and_clauses = []
             for item in value:
-                and_clauses.extend(build_filter_clauses(item, columns, table_model))
+                and_clauses.extend(build_filter_clauses(item, columns))
             if len(and_clauses) == 0:
                 continue
             filter_clauses.append(sqlalchemy.and_(*and_clauses))
@@ -73,7 +69,7 @@ def build_dict_filter_clauses(
                 )
             or_clauses = []
             for item in value:
-                or_clauses.extend(build_filter_clauses(item, columns, table_model))
+                or_clauses.extend(build_filter_clauses(item, columns))
             if len(or_clauses) == 0:
                 continue
             filter_clauses.append(sqlalchemy.or_(*or_clauses))
@@ -95,7 +91,7 @@ def build_dict_filter_clauses(
             column_name = match.group("column")
             json_field = match.group("json_field")
             column = sqlalchemy.func.json_extract(
-                getattr(table_model, column_name), f"$.{json_field}"
+                getattr(columns, column_name), f"$.{json_field}"
             )
             if isinstance(value, dict):
                 filter_clause = build_dict_column_filter(column, value)

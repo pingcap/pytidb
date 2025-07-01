@@ -157,7 +157,9 @@ class SearchQuery:
         self._num_candidate = num_candidate
         return self
 
-    def filter(self, filters: Optional[Dict[str, Any]] = None, prefilter: bool = False) -> "SearchQuery":
+    def filter(
+        self, filters: Optional[Dict[str, Any]] = None, prefilter: bool = False
+    ) -> "SearchQuery":
         self._filters = filters
         # Default mode is post-filter.
         self._prefilter = prefilter
@@ -263,7 +265,7 @@ class SearchQuery:
             stmt = self._build_pre_filter_vector_query(distance_column=distance_column)
         else:
             stmt = self._build_post_filter_vector_query(distance_column=distance_column)
-        
+
         # Debug.
         if self._debug:
             db_engine = self._table.db_engine
@@ -290,14 +292,16 @@ class SearchQuery:
                 distance_column,
                 (1 - distance_column).label(SCORE_LABEL),
             )
-            
             .order_by(asc(DISTANCE_LABEL))
             .limit(self._limit)
         )
-        
+
         # Distance range.
         having = []
-        if self._distance_lower_bound is not None and self._distance_upper_bound is not None:
+        if (
+            self._distance_lower_bound is not None
+            and self._distance_upper_bound is not None
+        ):
             having.append(distance_column >= self._distance_lower_bound)
             having.append(distance_column <= self._distance_upper_bound)
 
@@ -309,9 +313,7 @@ class SearchQuery:
             stmt = stmt.having(and_(*having))
 
         if self._filters is not None:
-            filter_clauses = build_filter_clauses(
-                self._filters, columns, table_model
-            )
+            filter_clauses = build_filter_clauses(self._filters, columns)
             stmt = stmt.filter(*filter_clauses)
 
         return stmt
@@ -337,7 +339,10 @@ class SearchQuery:
 
         # Distance range.
         having = []
-        if self._distance_lower_bound is not None and self._distance_upper_bound is not None:
+        if (
+            self._distance_lower_bound is not None
+            and self._distance_upper_bound is not None
+        ):
             having.append(distance_column >= self._distance_lower_bound)
             having.append(distance_column <= self._distance_upper_bound)
 
@@ -361,9 +366,7 @@ class SearchQuery:
         )
 
         if self._filters is not None:
-            filter_clauses = build_filter_clauses(
-                self._filters, subquery.c, table_model
-            )
+            filter_clauses = build_filter_clauses(self._filters, subquery.c)
             stmt = stmt.filter(*filter_clauses)
 
         stmt = stmt.order_by(asc(DISTANCE_LABEL)).limit(self._limit)
@@ -407,7 +410,7 @@ class SearchQuery:
         ).filter(fts_match_word(self._query_text, text_column))
 
         if self._filters is not None:
-            filter_clauses = build_filter_clauses(self._filters, columns, table_model)
+            filter_clauses = build_filter_clauses(self._filters, columns)
             stmt = stmt.filter(*filter_clauses)
 
         stmt = stmt.order_by(desc(MATCH_SCORE_LABEL)).limit(self._limit)
