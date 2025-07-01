@@ -41,7 +41,7 @@ else:
 
 
 # Define table schema.
-class Document(TableModel, table=True):
+class Document(TableModel):
     __tablename__ = "documents"
     __table_args__ = {"extend_existing": True}
 
@@ -134,24 +134,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Recommended keywords.
-recommended_keywords = {
-    "fulltext": ["HTAP database"],
-    "vector": ["library to build LLM application"],
-    "hybrid": ["library to build LLM application"],
-}
-
-
-def render_recommended_keywords(search_type):
-    html = "<span style='color:gray'>Try searching for: </span>"
-    keywords = recommended_keywords[search_type]
-    for keyword in keywords:
-        html += f'<b>"{keyword}"</b>'
-        if keyword != keywords[-1]:
-            html += ", "
-    return st.markdown(html, unsafe_allow_html=True)
-
-
 with st.form("search_form"):
     col1, col2 = st.columns([6, 1])
     with col1:
@@ -160,7 +142,10 @@ with st.form("search_form"):
             placeholder="Enter your search query",
             label_visibility="collapsed",
         )
-        render_recommended_keywords(search_type)
+        st.markdown(
+            'Try searching for: <b>"HTAP database"</b>',
+            unsafe_allow_html=True,
+        )
     with col2:
         submitted = st.form_submit_button("Search")
 
@@ -183,13 +168,7 @@ if submitted:
                 f'Found <b>{len(df)}</b> results for <b>"{query_text}"</b>',
                 unsafe_allow_html=True,
             )
-            if "_distance" not in df.columns:
-                df["_distance"] = None
-            if "_match_score" not in df.columns:
-                df["_match_score"] = None
-            df = df[["id", "text", "_distance", "_match_score", "_score"]].sort_values(
-                by="_score", ascending=False
-            )
+            df = df.drop(columns=["text_vec"])
             st.dataframe(df, hide_index=True)
         else:
             st.empty()

@@ -3,7 +3,8 @@
 In this demo, we will show you how to use hybrid search to combine vector search and full-text search on a set of documents.
 
 <p align="center">
-    <img src="https://github.com/user-attachments/assets/8caf22dc-d01e-470f-a7be-4656ba3ce3b2" alt="hybrid search demo" width="754"/>
+    <img src="https://github.com/user-attachments/assets/6e1c639d-2160-44c8-86b4-958913b9eca5" alt="TiDB Hybrid Search Demo" width="700"/>
+    <p align="center"><i>TiDB Hybrid Search Demo</i></p>
 </p>
 
 ## Prerequisites
