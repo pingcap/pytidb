@@ -294,9 +294,7 @@ class Table(Generic[T]):
             values[field_name] = vector_embedding
 
         with self._client.session() as db_session:
-            filter_clauses = build_filter_clauses(
-                filters, self._columns, self._table_model
-            )
+            filter_clauses = build_filter_clauses(filters, self._columns)
             stmt = update(self._table_model).filter(*filter_clauses).values(values)
             db_session.execute(stmt)
 
@@ -308,9 +306,7 @@ class Table(Generic[T]):
             filters: (Optional[Dict[str, Any]]): The filters to apply to the delete operation.
         """
         with self._client.session() as db_session:
-            filter_clauses = build_filter_clauses(
-                filters, self._columns, self._table_model
-            )
+            filter_clauses = build_filter_clauses(filters, self._columns)
             stmt = delete(self._table_model).filter(*filter_clauses)
             db_session.execute(stmt)
 
@@ -353,9 +349,7 @@ class Table(Generic[T]):
 
             # Apply filters.
             if filters is not None:
-                filter_clauses = build_filter_clauses(
-                    filters, self._columns, self._table_model
-                )
+                filter_clauses = build_filter_clauses(filters, self._columns)
                 stmt = stmt.filter(*filter_clauses)
 
             # Apply order by.

@@ -1,22 +1,23 @@
-# Vector Search Examples
+# Vector Search Example
 
-* Use `pytidb` to connect to TiDB
-* Use `ollama` to deploy local embedding model
-* Use Streamlit as web ui
+This example demonstrates how to build a semantic search application using TiDB and local embedding models. It leverages vector search to find similar items based on meaning, not just keywords. The app uses Streamlit for the web UI and Ollama for local embedding generation.
 
-<img width="1382" alt="Image" src="https://github.com/user-attachments/assets/f63302d7-6a79-44cf-b13a-610d7560be82" />
+<p align="center">
+  <img width="700" alt="Semantic search with vector embeddings" src="https://github.com/user-attachments/assets/6d7783a5-ce9c-4dcc-8b95-49d5f0ca735a" />
+  <p align="center"><i>Semantic search with vector embeddings</i></p>
+</p>
 
 ## Prerequisites
-* Python 3.8+
-* Ollama
-* TiDB server connection string, either local or TiDB Cloud
 
+- **Python 3.10+**
+- **A TiDB Cloud Serverless cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)
+- **Ollama**: You can install it from [Ollama ↗️](https://ollama.com/download)
 
 ## How to run
 
-**Step0**: Install ollama and start embedding service
+**Step 1**: Start the embedding service with Ollama
 
-Follow the [installation docs](https://ollama.com/download) to install Ollama, then pull the embedding service like this:
+Pull the embedding model:
 
 ```bash
 ollama pull mxbai-embed-large
@@ -31,14 +32,14 @@ curl http://localhost:11434/api/embed -d '{
 }'
 ```
 
-**Step1**: Clone the repo
+**Step 2**: Clone the repository to local
 
 ```bash
 git clone https://github.com/pingcap/pytidb.git
-cd pytidb/examples/vector_search/;
+cd pytidb/examples/vector_search/
 ```
 
-**Step2**: Install the required packages and setup environment
+**Step 3**: Install the required packages and set up the environment
 
 ```bash
 python -m venv .venv
@@ -46,31 +47,24 @@ source .venv/bin/activate
 pip install -r reqs.txt
 ```
 
-**Step3**: Set up environment to connect to storage
-If you are using TiDB Cloud, you'd better set up the environment variable `DATABASE_URL` to connect to the TiDB Cloud database. You can find the connection string in the [TiDB Cloud console](https://tidbcloud.com/).
+**Step 4**: Set up environment to connect to TiDB
+
+Go to [TiDB Cloud console](https://tidbcloud.com/clusters) and get the connection parameters, then set up the environment variable like this:
 
 ```bash
 cat > .env <<EOF
-DATABASE_URL="mysql+pymysql://<username>:<password>@<host>:4000/test?ssl_verify_cert=true&ssl_verify_identity=true"
-EOF
-```
-
-If you are using a local TiDB server, you can set up the environment variable like this:
-
-```bash
-cat > .env <<EOF
-TIDB_HOST=localhost
+TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
-TIDB_USERNAME=root
-TIDB_PASSWORD=
-TIDB_DATABASE=test
+TIDB_USERNAME={prefix}.root
+TIDB_PASSWORD={password}
+TIDB_DATABASE=pytidb_vector_demo
 EOF
 ```
 
-**Step4**: Run the Streamlit app
+**Step 5**: Run the Streamlit app
 
 ```bash
-streamlit run main.py
+streamlit run app.py
 ```
 
-**Step5**: open the browser and visit `http://localhost:8501`
+**Step 6**: Open your browser and visit `http://localhost:8501`
