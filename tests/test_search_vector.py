@@ -212,3 +212,66 @@ def test_rerank(vector_table: Table, reranker: BaseReranker):
     assert len(reranked_results) > 0
     assert reranked_results[0]["text"] == "bar"
     assert reranked_results[0]["_score"] > 0
+
+
+def test_with_multi_vector_fields(client: TiDBClient):
+    class ChunkWithMultiVec(TableModel):
+        __tablename__ = "test_vector_search_multi_vec"
+        id: int = Field(None, primary_key=True)
+        title: str = Field(None)
+        title_vec: list[float] = Field(sa_column=Column(Vector(3)))
+        body: str = Field(None)
+        body_vec: list[float] = Field(sa_column=Column(Vector(3)))
+
+    tbl = client.create_table(schema=ChunkWithMultiVec, mode="overwrite")
+    tbl.bulk_insert(
+        [
+            ChunkWithMultiVec(
+                id=1, title="tree", title_vec=[4, 5, 6], body="cat", body_vec=[1, 2, 3]
+            ),
+            ChunkWithMultiVec(
+                id=2, title="grass", title_vec=[1, 2, 3], body="dog", body_vec=[7, 8, 9]
+            ),
+            ChunkWithMultiVec(
+                id=3, title="leaf", title_vec=[7, 8, 9], body="bird", body_vec=[4, 5, 6]
+            ),
+        ]
+    )
+
+    with pytest.raises(ValueError, match="more than two vector columns"):
+        tbl.search([1, 2, 3], search_type="vector").limit(3).to_list()
+
+    with pytest.raises(ValueError, match="Invalid vector column"):
+        tbl.search([1, 2, 3], search_type="vector").vector_column("title").limit(3)
+
+    with pytest.raises(ValueError, match="Non-exists vector column"):
+        tbl.search([1, 2, 3], search_type="vector").vector_column(
+            "non_exist_column"
+        ).limit(3)
+
+    with pytest.raises(ValueError, match="Invalid vector column name"):
+        tbl.search([1, 2, 3], search_type="vector").vector_column(None).limit(3)
+
+    results = (
+        tbl.search([1, 2, 3], search_type="vector")
+        .vector_column("title_vec")
+        .limit(3)
+        .to_list()
+    )
+    assert len(results) == 3
+    assert results[0]["id"] == 2
+    assert results[0]["title"] == "grass"
+    assert results[0]["_distance"] == 0
+    assert results[0]["_score"] == 1
+
+    results = (
+        tbl.search([1, 2, 3], search_type="vector")
+        .vector_column("body_vec")
+        .limit(3)
+        .to_list()
+    )
+    assert len(results) == 3
+    assert results[0]["id"] == 1
+    assert results[0]["body"] == "cat"
+    assert results[0]["_distance"] == 0
+    assert results[0]["_score"] == 1

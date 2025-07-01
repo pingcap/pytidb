@@ -148,7 +148,7 @@ class TiDBClient:
         table = sqlalchemy.Table(
             table_name, Base.metadata, autoload_with=self._db_engine
         )
-        return table.drop(self._db_engine)
+        return table.drop(self._db_engine, checkfirst=True)
 
     # Raw SQL API
 
