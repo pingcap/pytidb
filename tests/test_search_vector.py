@@ -214,7 +214,7 @@ def test_rerank(vector_table: Table, reranker: BaseReranker):
     assert reranked_results[0]["_score"] > 0
 
 
-def test_with_multi_vectors(client: TiDBClient):
+def test_with_multi_vector_fields(client: TiDBClient):
     class ChunkWithMultiVec(TableModel):
         __tablename__ = "test_vector_search_multi_vec"
         id: int = Field(None, primary_key=True)
