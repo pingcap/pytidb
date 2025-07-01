@@ -112,7 +112,7 @@ class SearchQuery:
         self._distance_upper_bound = None
         self._filters = None
         self._prefilter = False
-        self._num_candidate = 20
+        self._num_candidate = None
 
         # Reranker.
         self._reranker = None
