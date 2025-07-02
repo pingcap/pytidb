@@ -1,7 +1,7 @@
 # TiDB Python SDK
 
 > [!NOTE]
-> This Python package is under rapid development and the API is subject to change, it is recommended to use a fixed version when importing, e.g. `pytidb==0.0.6`
+> This Python package is under active development and its API may change. It is recommended to use a fixed version when installing, e.g., `pytidb==0.0.8.post2`.
 
 <p>
   <a href="https://pypi.org/project/pytidb">
@@ -12,19 +12,19 @@
   </a>
 </p>
 
-Python SDK for TiDB AI: A unified data platform designed to empower developers in building next-generation AI applications.
+**Python SDK for TiDB AI**: A unified data platform empowering developers to build next-generation AI applications.
 
-- 🔍 Support various search modes: vector search, fulltext search, hybrid search
+- 🔍 Multiple search modes: vector, full-text, and hybrid search
 - 🔄 Automatic embedding generation
 - 🎯 Advanced filtering capabilities
-- 🥇 Tuning search results with Reranker
+- 🥇 Reranker for search result tuning
 - 💱 Transaction support
 
-Documentation: https://pingcap.github.io/ai/
+**Documentation:** https://pingcap.github.io/ai/
 
-Quick Start Guide: [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
+**Quick Start:** [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
 
-Install TiDB MCP Server (Docs: https://pingcap.github.io/ai/integrations/mcp): 
+**Install TiDB MCP Server** ([Docs](https://pingcap.github.io/ai/integrations/mcp)):
 
 [![Install TiDB MCP Server](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=TiDB&config=eyJjb21tYW5kIjoidXZ4IC0tZnJvbSBweXRpZGJbbWNwXSB0aWRiLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiVElEQl9IT1NUIjoibG9jYWxob3N0IiwiVElEQl9QT1JUIjoiNDAwMCIsIlRJREJfVVNFUk5BTUUiOiJyb290IiwiVElEQl9QQVNTV09SRCI6IiIsIlRJREJfREFUQUJBU0UiOiJ0ZXN0In19)
 
@@ -33,16 +33,16 @@ Install TiDB MCP Server (Docs: https://pingcap.github.io/ai/integrations/mcp):
 ```bash
 pip install pytidb
 
-# If you want to use built-in embedding function and rerankers.
+# To use built-in embedding functions and rerankers:
 pip install "pytidb[models]"
 
-# If you want to convert query result to pandas DataFrame.
+# To convert query results to pandas DataFrame:
 pip install pandas
 ```
 
 ## Connect to TiDB Cloud
 
-Go to [tidbcloud.com](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme) to create a free TiDB cluster.
+Create a free TiDB cluster at [tidbcloud.com](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme).
 
 ```python
 import os
@@ -54,104 +54,98 @@ db = TiDBClient.connect(
     username=os.getenv("TIDB_USERNAME"),
     password=os.getenv("TIDB_PASSWORD"),
     database=os.getenv("TIDB_DATABASE"),
+    ensure_db=True,
 )
 ```
 
 ## Highlights
 
-### 🤖 Auto Embedding
+### 🤖 Automatic Embedding
 
-PyTiDB automatically embeds the text field (e.g. `text`) and saves the vector embedding to the vector field (e.g. `text_vec`).
+PyTiDB automatically embeds text fields (e.g., `text`) and stores the vector embedding in a vector field (e.g., `text_vec`).
 
-**Create a table with embedding function**:
+**Create a table with an embedding function:**
 
 ```python
-from pytidb.schema import TableModel, Field
+from pytidb.schema import TableModel, Field, FullTextField
 from pytidb.embeddings import EmbeddingFunction
 
 text_embed = EmbeddingFunction("openai/text-embedding-3-small")
 
-class Chunk(TableModel, table=True):
+class Chunk(TableModel):
     __tablename__ = "chunks"
 
     id: int = Field(primary_key=True)
-    text: str = Field()
+    text: str = FullTextField()
     text_vec: list[float] = text_embed.VectorField(
         source_field="text"
-    )  # 👈 Define the vector field.
+    )  # 👈 Defines the vector field.
     user_id: int = Field()
 
-table = db.create_table(schema=Chunk)
+table = db.create_table(schema=Chunk, mode="exist_ok")
 ```
 
-**Bulk insert data**:
+**Bulk insert data:**
 
 ```python
-table.bulk_insert(
-    [
-        Chunk(id=2, text="bar", user_id=2),   # 👈 The text field will be embedded to a 
-        Chunk(id=3, text="baz", user_id=3),   # vector and save to the text_vec field
-        Chunk(id=4, text="qux", user_id=4),   # automatically.
-    ]
-)
+table.bulk_insert([
+    Chunk(id=2, text="bar", user_id=2),   # 👈 The text field is embedded and saved to text_vec automatically.
+    Chunk(id=3, text="baz", user_id=3),
+    Chunk(id=4, text="qux", user_id=4),
+])
 ```
 
 ### 🔍 Search
 
 **Vector Search**
 
-Vector search help you find the most relevant records based on **semantic similarity**, so you don't need to explicitly include all the keywords in your query.
+Vector search finds the most relevant records based on **semantic similarity**, so you don't need to include all keywords explicitly in your query.
 
 ```python
 df = (
-  table.search("<query>")  # 👈 The query will be embedding automatically.
+  table.search("<query>")  # 👈 The query is embedded automatically.
     .filter({"user_id": 2})
     .limit(2)
-    .to_pandas()
+    .to_list()
 )
+# Output: A list of dicts.
 ```
 
-For a complete example, please go to the [Vector Search](https://github.com/pingcap/pytidb/blob/main/examples/vector_search) demo.
+See the [Vector Search example](https://github.com/pingcap/pytidb/blob/main/examples/vector_search) for more details.
 
-**Fulltext Search**
+**Full-text Search**
 
-Full-text search helps tokenize the query and find the most relevant records by matching exact keywords.
+Full-text search tokenizes the query and finds the most relevant records by matching exact keywords.
 
 ```python
-if not table.has_fts_index("text"):
-    table.create_fts_index("text")   # 👈 Create a fulltext index on the text column.
-
 df = (
   table.search("<query>", search_type="fulltext")
     .limit(2)
-    .to_pandas()
+    .to_pydantic()
 )
+# Output: A list of pydantic model instances.
 ```
 
-For a complete example, please go to the [Fulltext Search](https://github.com/pingcap/pytidb/blob/main/examples/fulltext_search) demo.
+See the [Full-text Search example](https://github.com/pingcap/pytidb/blob/main/examples/fulltext_search) for more details.
 
 **Hybrid Search**
 
-Hybrid search combines vector search and fulltext search to provide a more accurate and relevant search result.
+Hybrid search combines **exact matching** from full-text search with **semantic understanding** from vector search, delivering more relevant and reliable results.
 
 ```python
-from pytidb.rerankers import Reranker
-
-jinaai = Reranker(model_name="jina_ai/jina-reranker-m0")
-
 df = (
   table.search("<query>", search_type="hybrid")
-    .rerank(jinaai, "text")  # 👈 Rerank the query result with the jinaai model.
     .limit(2)
     .to_pandas()
 )
+# Output: A pandas DataFrame.
 ```
 
-For a complete example, please go to the [Hybrid Search](https://github.com/pingcap/pytidb/blob/main/examples/hybrid_search) demo.
+See the [Hybrid Search example](https://github.com/pingcap/pytidb/blob/main/examples/hybrid_search) for more details.
 
 #### Advanced Filtering
 
-PyTiDB supports various operators for flexible filtering:
+PyTiDB supports a variety of operators for flexible filtering:
 
 | Operator | Description           | Example                                    |
 | -------- | --------------------- | ------------------------------------------ |
@@ -165,20 +159,17 @@ PyTiDB supports various operators for flexible filtering:
 | `$and`   | Logical AND           | `{"$and": [{"field1": 1}, {"field2": 2}]}` |
 | `$or`    | Logical OR            | `{"$or": [{"field1": 1}, {"field2": 2}]}`  |
 
-
-### ⛓ Join Structured Data and Unstructured Data
+### ⛓ Join Structured and Unstructured Data
 
 ```python
 from pytidb import Session
 from pytidb.sql import select
 
 # Create a table to store user data:
-class User(TableModel, table=True):
+class User(TableModel):
     __tablename__ = "users"
-
     id: int = Field(primary_key=True)
     name: str = Field(max_length=20)
-
 
 with Session(engine) as session:
     query = (
@@ -189,9 +180,9 @@ with Session(engine) as session:
 [(c.id, c.text, c.user_id) for c in chunks]
 ```
 
-### 💱Transaction Support
+### 💱 Transaction Support
 
-PyTiDB supports transaction management, so you can avoid race conditions and ensure data consistency.
+PyTiDB supports transaction management, helping you avoid race conditions and ensure data consistency.
 
 ```python
 with db.session() as session:
@@ -207,3 +198,8 @@ with db.session() as session:
     final_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
     assert final_total_balance == initial_total_balance
 ```
+
+## Getting Help
+
+- Join our Discord: [TiDB Community](https://discord.com/invite/vYU9h56kAX)
+- Ask questions on our forum: [TiDB Forum](https://ask.pingcap.com/)
