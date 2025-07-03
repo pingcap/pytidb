@@ -1,8 +1,5 @@
 # TiDB Python SDK
 
-> [!NOTE]
-> This Python package is under active development and its API may change. It is recommended to use a fixed version when installing, e.g., `pytidb==0.0.8.post2`.
-
 <p>
   <a href="https://pypi.org/project/pytidb">
     <img src="https://img.shields.io/pypi/v/pytidb.svg" alt="Python Package Index"/>
@@ -41,6 +38,9 @@ pip install "pytidb[models]"
 # To convert query results to pandas DataFrame:
 pip install pandas
 ```
+
+> [!NOTE]
+> This Python package is under active development and its API may change. It is recommended to use a fixed version when installing, e.g., `pytidb==0.0.8.post2`.
 
 ## Connect to TiDB Cloud
 
