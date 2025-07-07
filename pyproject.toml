@@ -58,6 +58,7 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 filterwarnings = [
     "ignore:.*:DeprecationWarning:litellm.*"
 ]
+addopts = "--durations=10 -v"
 
 # Build
 [tool.setuptools]

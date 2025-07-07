@@ -43,7 +43,7 @@ class BaseEmbeddingFunction(BaseModel, ABC):
         )
 
     @abstractmethod
-    def get_query_embedding(self, query: Any) -> list[float]:
+    def get_query_embedding(self, query: Any, **kwargs) -> list[float]:
         """
         Get embedding for a query (text or image).
 

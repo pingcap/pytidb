@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Any, Literal, Optional, Union
 
-from pydantic import Field
+from pytidb.schema import Field
 from pytidb.embeddings.base import BaseEmbeddingFunction
 from pytidb.embeddings.utils import (
     encode_local_file_to_base64,
