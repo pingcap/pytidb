@@ -56,7 +56,7 @@ class BaseEmbeddingFunction(BaseModel, ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_source_embedding(self, source: Any) -> list[float]:
+    def get_source_embedding(self, source: Any, **kwargs) -> list[float]:
         """
         Get embedding for a source field value (typically text).
 
@@ -69,7 +69,7 @@ class BaseEmbeddingFunction(BaseModel, ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_source_embeddings(self, sources: list[Any]) -> list[list[float]]:
+    def get_source_embeddings(self, sources: list[Any], **kwargs) -> list[list[float]]:
         """
         Get embeddings for multiple source field values.
 

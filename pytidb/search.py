@@ -104,12 +104,10 @@ class SearchQuery:
         if isinstance(query, dict):
             self._query = query["query"]
             self._query_vector = query["query_vector"]
-        elif isinstance(query, (str, Path, "Image")):
-            self._query = query
         elif isinstance(query, list) and all(isinstance(item, float) for item in query):
             self._query_vector = query
         else:
-            raise ValueError(f"unsupported query type: {type(query)}")
+            self._query = query
 
         if self._query is None and self._query_vector is None:
             raise ValueError(

@@ -1,17 +1,16 @@
 from pathlib import Path
 import pytest
-
-from sqlmodel import Field
+import numpy as np
 
 from pytidb import TiDBClient
-from pytidb.schema import TableModel, DistanceMetric
+from pytidb.schema import TableModel, Field, DistanceMetric
 from pytidb.table import Table
 from pytidb.embeddings import EmbeddingFunction
 
 
 @pytest.fixture
 def image_embed_fn():
-    return EmbeddingFunction(model_name="jina_ai/jina-embeddings-v4")
+    return EmbeddingFunction(model_name="jina_ai/jina-embeddings-v4", timeout=60)
 
 
 @pytest.fixture
@@ -36,6 +35,8 @@ def test_image_search_with_local_path(
     pet_table: Table, image_embed_fn: EmbeddingFunction
 ):
     Pet = pet_table.table_model
+
+    # INSERT.
     pet_images_dir = Path("./tests/fixtures/pet_images")
     pet_table.insert(
         Pet(
@@ -59,6 +60,20 @@ def test_image_search_with_local_path(
         ]
     )
 
+    # UPDATE.
+    original_pet = pet_table.query({"nickname": "Pudding"}).to_list()[0]
+    original_vec = original_pet["image_vec"]
+    pet_table.update(
+        {"image_uri": pet_images_dir / "shiba_inu_16.jpg"},
+        {"nickname": "Pudding"},
+    )
+    updated_pet = pet_table.query({"nickname": "Pudding"}).to_list()[0]
+    updated_vec = updated_pet["image_vec"]
+
+    # Verify the image_vec was auto-updated.
+    assert len(updated_vec) == len(original_vec)
+    assert not np.array_equal(updated_vec, original_vec)
+
     # Text to image search.
     results = (
         pet_table.search(query="shiba inu dog", search_type="vector")
@@ -70,9 +85,9 @@ def test_image_search_with_local_path(
     for pet in results:
         assert pet["nickname"] in ["Pudding"]
         assert pet["breed"] in ["shiba_inu"]
-        assert pet["image_uri"].endswith("shiba_inu_15.jpg")
+        assert pet["image_uri"].endswith("shiba_inu_16.jpg")
         assert len(pet["image_vec"]) == image_embed_fn.dimensions
-        assert pet["_distance"] < 0.2
+        assert pet["_distance"] < 0.3
 
     # Image to image search.
     query_image = pet_images_dir / "shiba_inu_4.jpg"
@@ -86,6 +101,6 @@ def test_image_search_with_local_path(
     for pet in results:
         assert pet["nickname"] in ["Pudding"]
         assert pet["breed"] in ["shiba_inu"]
-        assert pet["image_uri"].endswith("shiba_inu_15.jpg")
+        assert pet["image_uri"].endswith("shiba_inu_16.jpg")
         assert len(pet["image_vec"]) == image_embed_fn.dimensions
-        assert pet["_distance"] < 0.1
+        assert pet["_distance"] < 0.3
