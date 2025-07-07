@@ -438,7 +438,7 @@ class Table(Generic[T]):
 
     def search(
         self,
-        query: Optional[Union[VectorDataType, str, QueryBundle, Image, Path]] = None,
+        query: Optional[Union[VectorDataType, str, QueryBundle, "Image", Path]] = None,
         search_type: SearchType = "vector",
     ) -> SearchQuery:
         return SearchQuery(

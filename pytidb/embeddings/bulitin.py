@@ -44,7 +44,7 @@ def get_embeddings(
     return [result["embedding"] for result in response.data]
 
 
-EmbeddingSourceValueType = Union[str, Path, Image]
+EmbeddingSourceValueType = Union[str, Path, "Image"]
 
 EmbeddingSourceType = Union[Literal["text"], Literal["image"]]
 
@@ -119,7 +119,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
                     )
             else:
                 raise ValueError(f"invalid url format for image source: {source}")
-        elif isinstance(source, "PIL.Image.Image"):
+        elif isinstance(source, "Image"):
             return {"image": encode_image_to_base64(source)}
         else:
             raise ValueError(
@@ -145,7 +145,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
                     )
             else:
                 return query
-        elif isinstance(query, Image):
+        elif isinstance(query, "Image"):
             return {"image": encode_image_to_base64(query)}
         else:
             raise ValueError(

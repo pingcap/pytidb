@@ -82,7 +82,7 @@ class SearchQuery:
         self,
         table: "Table",
         search_type: SearchType = "vector",
-        query: Optional[Union[VectorDataType, str, Path, QueryBundle, Image]] = None,
+        query: Optional[Union[VectorDataType, str, Path, QueryBundle, "Image"]] = None,
     ):
         # Table.
         self._table = table
@@ -106,8 +106,9 @@ class SearchQuery:
         elif isinstance(query, list) and all(isinstance(item, float) for item in query):
             self._query_vector = query
         elif (
-            isinstance(query, str) or isinstance(query, Path)
-            # or isinstance(query, Image)
+            isinstance(query, str)
+            or isinstance(query, Path)
+            or isinstance(query, "Image")
         ):
             self._query = query
         else:
