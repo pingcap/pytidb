@@ -2,6 +2,7 @@ from typing import Literal
 from sqlalchemy import text
 from sqlalchemy.sql.schema import Index
 from pytidb.orm.sql.ddl import TiDBSchemaGenerator
+from pytidb.orm.types import DistanceMetric
 
 """
 The algorithm used for vector index.
@@ -12,25 +13,10 @@ Available algorithms:
 VectorIndexAlgorithm = Literal["HNSW"]
 
 
-"""
-The distance metric can be used for vector index.
-
-Available distance metrics:
-  COSINE: Cosine distance metric.
-  L2: L2 (Euclidean) distance metric.
-"""
-DistanceMetric = Literal["COSINE", "L2"]
-
-distance_fn_mappings: dict[DistanceMetric, str] = {
-    "COSINE": "VEC_COSINE_DISTANCE",
-    "L2": "VEC_L2_DISTANCE",
-}
-
-
 def format_distance_expression(
     column_name: str, distance_metric: DistanceMetric
 ) -> str:
-    distance_fn = distance_fn_mappings[distance_metric]
+    distance_fn = distance_metric.to_sql_func()
     return f"({distance_fn}({column_name}))"
 
 
@@ -41,7 +27,7 @@ class VectorIndex(Index):
         self,
         name,
         *columns,
-        distance_metric: DistanceMetric = "COSINE",
+        distance_metric: DistanceMetric = DistanceMetric.COSINE,
         algorithm: VectorIndexAlgorithm = "HNSW",
         ensure_columnar_replica: bool = True,
         **kw,

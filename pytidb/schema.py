@@ -1,5 +1,4 @@
-import enum
-from typing import Literal, Optional, TYPE_CHECKING, List, TypedDict
+from typing import Any, Literal, Optional, TYPE_CHECKING, List, TypedDict
 
 from pydantic import BaseModel
 from sqlalchemy import Column, Index
@@ -7,7 +6,8 @@ from sqlmodel import SQLModel, Field, Relationship
 from sqlmodel.main import FieldInfo, RelationshipInfo, SQLModelMetaclass
 from tidb_vector.sqlalchemy import VectorType
 
-from pytidb.orm.indexes import VectorIndexAlgorithm, DistanceMetric
+from pytidb.orm.indexes import VectorIndexAlgorithm
+from pytidb.orm.types import DistanceMetric
 
 if TYPE_CHECKING:
     from pytidb.embeddings.base import BaseEmbeddingFunction
@@ -19,7 +19,7 @@ IndexType = Literal["vector", "fulltext", "scalar"]
 
 
 class QueryBundle(TypedDict):
-    query_text: Optional[str]
+    query: Optional[Any]
     query_vector: Optional[VectorDataType]
 
 
@@ -41,13 +41,16 @@ Index = Index
 FieldInfo = FieldInfo
 RelationshipInfo = RelationshipInfo
 
+EmbeddingSourceType = Literal["text", "image"]
+
 
 def VectorField(
     dimensions: int,
     source_field: Optional[str] = None,
     embed_fn: Optional["BaseEmbeddingFunction"] = None,
+    source_type: EmbeddingSourceType = "text",
     index: Optional[bool] = True,
-    distance_metric: Optional[DistanceMetric] = "COSINE",
+    distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
     algorithm: Optional[VectorIndexAlgorithm] = "HNSW",
     **kwargs,
 ):
@@ -59,6 +62,7 @@ def VectorField(
             # Auto embedding related.
             "embed_fn": embed_fn,
             "source_field": source_field,
+            "source_type": source_type,
             # Vector index related.
             "skip_index": not index,
             "distance_metric": distance_metric,
@@ -82,35 +86,6 @@ def FullTextField(
         },
         **kwargs,
     )
-
-
-class DistanceMetric(enum.Enum):
-    """
-    An enumeration representing different types of distance metrics.
-
-    - `DistanceMetric.L2`: L2 (Euclidean) distance metric.
-    - `DistanceMetric.COSINE`: Cosine distance metric.
-    """
-
-    L2 = "L2"
-    COSINE = "COSINE"
-
-    def to_sql_func(self):
-        """
-        Converts the DistanceMetric to its corresponding SQL function name.
-
-        Returns:
-            str: The SQL function name.
-
-        Raises:
-            ValueError: If the DistanceMetric enum member is not supported.
-        """
-        if self == DistanceMetric.L2:
-            return "VEC_L2_DISTANCE"
-        elif self == DistanceMetric.COSINE:
-            return "VEC_COSINE_DISTANCE"
-        else:
-            raise ValueError("unsupported distance metric")
 
 
 class ColumnInfo(BaseModel):

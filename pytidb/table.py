@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import (
     Literal,
     Optional,
@@ -40,6 +41,7 @@ from pytidb.utils import (
 
 if TYPE_CHECKING:
     from pytidb import TiDBClient
+    from PIL.Image import Image
 
 
 T = TypeVar("T", bound=TableModel)
@@ -145,19 +147,23 @@ class Table(Generic[T]):
         """Setup auto embedding configurations for fields with embed_fn."""
         self._auto_embedding_configs = {}
         for vector_field_name, field in vector_fields.items():
-            embed_fn = field._attributes_set.get("embed_fn", None)
+            field_attrs = field._attributes_set
+            embed_fn = field_attrs.get("embed_fn", None)
             if embed_fn is None:
                 continue
 
-            source_field_name = field._attributes_set.get("source_field", None)
+            source_field_name = field_attrs.get("source_field", None)
             if source_field_name is None:
                 continue
+
+            source_type = field_attrs.get("source_type", "text")
 
             self._auto_embedding_configs[vector_field_name] = {
                 "embed_fn": embed_fn,
                 "vector_field": field,
                 "vector_field_name": vector_field_name,
                 "source_field_name": source_field_name,
+                "source_type": source_type,
             }
 
     def _auto_create_vector_index(self, vector_fields):
@@ -223,7 +229,12 @@ class Table(Generic[T]):
             return db_session.get(self._table_model, id)
 
     def insert(self, data: Union[T, dict]) -> T:
-        # Convert dict to table model instance if needed
+        if not isinstance(data, self._table_model) and not isinstance(data, dict):
+            raise ValueError(
+                f"Invalid data type: {type(data)}, expected {self._table_model}"
+            )
+
+        # Convert dict to table model instance.
         if isinstance(data, dict):
             data = self._table_model(**data)
 
@@ -242,7 +253,11 @@ class Table(Generic[T]):
             if embedding_source is None or embedding_source == "":
                 continue
 
-            vector_embedding = config["embed_fn"].get_source_embedding(embedding_source)
+            source_type = config.get("source_type", "text")
+            vector_embedding = config["embed_fn"].get_source_embedding(
+                embedding_source,
+                source_type=source_type,
+            )
             setattr(data, field_name, vector_embedding)
 
         with self._client.session() as db_session:
@@ -252,7 +267,12 @@ class Table(Generic[T]):
             return data
 
     def bulk_insert(self, data: List[Union[T, dict]]) -> List[T]:
-        # Convert dict items to table model instances if needed
+        if not isinstance(data, list):
+            raise ValueError(
+                f"Invalid data type: {type(data)}, expected list[dict], list[{self._table_model}]"
+            )
+
+        # Convert all items to table model instances
         converted_data = []
         for item in data:
             if isinstance(item, dict):
@@ -260,7 +280,7 @@ class Table(Generic[T]):
             else:
                 converted_data.append(item)
         data = converted_data
-        
+
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             items_need_embedding = []
@@ -288,9 +308,12 @@ class Table(Generic[T]):
                 sources_to_embedding.append(embedding_source)
 
             # Batch embedding.
+            source_type = config.get("source_type", "text")
             vector_embeddings = config["embed_fn"].get_source_embeddings(
-                sources_to_embedding
+                sources_to_embedding,
+                source_type=source_type,
             )
+
             for item, embedding in zip(items_need_embedding, vector_embeddings):
                 setattr(item, field_name, embedding)
 
@@ -317,7 +340,11 @@ class Table(Generic[T]):
             if embedding_source is None or embedding_source == "":
                 continue
 
-            vector_embedding = config["embed_fn"].get_source_embedding(embedding_source)
+            source_type = config.get("source_type", "text")
+            vector_embedding = config["embed_fn"].get_source_embedding(
+                embedding_source,
+                source_type=source_type,
+            )
             values[field_name] = vector_embedding
 
         with self._client.session() as db_session:
@@ -411,7 +438,7 @@ class Table(Generic[T]):
 
     def search(
         self,
-        query: Optional[Union[VectorDataType, str, QueryBundle]] = None,
+        query: Optional[Union[VectorDataType, str, QueryBundle, Image, Path]] = None,
         search_type: SearchType = "vector",
     ) -> SearchQuery:
         return SearchQuery(

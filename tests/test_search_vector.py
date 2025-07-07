@@ -48,7 +48,7 @@ def test_vector_search(vector_table: Table):
     # to_pydantic()
     results = (
         vector_table.search([1, 2, 3])
-        .distance_metric(metric=DistanceMetric.COSINE)
+        .distance_metric(metric=DistanceMetric.L2)
         .num_candidate(20)
         .filter({"user_id": 2})
         .limit(2)
@@ -131,7 +131,7 @@ def test_with_filter(vector_table: Table, prefilter: bool):
 def test_with_metadata_filter(vector_table: Table, prefilter: bool):
     results = (
         vector_table.search([1, 2, 3])
-        .distance_metric(metric=DistanceMetric.COSINE)
+        .distance_metric(metric="COSINE")
         .debug(True)
         .filter({"meta.owner_id": {"$in": [1, 2]}}, prefilter=prefilter)
         .limit(10)

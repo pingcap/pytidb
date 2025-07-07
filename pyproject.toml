@@ -27,6 +27,7 @@ pandas = [
 ]
 models = [
     "litellm>=1.59.8,<2.0.0",
+    "pillow",
 ]
 
 [dependency-groups]
@@ -44,6 +45,7 @@ dev = [
     "mypy>=1.15.0",
     "mcp[cli]>=1.6.0",
     "mcp",
+    "pillow",
 ]
 
 # Test

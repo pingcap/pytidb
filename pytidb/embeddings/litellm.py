@@ -1,7 +1,14 @@
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Union, TYPE_CHECKING
 
 from pydantic import Field
 from pytidb.embeddings.base import BaseEmbeddingFunction
+from pytidb.embeddings.utils import (
+    parse_url_if_valid,
+    encode_image_to_base64,
+)
+
+if TYPE_CHECKING:
+    from PIL.Image import Image
 
 
 def get_embeddings(
@@ -41,7 +48,7 @@ def get_embeddings(
     return [result["embedding"] for result in response.data]
 
 
-class LiteLLMEmbeddingFunction(BaseEmbeddingFunction):
+class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
     api_key: Optional[str] = Field(None, description="The API key for authentication.")
     api_base: Optional[str] = Field(
         None, description="The base URL of the model provider."
@@ -75,7 +82,21 @@ class LiteLLMEmbeddingFunction(BaseEmbeddingFunction):
         if dimensions is None:
             self.dimensions = len(self.get_query_embedding("test"))
 
-    def get_query_embedding(self, query: str) -> list[float]:
+    def get_query_embedding(
+        self,
+        query: Union[str, Image],
+        source_type: Optional[str] = "text",
+    ) -> list[float]:
+        """
+        Get embedding for a query. Currently only supports text queries.
+
+        Args:
+            query: Query text string or PIL Image object
+
+        Returns:
+            List of float values representing the embedding
+        """
+        embedding_input = self._process_input_source(query, source_type)
         embeddings = get_embeddings(
             api_key=self.api_key,
             api_base=self.api_base,
@@ -83,11 +104,17 @@ class LiteLLMEmbeddingFunction(BaseEmbeddingFunction):
             dimensions=self.dimensions,
             timeout=self.timeout,
             caching=self.caching,
-            input=[query],
+            input=[embedding_input],
         )
         return embeddings[0]
 
-    def get_source_embedding(self, source: str) -> list[float]:
+    def get_source_embedding(
+        self,
+        source: Union[str, Image],
+        source_type: Optional[str] = "text",
+    ) -> list[float]:
+        embedding_input = self._process_input_source(source, source_type)
+
         embeddings = get_embeddings(
             api_key=self.api_key,
             api_base=self.api_base,
@@ -95,11 +122,67 @@ class LiteLLMEmbeddingFunction(BaseEmbeddingFunction):
             dimensions=self.dimensions,
             timeout=self.timeout,
             caching=self.caching,
-            input=[source],
+            input=[embedding_input],
         )
         return embeddings[0]
 
-    def get_source_embeddings(self, sources: List[str]) -> list[list[float]]:
+    def _process_input_source(
+        self,
+        source: Any,
+        source_type: Optional[str] = "text",
+    ) -> Union[str, dict]:
+        """
+        Process input source based on source type and format.
+
+        Args:
+            source: Input source (string or PIL Image object)
+            source_type: Type of the source ("text" or "image")
+
+        Returns:
+            Processed input suitable for embedding generation
+
+        Raises:
+            ValueError: If the source format is not supported
+        """
+        if source_type == "text":
+            return source
+
+        if source_type == "image":
+            if isinstance(source, str):
+                is_valid, image_url = parse_url_if_valid(source)
+                if is_valid:
+                    if image_url.scheme == "file":
+                        file_path = image_url.path
+                        return {"image": encode_image_to_base64(file_path)}
+                    elif image_url.scheme == "http" or image_url.scheme == "https":
+                        return {"image": image_url.geturl()}
+                    else:
+                        raise ValueError(
+                            f"Unsupported url schema for image source: {image_url.scheme}"
+                        )
+                else:
+                    raise ValueError(
+                        "Unsupported image source input, only valid url, local file path, Image object are supported"
+                    )
+            elif isinstance(source, Image):
+                return {"image": encode_image_to_base64(source)}
+            else:
+                raise ValueError(
+                    "Unsupported image source input, only valid url, local file path, Image object are supported"
+                )
+
+        # Default case: return source as-is
+        return source
+
+    def get_source_embeddings(
+        self,
+        sources: List[str],
+        source_type: Optional[str] = "text",
+    ) -> list[list[float]]:
+        embedding_inputs = [
+            self._process_input_source(source, source_type) for source in sources
+        ]
+
         embeddings = get_embeddings(
             api_key=self.api_key,
             api_base=self.api_base,
@@ -107,6 +190,6 @@ class LiteLLMEmbeddingFunction(BaseEmbeddingFunction):
             dimensions=self.dimensions,
             timeout=self.timeout,
             caching=self.caching,
-            input=sources,
+            input=embedding_inputs,
         )
         return embeddings

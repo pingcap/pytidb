@@ -3,7 +3,7 @@ from typing import Optional, Any
 
 from pydantic import BaseModel
 from sqlmodel import Field
-from pytidb.schema import VectorField
+from pytidb.schema import VectorField, EmbeddingSourceType
 
 
 class BaseEmbeddingFunction(BaseModel, ABC):
@@ -17,22 +17,66 @@ class BaseEmbeddingFunction(BaseModel, ABC):
     def __init__(self, /, **data: Any):
         super().__init__(**data)
 
-    def VectorField(self, source_field: Optional[str] = None, **kwargs):
+    def VectorField(
+        self,
+        source_field: Optional[str] = None,
+        source_type: EmbeddingSourceType = "text",
+        **kwargs,
+    ):
+        """
+        Create a VectorField with auto embedding configuration.
+
+        Args:
+            source_field: The name of the source field to embed
+            source_type: The type of source data ("text" or "image")
+            **kwargs: Additional keyword arguments for VectorField
+
+        Returns:
+            VectorField configured with this embedding function
+        """
         return VectorField(
             embed_fn=self,
             dimensions=self.dimensions,
             source_field=source_field,
+            source_type=source_type,
             **kwargs,
         )
 
     @abstractmethod
-    def get_query_embedding(self, query: str) -> list[float]:
+    def get_query_embedding(self, query: Any) -> list[float]:
+        """
+        Get embedding for a query (text or image).
+
+        Args:
+            query: Query text string or PIL Image object
+
+        Returns:
+            List of float values representing the embedding
+        """
         raise NotImplementedError()
 
     @abstractmethod
-    def get_source_embedding(self, source: str) -> list[float]:
+    def get_source_embedding(self, source: Any) -> list[float]:
+        """
+        Get embedding for a source field value (typically text).
+
+        Args:
+            source: Source field value (text)
+
+        Returns:
+            List of float values representing the embedding
+        """
         raise NotImplementedError()
 
     @abstractmethod
-    def get_source_embeddings(self, source: list[str]) -> list[list[float]]:
+    def get_source_embeddings(self, sources: list[Any]) -> list[list[float]]:
+        """
+        Get embeddings for multiple source field values.
+
+        Args:
+            sources: List of source field values
+
+        Returns:
+            List of embeddings, where each embedding is a list of float values
+        """
         raise NotImplementedError()
