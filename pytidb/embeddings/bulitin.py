@@ -137,18 +137,19 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
     def get_query_embedding(
         self,
         query: QueryInputType,
-        query_type: Optional[SourceType] = "text",
+        source_type: Optional[SourceType] = "text",
     ) -> list[float]:
         """
         Get embedding for a query. Currently only supports text queries.
 
         Args:
             query: Query text string or PIL Image object
+            source_type: The type of source data ("text" or "image")
 
         Returns:
             List of float values representing the embedding
         """
-        embedding_input = self._process_query(query, query_type)
+        embedding_input = self._process_query(query, source_type)
         embeddings = get_embeddings(
             api_key=self.api_key,
             api_base=self.api_base,
