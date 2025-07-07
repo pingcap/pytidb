@@ -104,7 +104,7 @@ class SearchQuery:
         if isinstance(query, dict):
             self._query = query["query"]
             self._query_vector = query["query_vector"]
-        elif isinstance(query, list) and all(isinstance(item, float) for item in query):
+        elif isinstance(query, list):
             self._query_vector = query
         else:
             self._query = query
