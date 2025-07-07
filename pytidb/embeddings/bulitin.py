@@ -1,12 +1,22 @@
 from pathlib import Path
-from typing import List, Any, Literal, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Any, Literal, Optional, Union
 
 from pydantic import Field
 from pytidb.embeddings.base import BaseEmbeddingFunction
-from pytidb.embeddings.utils import encode_image_to_base64, parse_url_if_valid
+from pytidb.embeddings.utils import (
+    encode_local_file_to_base64,
+    encode_pil_image_to_base64,
+    parse_url_safely,
+)
 
 if TYPE_CHECKING:
     from PIL.Image import Image
+
+
+SourceInputType = Union[str, Path, "Image"]
+QueryInputType = Union[str, Path, "Image"]
+
+SourceType = Union[Literal["text"], Literal["image"]]
 
 
 def get_embeddings(
@@ -15,6 +25,7 @@ def get_embeddings(
     api_key: Optional[str] = None,
     api_base: Optional[str] = None,
     timeout: Optional[int] = 60,
+    caching: bool = True,
     **kwargs: Any,
 ) -> List[List[float]]:
     """
@@ -26,6 +37,7 @@ def get_embeddings(
         model_name (str): The name of the model to use for generating embeddings.
         input (List[str]): A list of input strings for which embeddings are to be generated.
         timeout (float): The timeout value for the API call, default 60 secs.
+        caching (bool): Whether to cache the embeddings, default True.
         **kwargs (Any): Additional keyword arguments to be passed to the embedding function.
 
     Returns:
@@ -44,11 +56,6 @@ def get_embeddings(
     return [result["embedding"] for result in response.data]
 
 
-EmbeddingSourceValueType = Union[str, Path, "Image"]
-
-EmbeddingSourceType = Union[Literal["text"], Literal["image"]]
-
-
 class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
     api_key: Optional[str] = Field(None, description="The API key for authentication.")
     api_base: Optional[str] = Field(
@@ -56,6 +63,9 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
     )
     timeout: Optional[int] = Field(
         None, description="The timeout value for the API call."
+    )
+    caching: bool = Field(
+        True, description="Whether to cache the embeddings, default True."
     )
 
     def __init__(
@@ -65,6 +75,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
         api_key: Optional[str] = None,
         api_base: Optional[str] = None,
         timeout: Optional[int] = None,
+        caching: bool = True,
         **kwargs,
     ):
         super().__init__(
@@ -73,70 +84,39 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             api_key=api_key,
             api_base=api_base,
             timeout=timeout,
+            caching=caching,
             **kwargs,
         )
         if dimensions is None:
             self.dimensions = len(self.get_query_embedding("test"))
 
-    def _process_source(
-        self,
-        source: EmbeddingSourceValueType,
-        source_type: Optional[EmbeddingSourceType] = "text",
+    def _process_query(
+        self, query: QueryInputType, source_type: Optional[SourceType] = "text"
     ) -> Union[str, dict]:
-        """
-        Process source value based on source type and format.
-
-        Args:
-            source: Input source (string, Path or PIL Image object)
-            source_type: Type of the source ("text" or "image")
-
-        Returns:
-            Processed input suitable for embedding generation
-
-        Raises:
-            ValueError: If the source format is not supported
-        """
-        if source_type == "image":
-            return self._process_image_source(source)
+        if source_type == "text":
+            return query
+        elif source_type == "image":
+            return self._process_image_query(query)
         else:
-            return source
+            raise ValueError(f"invalid source type: {source_type}")
 
-    def _process_image_source(self, source: EmbeddingSourceValueType) -> dict:
-        if isinstance(source, Path):
-            source = "file://" + str(source.resolve())
-
-        if isinstance(source, str):
-            is_valid, image_url = parse_url_if_valid(source)
-            if is_valid:
-                if image_url.scheme == "file":
-                    file_path = image_url.path
-                    return {"image": encode_image_to_base64(file_path)}
-                elif image_url.scheme == "http" or image_url.scheme == "https":
-                    return {"image": image_url.geturl()}
-                else:
-                    raise ValueError(
-                        f"invalid url schema for image source: {image_url.scheme}"
-                    )
-            else:
-                raise ValueError(f"invalid url format for image source: {source}")
-        elif isinstance(source, "Image"):
-            return {"image": encode_image_to_base64(source)}
-        else:
-            raise ValueError(
-                "invalid input for source, current supported input types: "
-                "url string, Path object, PIL.Image object"
+    def _process_image_query(self, query: QueryInputType) -> Union[str, dict]:
+        try:
+            from PIL.Image import Image
+        except ImportError:
+            raise ImportError(
+                "PIL (Pillow) is required for image processing. Install it with: pip install Pillow"
             )
 
-    def _process_image_query(self, query: EmbeddingSourceValueType) -> dict:
         if isinstance(query, Path):
             query = "file://" + str(query.resolve())
 
         if isinstance(query, str):
-            is_valid, image_url = parse_url_if_valid(query)
+            is_valid, image_url = parse_url_safely(query)
             if is_valid:
                 if image_url.scheme == "file":
                     file_path = image_url.path
-                    return {"image": encode_image_to_base64(file_path)}
+                    return {"image": encode_local_file_to_base64(file_path)}
                 elif image_url.scheme == "http" or image_url.scheme == "https":
                     return {"image": image_url.geturl()}
                 else:
@@ -144,9 +124,10 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
                         f"invalid url schema for image source: {image_url.scheme}"
                     )
             else:
+                # For image search, the query can be string contains some keywords.
                 return query
-        elif isinstance(query, "Image"):
-            return {"image": encode_image_to_base64(query)}
+        elif isinstance(query, Image):
+            return {"image": encode_pil_image_to_base64(query)}
         else:
             raise ValueError(
                 "invalid input for image vector search, current supported input types: "
@@ -155,8 +136,8 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
 
     def get_query_embedding(
         self,
-        query: EmbeddingSourceValueType,
-        source_type: Optional[EmbeddingSourceType] = "text",
+        query: QueryInputType,
+        query_type: Optional[SourceType] = "text",
     ) -> list[float]:
         """
         Get embedding for a query. Currently only supports text queries.
@@ -167,27 +148,67 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
         Returns:
             List of float values representing the embedding
         """
-        if source_type == "text":
-            embedding_input = query
-        elif source_type == "image":
-            embedding_input = self._process_image_query(query)
-        else:
-            raise ValueError(f"invalid source type: {source_type}")
-
+        embedding_input = self._process_query(query, query_type)
         embeddings = get_embeddings(
             api_key=self.api_key,
             api_base=self.api_base,
             model_name=self.model_name,
             dimensions=self.dimensions,
             timeout=self.timeout,
+            caching=self.caching,
             input=[embedding_input],
         )
         return embeddings[0]
 
+    def _process_source(
+        self,
+        source: SourceInputType,
+        source_type: Optional[SourceType] = "text",
+    ) -> Union[str, dict]:
+        if source_type == "image":
+            return self._process_image_source(source)
+        elif source_type == "text":
+            return source
+        else:
+            raise ValueError(f"Invalid source type: {source_type}")
+
+    def _process_image_source(self, source: SourceInputType) -> Union[str, dict]:
+        try:
+            from PIL.Image import Image
+        except ImportError:
+            raise ImportError(
+                "PIL (Pillow) is required for image processing. Install it with: pip install Pillow"
+            )
+
+        if isinstance(source, Path):
+            source = "file://" + str(source.resolve())
+
+        if isinstance(source, str):
+            is_valid, image_url = parse_url_safely(source)
+            if is_valid:
+                if image_url.scheme == "file":
+                    file_path = image_url.path
+                    return {"image": encode_local_file_to_base64(file_path)}
+                elif image_url.scheme == "http" or image_url.scheme == "https":
+                    return {"image": image_url.geturl()}
+                else:
+                    raise ValueError(
+                        f"invalid url schema for image source: {image_url.scheme}"
+                    )
+            else:
+                raise ValueError(f"invalid url format for image source: {source}")
+        elif isinstance(source, Image):
+            return {"image": encode_pil_image_to_base64(source)}
+        else:
+            raise ValueError(
+                "invalid input for source, current supported input types: "
+                "url string, Path object, PIL.Image object"
+            )
+
     def get_source_embedding(
         self,
-        source: EmbeddingSourceValueType,
-        source_type: Optional[EmbeddingSourceType] = "text",
+        source: SourceInputType,
+        source_type: Optional[SourceType] = "text",
     ) -> list[float]:
         embedding_input = self._process_source(source, source_type)
         embeddings = get_embeddings(
@@ -196,14 +217,15 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             model_name=self.model_name,
             dimensions=self.dimensions,
             timeout=self.timeout,
+            caching=self.caching,
             input=[embedding_input],
         )
         return embeddings[0]
 
     def get_source_embeddings(
         self,
-        sources: List[EmbeddingSourceValueType],
-        source_type: Optional[EmbeddingSourceType] = "text",
+        sources: List[SourceInputType],
+        source_type: Optional[SourceType] = "text",
     ) -> list[list[float]]:
         embedding_inputs = [
             self._process_source(source, source_type) for source in sources
@@ -214,6 +236,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             model_name=self.model_name,
             dimensions=self.dimensions,
             timeout=self.timeout,
+            caching=self.caching,
             input=embedding_inputs,
         )
         return embeddings

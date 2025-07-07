@@ -84,33 +84,30 @@ class SearchQuery:
         search_type: SearchType = "vector",
         query: Optional[Union[VectorDataType, str, Path, QueryBundle, "Image"]] = None,
     ):
-        # Table.
+        # Table information.
         self._table = table
         self._sa_table = table._sa_table
         self._client = table.client
         self._columns = table._columns
+
+        # Search parameters.
+        self._search_type = search_type
         self._vector_column = table._default_vector_column
         self._text_column = table._default_text_column
-        self._fusion_method = "rrf"
-        self._fusion_params = {
-            "k": 60,
-        }
+        self._limit = None
+        self._debug = False
 
         # Query.
-        self._search_type = search_type
         self._query = None
         self._query_vector = None
+
         if isinstance(query, dict):
-            self._query = query["query_text"]
+            self._query = query["query"]
             self._query_vector = query["query_vector"]
+        elif isinstance(query, (str, Path, "Image")):
+            self._query = query
         elif isinstance(query, list) and all(isinstance(item, float) for item in query):
             self._query_vector = query
-        elif (
-            isinstance(query, str)
-            or isinstance(query, Path)
-            or isinstance(query, "Image")
-        ):
-            self._query = query
         else:
             raise ValueError(f"unsupported query type: {type(query)}")
 
@@ -120,7 +117,7 @@ class SearchQuery:
                 "table.search('<query>')"
             )
 
-        # Vector search.
+        # Vector search parameters.
         self._distance_metric = DistanceMetric.COSINE
         self._distance_threshold = None
         self._distance_lower_bound = None
@@ -129,13 +126,15 @@ class SearchQuery:
         self._prefilter = False
         self._num_candidate = None
 
-        # Reranker.
+        # Reranker parameters.
         self._reranker = None
         self._rerank_field_name = None
 
-        # Miscellaneous.
-        self._debug = False
-        self._limit = None
+        # Fusion parameters.
+        self._fusion_method = "rrf"
+        self._fusion_params = {
+            "k": 60,
+        }
 
     def vector(self, query_vector: VectorDataType):
         self._query_vector = query_vector
@@ -201,10 +200,10 @@ class SearchQuery:
 
     def fusion(self, method: FusionMethod = "rrf", **params) -> "SearchQuery":
         """
-        Fusion the search results.
+        Configure the fusion method for the search results.
 
         Args:
-            method: The fusion method to use.
+            method: The fusion method to use, supported methods are `rrf` and `weighted`.
             **params: The parameters for the fusion method.
         """
         if self._search_type != "hybrid":
@@ -215,7 +214,7 @@ class SearchQuery:
 
         if method not in ["rrf", "weighted"]:
             raise ValueError(
-                "invalid fusion method, supported methods: 'rrf', 'weighted'"
+                "Invalid fusion method, supported methods: 'rrf', 'weighted'"
             )
 
         self._fusion_method = method
@@ -226,10 +225,10 @@ class SearchQuery:
         self, reranker: BaseReranker, rerank_field: Optional[str] = None
     ) -> "SearchQuery":
         """
-        Rerank the search results.
+        Configure the rerank method for the search results.
 
-        Reranker can be used for multiple-way (multi-vectors, hybrid) search result fusion or
-        improve the quality of vector search results.
+        Reranker is a component that sorts search results using a specific model to
+        improve search quality and relevance.
 
         Args:
             reranker: The reranker to use.
