@@ -109,12 +109,6 @@ class SearchQuery:
         else:
             self._query = query
 
-        if self._query is None and self._query_vector is None:
-            raise ValueError(
-                "query is required for vector search, please specify it through "
-                "table.search('<query>')"
-            )
-
         # Vector search parameters.
         self._distance_metric = DistanceMetric.COSINE
         self._distance_threshold = None
@@ -237,6 +231,13 @@ class SearchQuery:
         return self
 
     def _build_vector_query(self) -> Select:
+        # Validate parameters.
+        if self._query is None and self._query_vector is None:
+            raise ValueError(
+                "query is required for vector search, please specify it through "
+                ".search('<query>', search_type='vector')"
+            )
+
         if self._vector_column is None:
             if len(self._table.vector_columns) == 0:
                 raise ValueError(
@@ -251,14 +252,8 @@ class SearchQuery:
         else:
             vector_column = self._vector_column
 
-        # Auto embedding
+        # Auto embedding for query.
         if self._query_vector is None:
-            if self._query is None:
-                raise ValueError(
-                    "query is required for vector search, please specify it through "
-                    ".search('<query>', search_type='vector')"
-                )
-
             if vector_column.name not in self._table.auto_embedding_configs:
                 raise ValueError(
                     "query should be a vector, because the vector column didn't "
