@@ -222,7 +222,11 @@ class Table(Generic[T]):
         with self._client.session() as db_session:
             return db_session.get(self._table_model, id)
 
-    def insert(self, data: T) -> T:
+    def insert(self, data: Union[T, dict]) -> T:
+        # Convert dict to table model instance if needed
+        if isinstance(data, dict):
+            data = self._table_model(**data)
+
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if vector embeddings is provided.
@@ -247,7 +251,16 @@ class Table(Generic[T]):
             db_session.refresh(data)
             return data
 
-    def bulk_insert(self, data: List[T]) -> List[T]:
+    def bulk_insert(self, data: List[Union[T, dict]]) -> List[T]:
+        # Convert dict items to table model instances if needed
+        converted_data = []
+        for item in data:
+            if isinstance(item, dict):
+                converted_data.append(self._table_model(**item))
+            else:
+                converted_data.append(item)
+        data = converted_data
+        
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             items_need_embedding = []

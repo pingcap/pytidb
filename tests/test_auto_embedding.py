@@ -42,6 +42,43 @@ def test_auto_embedding(client: TiDBClient):
     assert results[0].text == "bar"
     assert results[0].similarity_score >= 0.9
 
+    # Test dict insert
+    dict_chunk = tbl.insert({"id": 5, "text": "dict_test", "user_id": 5})
+    assert dict_chunk.id == 5
+    assert dict_chunk.text == "dict_test"
+    assert dict_chunk.user_id == 5
+    assert len(dict_chunk.text_vec) == 1536
+
+    # Test dict bulk_insert
+    dict_chunks = tbl.bulk_insert([
+        {"id": 6, "text": "dict_bulk_1", "user_id": 6},
+        {"id": 7, "text": "dict_bulk_2", "user_id": 7},
+        {"id": 8, "text": "", "user_id": 8},  # Empty string will skip auto embedding
+    ])
+    assert len(dict_chunks) == 3
+    assert dict_chunks[0].id == 6
+    assert dict_chunks[0].text == "dict_bulk_1"
+    assert len(dict_chunks[0].text_vec) == 1536
+    assert dict_chunks[1].id == 7
+    assert dict_chunks[1].text == "dict_bulk_2"
+    assert len(dict_chunks[1].text_vec) == 1536
+    assert dict_chunks[2].id == 8
+    assert dict_chunks[2].text == ""
+    assert dict_chunks[2].text_vec is None
+
+    # Test mixed bulk_insert (dict and model instances)
+    mixed_chunks = tbl.bulk_insert([
+        Chunk(id=9, text="model_instance", user_id=9),
+        {"id": 10, "text": "dict_mixed", "user_id": 10},
+    ])
+    assert len(mixed_chunks) == 2
+    assert mixed_chunks[0].id == 9
+    assert mixed_chunks[0].text == "model_instance"
+    assert len(mixed_chunks[0].text_vec) == 1536
+    assert mixed_chunks[1].id == 10
+    assert mixed_chunks[1].text == "dict_mixed"
+    assert len(mixed_chunks[1].text_vec) == 1536
+
     # Update,
     chunk = tbl.get(4)
     assert chunk.text == ""
