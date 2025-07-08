@@ -320,6 +320,7 @@ class SearchQuery:
             filter_clauses = build_filter_clauses(self._filters, columns)
             stmt = stmt.filter(*filter_clauses)
 
+        # TODO: Remove this workaround after TiDB return MAX_DISTANCE for NULL vector values.
         stmt = stmt.where(distance_column.isnot(None))
 
         return stmt
@@ -377,6 +378,10 @@ class SearchQuery:
 
         stmt = (
             stmt.order_by(asc(DISTANCE_LABEL))
+            # Notice: This is a workaround to avoid records without vector value
+            #         disappear in the front of the result set, which is caused by
+            #         MySQL's default behavior of sorting NULL values to the head.
+            # TODO: Remove this workaround after TiDB return MAX_DISTANCE for NULL vector values.
             .where(subquery.c[DISTANCE_LABEL].isnot(None))
             .limit(self._limit)
         )
