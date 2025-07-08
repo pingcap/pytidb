@@ -12,6 +12,7 @@
 **Python SDK for TiDB AI**: A unified data platform empowering developers to build next-generation AI applications.
 
 - 🔍 Multiple search modes: vector, full-text, and hybrid search
+- 🎭 Multi-modal storage and processing: text, images, and more
 - 🔄 Automatic embedding generation for text and images
 - 🖼️ Image search: text-to-image and image-to-image capabilities
 - 🎯 Advanced filtering capabilities
@@ -98,61 +99,6 @@ table.bulk_insert([
 ])
 ```
 
-### 🖼️ Image Auto Embedding
-
-PyTiDB now supports **automatic image embedding** using CLIP models, enabling both text-to-image and image-to-image search capabilities.
-
-**Create a table with image auto embedding:**
-
-```python
-from pytidb.embeddings import CLIPEmbeddingFunction
-from PIL import Image
-
-clip_embed = CLIPEmbeddingFunction("openai/clip-vit-base-patch32")
-
-class Pet(TableModel):
-    __tablename__ = "pets"
-    id: int = Field(primary_key=True)
-    name: str = Field()
-    image_uri: str = Field()
-    image_vector: list[float] = clip_embed.VectorField(
-        source_field="image_uri",
-        source_type="image"  # 👈 Specify image source type
-    )
-    
-    @property
-    def image(self):
-        return Image.open(self.image_uri)
-
-table = db.create_table(schema=Pet, mode="exist_ok")
-```
-
-**Insert data with automatic image embedding:**
-
-```python
-table.bulk_insert([
-    Pet(id=1, name="Golden Retriever", image_uri="dog1.jpg"),  # 👈 Images are embedded automatically
-    Pet(id=2, name="Siamese Cat", image_uri="cat1.jpg"),
-])
-```
-
-**Text-to-image search:**
-
-```python
-# Search for images using natural language
-results = table.search("friendly dog").limit(3).to_pydantic()
-```
-
-**Image-to-image search:**
-
-```python
-# Search for similar images using an image as query
-query_image = Image.open("query.jpg")
-results = table.search(query_image).limit(3).to_pydantic()
-```
-
-See the [Image Search example](https://github.com/pingcap/pytidb/blob/main/examples/image_search) for more details.
-
 ### 🔍 Search
 
 **Vector Search**
@@ -200,6 +146,41 @@ df = (
 ```
 
 See the [Hybrid Search example](https://github.com/pingcap/pytidb/blob/main/examples/hybrid_search) for more details.
+
+**Image Search**
+
+Image search lets you find visually similar images using natural language descriptions or another image as a reference.
+
+```python
+from PIL import Image
+from pytidb.schema import TableModel, Field
+from pytidb.embeddings import EmbeddingFunction
+
+# Define a multi-modal embedding model.
+jina_embed_fn = EmbeddingFunction("jinaai/jina-embeddings-v4")  # Using multi-modal embedding model.
+
+class Pet(TableModel):
+    __tablename__ = "pets"
+    id: int = Field(primary_key=True)
+    image_uri: str = Field()
+    image_vec: list[float] = jina_embed_fn.VectorField(
+        source_field="image_uri",
+        source_type="image"
+    )
+
+table = db.create_table(schema=Pet, mode="exist_ok")
+
+# Insert sample images ...
+
+# Search for images using natural language
+results = table.search("shiba inu dog").limit(1).to_list()
+
+# Search for images using an image ...
+query_image = Image.open("shiba_inu_15.jpg")
+results = table.search(query_image).limit(1).to_pydantic()
+```
+
+See the [Image Search example](https://github.com/pingcap/pytidb/blob/main/examples/image_search) for more details.
 
 #### Advanced Filtering
 
