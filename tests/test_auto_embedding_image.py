@@ -11,12 +11,12 @@ from pytidb.embeddings import EmbeddingFunction
 pet_images_dir = Path("./tests/fixtures/pet_images")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def image_embed_fn():
     return EmbeddingFunction(model_name="jina_ai/jina-embeddings-v4", timeout=60)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def pet_table(client: TiDBClient, image_embed_fn: EmbeddingFunction):
     class Pet(TableModel):
         __tablename__ = "pets"
@@ -74,9 +74,7 @@ def pet_table(client: TiDBClient, image_embed_fn: EmbeddingFunction):
 def test_image_search_with_query_text(
     pet_table: Table, image_embed_fn: EmbeddingFunction
 ):
-    results = (
-        pet_table.search(query="shiba inu dog", search_type="vector").limit(1).to_list()
-    )
+    results = pet_table.search(query="shiba inu dog").limit(1).to_list()
     assert len(results) == 1
     for pet in results:
         assert pet["nickname"] in ["Pudding"]
@@ -90,9 +88,7 @@ def test_image_search_with_image_path(
     pet_table: Table, image_embed_fn: EmbeddingFunction
 ):
     query_image = pet_images_dir / "shiba_inu_15.jpg"
-    results = (
-        pet_table.search(query=query_image, search_type="vector").limit(1).to_list()
-    )
+    results = pet_table.search(query=query_image).limit(1).to_list()
     assert len(results) == 1
     for pet in results:
         assert pet["nickname"] in ["Pudding"]
@@ -108,9 +104,7 @@ def test_image_search_with_pil_image(
     from PIL import Image
 
     query_image = Image.open(pet_images_dir / "shiba_inu_15.jpg")
-    results = (
-        pet_table.search(query=query_image, search_type="vector").limit(1).to_list()
-    )
+    results = pet_table.search(query=query_image).limit(1).to_list()
 
     assert len(results) == 1
     for pet in results:
