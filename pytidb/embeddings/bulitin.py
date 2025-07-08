@@ -109,7 +109,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             )
 
         if isinstance(query, Path):
-            query = "file://" + str(query.resolve())
+            query = query.as_uri()
 
         if isinstance(query, str):
             is_valid, image_url = parse_url_safely(query)
@@ -182,7 +182,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             )
 
         if isinstance(source, Path):
-            source = "file://" + str(source.resolve())
+            source = source.as_uri()
 
         if isinstance(source, str):
             is_valid, image_url = parse_url_safely(source)
