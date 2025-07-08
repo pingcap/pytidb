@@ -195,7 +195,7 @@ def test_with_filter_and_distance_range(vector_table: Table, prefilter: bool):
 def reranker():
     return Reranker(
         model_name="jina_ai/jina-reranker-v2-base-multilingual",
-        api_key=os.getenv("JINA_API_KEY"),
+        api_key=os.getenv("JINA_AI_API_KEY"),
     )
 
 
