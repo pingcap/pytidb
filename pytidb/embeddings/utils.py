@@ -63,7 +63,7 @@ def encode_local_file_to_base64(file_path: Union[str, Path]) -> str:
 def encode_pil_image_to_base64(image: "Image") -> str:
     try:
         buffer = io.BytesIO()
-        image.save(buffer)
+        image.save(buffer, format=image.format or "PNG")
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
     except Exception as e:
-        raise ValueError(f"Error converting PIL Image to base64: {str(e)}")
+        raise ValueError(f"Failed to encode PIL Image to base64: {str(e)}")

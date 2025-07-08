@@ -1,11 +1,14 @@
 from pathlib import Path
+from typing import Optional
 import pytest
-import numpy as np
 
 from pytidb import TiDBClient
 from pytidb.schema import TableModel, Field, DistanceMetric
 from pytidb.table import Table
 from pytidb.embeddings import EmbeddingFunction
+
+
+pet_images_dir = Path("./tests/fixtures/pet_images")
 
 
 @pytest.fixture
@@ -18,34 +21,27 @@ def pet_table(client: TiDBClient, image_embed_fn: EmbeddingFunction):
     class Pet(TableModel):
         __tablename__ = "pets"
         id: int = Field(primary_key=True)
-        nickname: str = Field()  # Pet nickname
-        breed: str = Field()  # Pet breed
-        image_uri: str = Field()
-        image_vec: list[float] = image_embed_fn.VectorField(
+        nickname: str
+        breed: str
+        image_uri: Optional[str] = Field(default=None)
+        image_vec: Optional[list[float]] = image_embed_fn.VectorField(
             distance_metric=DistanceMetric.COSINE,
             source_field="image_uri",
-            source_type="image",
+            source_type="image",  # Configure the source field as image.
         )
 
+    # Create table.
     tbl = client.create_table(schema=Pet, mode="overwrite")
-    return tbl
-
-
-def test_image_search_with_local_path(
-    pet_table: Table, image_embed_fn: EmbeddingFunction
-):
-    Pet = pet_table.table_model
 
     # INSERT.
-    pet_images_dir = Path("./tests/fixtures/pet_images")
-    pet_table.insert(
+    tbl.insert(
         Pet(
             nickname="Cookie",
             breed="scottish_terrier",
             image_uri=pet_images_dir / "scottish_terrier_161.jpg",
         )
     )
-    pet_table.bulk_insert(
+    tbl.bulk_insert(
         [
             Pet(
                 nickname="Coco",
@@ -55,31 +51,31 @@ def test_image_search_with_local_path(
             Pet(
                 nickname="Pudding",
                 breed="shiba_inu",
-                image_uri=pet_images_dir / "shiba_inu_15.jpg",
+                # With no image_uri, the image_vec will be None.
             ),
         ]
     )
 
     # UPDATE.
-    original_pet = pet_table.query({"nickname": "Pudding"}).to_list()[0]
-    original_vec = original_pet["image_vec"]
-    pet_table.update(
-        {"image_uri": pet_images_dir / "shiba_inu_16.jpg"},
+    original_pet = tbl.query({"nickname": "Pudding"}).to_list()[0]
+    assert original_pet["image_vec"] is None
+    tbl.update(
+        {
+            "image_uri": pet_images_dir / "shiba_inu_16.jpg",
+        },
         {"nickname": "Pudding"},
     )
-    updated_pet = pet_table.query({"nickname": "Pudding"}).to_list()[0]
-    updated_vec = updated_pet["image_vec"]
+    updated_pet = tbl.query({"nickname": "Pudding"}).to_list()[0]
+    assert updated_pet["image_vec"] is not None
 
-    # Verify the image_vec was auto-updated.
-    assert len(updated_vec) == len(original_vec)
-    assert not np.array_equal(updated_vec, original_vec)
+    return tbl
 
-    # Text to image search.
+
+def test_image_search_with_query_text(
+    pet_table: Table, image_embed_fn: EmbeddingFunction
+):
     results = (
-        pet_table.search(query="shiba inu dog", search_type="vector")
-        .distance_metric(DistanceMetric.COSINE)
-        .limit(1)
-        .to_list()
+        pet_table.search(query="shiba inu dog", search_type="vector").limit(1).to_list()
     )
     assert len(results) == 1
     for pet in results:
@@ -89,14 +85,33 @@ def test_image_search_with_local_path(
         assert len(pet["image_vec"]) == image_embed_fn.dimensions
         assert pet["_distance"] < 0.3
 
-    # Image to image search.
-    query_image = pet_images_dir / "shiba_inu_4.jpg"
+
+def test_image_search_with_image_path(
+    pet_table: Table, image_embed_fn: EmbeddingFunction
+):
+    query_image = pet_images_dir / "shiba_inu_15.jpg"
     results = (
-        pet_table.search(query=query_image, search_type="vector")
-        .distance_metric(DistanceMetric.COSINE)
-        .limit(1)
-        .to_list()
+        pet_table.search(query=query_image, search_type="vector").limit(1).to_list()
     )
+    assert len(results) == 1
+    for pet in results:
+        assert pet["nickname"] in ["Pudding"]
+        assert pet["breed"] in ["shiba_inu"]
+        assert pet["image_uri"].endswith("shiba_inu_16.jpg")
+        assert len(pet["image_vec"]) == image_embed_fn.dimensions
+        assert pet["_distance"] < 0.3
+
+
+def test_image_search_with_pil_image(
+    pet_table: Table, image_embed_fn: EmbeddingFunction
+):
+    from PIL import Image
+
+    query_image = Image.open(pet_images_dir / "shiba_inu_15.jpg")
+    results = (
+        pet_table.search(query=query_image, search_type="vector").limit(1).to_list()
+    )
+
     assert len(results) == 1
     for pet in results:
         assert pet["nickname"] in ["Pudding"]
