@@ -21,7 +21,7 @@ def pet_table(client: TiDBClient, image_embed_fn: EmbeddingFunction):
         nickname: str = Field()  # Pet nickname
         breed: str = Field()  # Pet breed
         image_uri: str = Field()
-        image_vec: np.ndarray = image_embed_fn.VectorField(
+        image_vec: list[float] = image_embed_fn.VectorField(
             distance_metric=DistanceMetric.COSINE,
             source_field="image_uri",
             source_type="image",
