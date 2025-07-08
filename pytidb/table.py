@@ -225,14 +225,19 @@ class Table(Generic[T]):
     def insert(self, data: T) -> T:
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
+            # Skip if vector embeddings is provided.
             if getattr(data, field_name) is not None:
-                # Vector embeddings is provided.
                 continue
 
+            # Skip if source field is not provided.
             if not hasattr(data, config["source_field_name"]):
                 continue
 
+            # Skip if source field is None or empty.
             embedding_source = getattr(data, config["source_field_name"])
+            if embedding_source is None or embedding_source == "":
+                continue
+
             vector_embedding = config["embed_fn"].get_source_embedding(embedding_source)
             setattr(data, field_name, vector_embedding)
 
@@ -261,8 +266,12 @@ class Table(Generic[T]):
                 if not hasattr(item, config["source_field_name"]):
                     continue
 
-                items_need_embedding.append(item)
+                # Skip if source field is None or empty.
                 embedding_source = getattr(item, config["source_field_name"])
+                if embedding_source is None or embedding_source == "":
+                    continue
+
+                items_need_embedding.append(item)
                 sources_to_embedding.append(embedding_source)
 
             # Batch embedding.
@@ -282,14 +291,19 @@ class Table(Generic[T]):
     def update(self, values: dict, filters: Optional[Filters] = None) -> object:
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
+            # Skip if vector embeddings is provided.
             if field_name in values:
-                # Vector embeddings is provided.
                 continue
 
+            # Skip if source field is not provided.
             if config["source_field_name"] not in values:
                 continue
 
+            # Skip if source field is None or empty.
             embedding_source = values[config["source_field_name"]]
+            if embedding_source is None or embedding_source == "":
+                continue
+
             vector_embedding = config["embed_fn"].get_source_embedding(embedding_source)
             values[field_name] = vector_embedding
 

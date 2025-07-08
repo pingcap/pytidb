@@ -1,10 +1,7 @@
-import hashlib
-from typing import Optional, Any
-from sqlmodel import Field
-
+from typing import Optional
 from pytidb import TiDBClient
 from pytidb.embeddings import EmbeddingFunction
-from pytidb.schema import TableModel
+from pytidb.schema import TableModel, Field
 
 
 def test_auto_embedding(client: TiDBClient):
@@ -15,8 +12,9 @@ def test_auto_embedding(client: TiDBClient):
         __tablename__ = test_table_name
         id: int = Field(primary_key=True)
         text: str = Field()
-        # FIXME: if using list[float], sqlmodel will report an error
-        text_vec: Optional[Any] = text_embed_small.VectorField(source_field="text")
+        text_vec: Optional[list[float]] = text_embed_small.VectorField(
+            source_field="text"
+        )
         user_id: int = Field()
 
     tbl = client.create_table(schema=Chunk, mode="overwrite")
@@ -26,7 +24,11 @@ def test_auto_embedding(client: TiDBClient):
         [
             Chunk(id=2, text="bar", user_id=2),
             Chunk(id=3, text="baz", user_id=3),
-            Chunk(id=4, text="qux", user_id=4),
+            Chunk(
+                id=4,
+                text="",  # Empty string will skip auto embedding.
+                user_id=4,
+            ),
         ]
     )
     chunks = tbl.query(filters=Chunk.user_id == 3).to_pydantic()
@@ -41,14 +43,13 @@ def test_auto_embedding(client: TiDBClient):
     assert results[0].similarity_score >= 0.9
 
     # Update,
-    chunk = tbl.get(1)
-    assert chunk.text_vec is not None
-    original_vec_hash = hashlib.md5(chunk.text_vec).hexdigest()
+    chunk = tbl.get(4)
+    assert chunk.text == ""
+    assert chunk.text_vec is None
     tbl.update(
-        values={"text": "new foo"},
-        filters={"id": 1},
+        values={"text": "qux"},
+        filters={"id": 4},
     )
-    chunk = tbl.get(1)
+    chunk = tbl.get(4)
+    assert chunk.text == "qux"
     assert chunk.text_vec is not None
-    updated_vec_hash = hashlib.md5(chunk.text_vec).hexdigest()
-    assert original_vec_hash != updated_vec_hash
