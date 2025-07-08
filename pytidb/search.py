@@ -262,9 +262,13 @@ class SearchQuery:
             )
 
         if self._prefilter:
-            stmt = self._build_pre_filter_vector_query(distance_column=distance_column)
+            stmt = self._build_vector_query_with_pre_filter(
+                distance_column=distance_column
+            )
         else:
-            stmt = self._build_post_filter_vector_query(distance_column=distance_column)
+            stmt = self._build_vector_query_with_post_filter(
+                distance_column=distance_column
+            )
 
         # Debug.
         if self._debug:
@@ -279,7 +283,7 @@ class SearchQuery:
 
         return stmt
 
-    def _build_pre_filter_vector_query(self, distance_column: Column) -> Select:
+    def _build_vector_query_with_pre_filter(self, distance_column: Column) -> Select:
         table_model = self._table.table_model
         columns = table_model.__table__.c
         selected_columns = list(columns)
@@ -316,9 +320,12 @@ class SearchQuery:
             filter_clauses = build_filter_clauses(self._filters, columns)
             stmt = stmt.filter(*filter_clauses)
 
+        # TODO: Remove this workaround after TiDB return MAX_DISTANCE for NULL vector values.
+        stmt = stmt.where(distance_column.isnot(None))
+
         return stmt
 
-    def _build_post_filter_vector_query(self, distance_column: Column) -> Select:
+    def _build_vector_query_with_post_filter(self, distance_column: Column) -> Select:
         num_candidate = self._num_candidate if self._num_candidate else self._limit * 10
 
         # Inner query for ANN search
@@ -369,7 +376,15 @@ class SearchQuery:
             filter_clauses = build_filter_clauses(self._filters, subquery.c)
             stmt = stmt.filter(*filter_clauses)
 
-        stmt = stmt.order_by(asc(DISTANCE_LABEL)).limit(self._limit)
+        stmt = (
+            stmt.order_by(asc(DISTANCE_LABEL))
+            # Notice: This is a workaround to avoid records without vector value
+            #         disappear in the front of the result set, which is caused by
+            #         MySQL's default behavior of sorting NULL values to the head.
+            # TODO: Remove this workaround after TiDB return MAX_DISTANCE for NULL vector values.
+            .where(subquery.c[DISTANCE_LABEL].isnot(None))
+            .limit(self._limit)
+        )
 
         return stmt
 

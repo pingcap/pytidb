@@ -82,7 +82,7 @@ def test_fulltext_search(text_table: Table):
 def reranker():
     return Reranker(
         model_name="jina_ai/jina-reranker-v2-base-multilingual",
-        api_key=os.getenv("JINA_API_KEY"),
+        api_key=os.getenv("JINA_AI_API_KEY"),
     )
 
 
