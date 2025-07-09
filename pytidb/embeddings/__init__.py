@@ -1,5 +1,5 @@
 from .base import BaseEmbeddingFunction
-from .bulitin import BuiltInEmbeddingFunction
+from .builtin import BuiltInEmbeddingFunction
 
 EmbeddingFunction = BuiltInEmbeddingFunction
 
