@@ -10,6 +10,7 @@ def get_embeddings(
     api_key: Optional[str] = None,
     api_base: Optional[str] = None,
     timeout: Optional[int] = 60,
+    caching: bool = True,
     **kwargs: Any,
 ) -> List[List[float]]:
     """
@@ -34,6 +35,7 @@ def get_embeddings(
         model=model_name,
         input=input,
         timeout=timeout,
+        caching=caching,
         **kwargs,
     )
     return [result["embedding"] for result in response.data]
@@ -47,6 +49,9 @@ class LiteLLMEmbeddingFunction(BaseEmbeddingFunction):
     timeout: Optional[int] = Field(
         None, description="The timeout value for the API call."
     )
+    caching: bool = Field(
+        True, description="Whether to cache the embedding results."
+    )
 
     def __init__(
         self,
@@ -55,6 +60,7 @@ class LiteLLMEmbeddingFunction(BaseEmbeddingFunction):
         api_key: Optional[str] = None,
         api_base: Optional[str] = None,
         timeout: Optional[int] = None,
+        caching: bool = True,
         **kwargs,
     ):
         super().__init__(
@@ -63,6 +69,7 @@ class LiteLLMEmbeddingFunction(BaseEmbeddingFunction):
             api_key=api_key,
             api_base=api_base,
             timeout=timeout,
+            caching=caching,
             **kwargs,
         )
         if dimensions is None:
@@ -75,6 +82,7 @@ class LiteLLMEmbeddingFunction(BaseEmbeddingFunction):
             model_name=self.model_name,
             dimensions=self.dimensions,
             timeout=self.timeout,
+            caching=self.caching,
             input=[query],
         )
         return embeddings[0]
@@ -86,6 +94,7 @@ class LiteLLMEmbeddingFunction(BaseEmbeddingFunction):
             model_name=self.model_name,
             dimensions=self.dimensions,
             timeout=self.timeout,
+            caching=self.caching,
             input=[source],
         )
         return embeddings[0]
@@ -97,6 +106,7 @@ class LiteLLMEmbeddingFunction(BaseEmbeddingFunction):
             model_name=self.model_name,
             dimensions=self.dimensions,
             timeout=self.timeout,
+            caching=self.caching,
             input=sources,
         )
         return embeddings
