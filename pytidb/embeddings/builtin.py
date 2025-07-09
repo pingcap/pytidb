@@ -8,6 +8,8 @@ from pytidb.embeddings.utils import (
     encode_pil_image_to_base64,
     parse_url_safely,
 )
+import urllib.request
+
 
 if TYPE_CHECKING:
     from PIL.Image import Image
@@ -114,7 +116,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             is_valid, image_url = parse_url_safely(query)
             if is_valid:
                 if image_url.scheme == "file":
-                    file_path = image_url.path
+                    file_path = urllib.request.url2pathname(image_url.path)
                     return {"image": encode_local_file_to_base64(file_path)}
                 elif image_url.scheme == "http" or image_url.scheme == "https":
                     return {"image": image_url.geturl()}
@@ -190,7 +192,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             is_valid, image_url = parse_url_safely(source)
             if is_valid:
                 if image_url.scheme == "file":
-                    file_path = image_url.path
+                    file_path = urllib.request.url2pathname(image_url.path)
                     return {"image": encode_local_file_to_base64(file_path)}
                 elif image_url.scheme == "http" or image_url.scheme == "https":
                     return {"image": image_url.geturl()}
