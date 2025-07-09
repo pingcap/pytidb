@@ -47,7 +47,7 @@ def VectorField(
     dimensions: int,
     source_field: Optional[str] = None,
     embed_fn: Optional["BaseEmbeddingFunction"] = None,
-    source_type: EmbeddingSourceType = "text",
+    source_type: "EmbeddingSourceType" = "text",
     index: Optional[bool] = True,
     distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
     algorithm: Optional[VectorIndexAlgorithm] = "HNSW",
