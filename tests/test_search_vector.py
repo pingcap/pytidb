@@ -131,7 +131,7 @@ def test_with_filter(vector_table: Table, prefilter: bool):
 def test_with_metadata_filter(vector_table: Table, prefilter: bool):
     results = (
         vector_table.search([1, 2, 3])
-        .distance_metric(metric="COSINE")
+        .distance_metric(metric=DistanceMetric.COSINE)
         .debug(True)
         .filter({"meta.owner_id": {"$in": [1, 2]}}, prefilter=prefilter)
         .limit(10)

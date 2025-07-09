@@ -1,8 +1,9 @@
-from typing import Literal
+from typing import Literal, Union
 from sqlalchemy import text
 from sqlalchemy.sql.schema import Index
 from pytidb.orm.sql.ddl import TiDBSchemaGenerator
-from pytidb.orm.types import DistanceMetric
+from pytidb.orm.types import DistanceMetric, validate_distance_metric
+
 
 """
 The algorithm used for vector index.
@@ -27,7 +28,7 @@ class VectorIndex(Index):
         self,
         name,
         *columns,
-        distance_metric: DistanceMetric = DistanceMetric.COSINE,
+        distance_metric: Union[DistanceMetric, str] = DistanceMetric.COSINE,
         algorithm: VectorIndexAlgorithm = "HNSW",
         ensure_columnar_replica: bool = True,
         **kw,
@@ -40,8 +41,8 @@ class VectorIndex(Index):
             )
         if algorithm not in ["HNSW"]:
             raise ValueError(f"Invalid vector index algorithm: {algorithm}")
-        if distance_metric not in ["COSINE", "L2"]:
-            raise ValueError(f"Invalid distance metric: {distance_metric}")
+
+        distance_metric = validate_distance_metric(distance_metric)
 
         # Convert column name to distance expression.
         vector_column = columns[0]

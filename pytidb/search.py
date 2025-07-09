@@ -18,7 +18,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import Column, Row, Select, asc, desc, select, and_, text
 from pytidb.orm.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
-from pytidb.schema import DistanceMetric, QueryBundle, VectorDataType, TableModel
+from pytidb.schema import QueryBundle, VectorDataType, TableModel
+from pytidb.orm.types import DistanceMetric, validate_distance_metric
 from pytidb.filters import build_filter_clauses
 from pytidb.utils import (
     RowKeyType,
@@ -102,8 +103,8 @@ class SearchQuery:
         self._query_vector = None
 
         if isinstance(query, dict):
-            self._query = query["query"]
-            self._query_vector = query["query_vector"]
+            self._query = query.get("query")
+            self._query_vector = query.get("query_vector")
         elif isinstance(query, list):
             self._query_vector = query
         else:
@@ -144,8 +145,8 @@ class SearchQuery:
         self._text_column = check_text_column(self._columns, column_name)
         return self
 
-    def distance_metric(self, metric: DistanceMetric) -> "SearchQuery":
-        self._distance_metric = metric
+    def distance_metric(self, metric) -> "SearchQuery":
+        self._distance_metric = validate_distance_metric(metric)
         return self
 
     def distance_threshold(self, threshold: Optional[float] = None) -> "SearchQuery":

@@ -28,6 +28,7 @@ from pytidb.schema import (
     VectorDataType,
     TableModel,
     ColumnInfo,
+    DistanceMetric,
 )
 from pytidb.search import SearchType, SearchQuery
 from pytidb.result import QueryResult, SQLModelQueryResult
@@ -173,7 +174,9 @@ class Table(Generic[T]):
             if skip_index:
                 continue
 
-            distance_metric = field._attributes_set.get("distance_metric", "COSINE")
+            distance_metric = field._attributes_set.get(
+                "distance_metric", DistanceMetric.COSINE
+            )
             algorithm = field._attributes_set.get("algorithm", "HNSW")
 
             # Check if the metric on the column is already defined in vector indexes
