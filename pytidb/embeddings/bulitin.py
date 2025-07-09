@@ -138,6 +138,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
         self,
         query: QueryInputType,
         source_type: Optional[SourceType] = "text",
+        **kwargs,
     ) -> list[float]:
         """
         Get embedding for a query. Currently only supports text queries.
@@ -145,6 +146,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
         Args:
             query: Query text string or PIL Image object
             source_type: The type of source data ("text" or "image")
+            **kwargs: Additional keyword arguments to be passed to the embedding function.
 
         Returns:
             List of float values representing the embedding
@@ -158,6 +160,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             timeout=self.timeout,
             caching=self.caching,
             input=[embedding_input],
+            **kwargs,
         )
         return embeddings[0]
 
@@ -210,6 +213,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
         self,
         source: SourceInputType,
         source_type: Optional[SourceType] = "text",
+        **kwargs,
     ) -> list[float]:
         embedding_input = self._process_source(source, source_type)
         embeddings = get_embeddings(
@@ -220,6 +224,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             timeout=self.timeout,
             caching=self.caching,
             input=[embedding_input],
+            **kwargs,
         )
         return embeddings[0]
 
@@ -227,6 +232,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
         self,
         sources: List[SourceInputType],
         source_type: Optional[SourceType] = "text",
+        **kwargs,
     ) -> list[list[float]]:
         embedding_inputs = [
             self._process_source(source, source_type) for source in sources
@@ -239,5 +245,6 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             timeout=self.timeout,
             caching=self.caching,
             input=embedding_inputs,
+            **kwargs,
         )
         return embeddings
