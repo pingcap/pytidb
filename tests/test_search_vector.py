@@ -48,7 +48,7 @@ def test_vector_search(vector_table: Table):
     # to_pydantic()
     results = (
         vector_table.search([1, 2, 3])
-        .distance_metric(metric=DistanceMetric.COSINE)
+        .distance_metric(metric=DistanceMetric.L2)
         .num_candidate(20)
         .filter({"user_id": 2})
         .limit(2)

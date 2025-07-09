@@ -27,6 +27,7 @@ pandas = [
 ]
 models = [
     "litellm>=1.59.8,<2.0.0",
+    "pillow",
 ]
 
 [dependency-groups]
@@ -44,6 +45,7 @@ dev = [
     "mypy>=1.15.0",
     "mcp[cli]>=1.6.0",
     "mcp",
+    "pillow",
 ]
 
 # Test
@@ -56,6 +58,7 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 filterwarnings = [
     "ignore:.*:DeprecationWarning:litellm.*"
 ]
+addopts = "--durations=10 -v"
 
 # Build
 [tool.setuptools]
