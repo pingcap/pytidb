@@ -49,6 +49,7 @@ def get_embeddings(
         model=model_name,
         input=input,
         timeout=timeout,
+        caching=caching,
         **kwargs,
     )
     return [result["embedding"] for result in response.data]
