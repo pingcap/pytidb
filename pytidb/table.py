@@ -234,7 +234,7 @@ class Table(Generic[T]):
     def insert(self, data: Union[T, dict]) -> T:
         if not isinstance(data, self._table_model) and not isinstance(data, dict):
             raise ValueError(
-                f"Invalid data type: {type(data)}, expected {self._table_model}"
+                f"Invalid data type: {type(data)}, expected {self._table_model}, dict"
             )
 
         # Convert dict to table model instance.
@@ -275,7 +275,7 @@ class Table(Generic[T]):
                 f"Invalid data type: {type(data)}, expected list[dict], list[{self._table_model}]"
             )
 
-        # Convert all items to table model instances
+        # Convert dict items to table model instances.
         converted_data = []
         for item in data:
             if isinstance(item, dict):
