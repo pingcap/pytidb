@@ -240,5 +240,6 @@ with db.session() as session:
 
 ## Getting Help
 
-- Join our Discord: [TiDB Community](https://discord.com/invite/vYU9h56kAX)
-- Ask questions on our forum: [TiDB Forum](https://ask.pingcap.com/)
+- 💬 Join our Discord: [TiDB Community](https://discord.com/invite/vYU9h56kAX)
+- 🐛 Report issues or request features: [Open an issue](https://github.com/pingcap/pytidb/issues)
+- 📝 Contact sales or get enterprise support: [PingCAP Contact Form](https://www.pingcap.com/contact-us/)
