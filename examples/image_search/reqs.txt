@@ -1,5 +1,0 @@
-pytidb>=0.1.0
-python-dotenv>=1.0.0
-Pillow>=9.0.0
-requests>=2.25.0
-openai>=1.0.0 
