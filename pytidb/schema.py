@@ -9,11 +9,12 @@ from tidb_vector.sqlalchemy import VectorType
 from pytidb.orm.indexes import VectorIndexAlgorithm
 from pytidb.orm.types import DistanceMetric
 
+
 if TYPE_CHECKING:
-    from pytidb.embeddings.base import BaseEmbeddingFunction
+    from pytidb.embeddings.base import BaseEmbeddingFunction, EmbeddingSourceType
+
 
 VectorDataType = List[float]
-
 
 IndexType = Literal["vector", "fulltext", "scalar"]
 
@@ -40,8 +41,6 @@ Column = Column
 Index = Index
 FieldInfo = FieldInfo
 RelationshipInfo = RelationshipInfo
-
-EmbeddingSourceType = Literal["text", "image"]
 
 
 def VectorField(

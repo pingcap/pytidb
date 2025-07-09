@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Any
+from typing import Optional, Any, Literal
 
 from pydantic import BaseModel
 from sqlmodel import Field
-from pytidb.schema import VectorField, EmbeddingSourceType
+
+
+EmbeddingSourceType = Literal["text", "image"]
 
 
 class BaseEmbeddingFunction(BaseModel, ABC):
@@ -20,7 +22,7 @@ class BaseEmbeddingFunction(BaseModel, ABC):
     def VectorField(
         self,
         source_field: Optional[str] = None,
-        source_type: EmbeddingSourceType = "text",
+        source_type: Optional[EmbeddingSourceType] = "text",
         **kwargs,
     ):
         """
@@ -34,6 +36,9 @@ class BaseEmbeddingFunction(BaseModel, ABC):
         Returns:
             VectorField configured with this embedding function
         """
+        # Import here to avoid circular import
+        from pytidb.schema import VectorField
+
         return VectorField(
             embed_fn=self,
             dimensions=self.dimensions,
@@ -43,12 +48,15 @@ class BaseEmbeddingFunction(BaseModel, ABC):
         )
 
     @abstractmethod
-    def get_query_embedding(self, query: Any, **kwargs) -> list[float]:
+    def get_query_embedding(
+        self, query: Any, source_type: Optional[EmbeddingSourceType] = "text", **kwargs
+    ) -> list[float]:
         """
         Get embedding for a query (text or image).
 
         Args:
             query: Query text string or PIL Image object
+            source_type: The type of source data ("text" or "image")
 
         Returns:
             List of float values representing the embedding
@@ -56,12 +64,15 @@ class BaseEmbeddingFunction(BaseModel, ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_source_embedding(self, source: Any, **kwargs) -> list[float]:
+    def get_source_embedding(
+        self, source: Any, source_type: Optional[EmbeddingSourceType] = "text", **kwargs
+    ) -> list[float]:
         """
         Get embedding for a source field value (typically text).
 
         Args:
             source: Source field value (text)
+            source_type: The type of source data ("text" or "image")
 
         Returns:
             List of float values representing the embedding
@@ -69,12 +80,18 @@ class BaseEmbeddingFunction(BaseModel, ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_source_embeddings(self, sources: list[Any], **kwargs) -> list[list[float]]:
+    def get_source_embeddings(
+        self,
+        sources: list[Any],
+        source_type: Optional[EmbeddingSourceType] = "text",
+        **kwargs,
+    ) -> list[list[float]]:
         """
         Get embeddings for multiple source field values.
 
         Args:
             sources: List of source field values
+            source_type: The type of source data ("text" or "image")
 
         Returns:
             List of embeddings, where each embedding is a list of float values

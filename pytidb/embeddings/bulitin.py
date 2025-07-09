@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, List, Any, Optional, Union
 
 from pytidb.schema import Field
-from pytidb.embeddings.base import BaseEmbeddingFunction
+from pytidb.embeddings.base import BaseEmbeddingFunction, EmbeddingSourceType
 from pytidb.embeddings.utils import (
     encode_local_file_to_base64,
     encode_pil_image_to_base64,
@@ -15,8 +15,6 @@ if TYPE_CHECKING:
 
 SourceInputType = Union[str, Path, "Image"]
 QueryInputType = Union[str, Path, "Image"]
-
-SourceType = Union[Literal["text"], Literal["image"]]
 
 
 def get_embeddings(
@@ -88,10 +86,10 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             **kwargs,
         )
         if dimensions is None:
-            self.dimensions = len(self.get_query_embedding("test"))
+            self.dimensions = len(self.get_query_embedding("test", "text"))
 
     def _process_query(
-        self, query: QueryInputType, source_type: Optional[SourceType] = "text"
+        self, query: QueryInputType, source_type: Optional[EmbeddingSourceType] = "text"
     ) -> Union[str, dict]:
         if source_type == "text":
             return query
@@ -137,7 +135,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
     def get_query_embedding(
         self,
         query: QueryInputType,
-        source_type: Optional[SourceType] = "text",
+        source_type: Optional[EmbeddingSourceType] = "text",
         **kwargs,
     ) -> list[float]:
         """
@@ -167,7 +165,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
     def _process_source(
         self,
         source: SourceInputType,
-        source_type: Optional[SourceType] = "text",
+        source_type: Optional[EmbeddingSourceType] = "text",
     ) -> Union[str, dict]:
         if source_type == "image":
             return self._process_image_source(source)
@@ -212,7 +210,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
     def get_source_embedding(
         self,
         source: SourceInputType,
-        source_type: Optional[SourceType] = "text",
+        source_type: Optional[EmbeddingSourceType] = "text",
         **kwargs,
     ) -> list[float]:
         embedding_input = self._process_source(source, source_type)
@@ -231,7 +229,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
     def get_source_embeddings(
         self,
         sources: List[SourceInputType],
-        source_type: Optional[SourceType] = "text",
+        source_type: Optional[EmbeddingSourceType] = "text",
         **kwargs,
     ) -> list[list[float]]:
         embedding_inputs = [
