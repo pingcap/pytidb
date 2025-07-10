@@ -13,7 +13,7 @@ def test_table_crud(client):
         __tablename__ = "test_crud_table"
         id: int = Field(primary_key=True)
         text: str = Field(max_length=20)
-        text_vec: Any = VectorField(dimensions=3)
+        text_vec: Any = VectorField(dimensions=3, index=False)
 
     tbl = client.create_table(schema=Chunk, mode="overwrite")
 
@@ -63,7 +63,7 @@ def test_table_query(client):
         __tablename__ = "test_query_table"
         id: int = Field(primary_key=True)
         text: str = Field(max_length=20)
-        text_vec: Any = VectorField(dimensions=3)
+        text_vec: Any = VectorField(dimensions=3, index=False)
 
     tbl = client.create_table(schema=Chunk, mode="overwrite")
 

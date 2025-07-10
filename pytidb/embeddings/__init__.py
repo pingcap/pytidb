@@ -1,6 +1,6 @@
 from .base import BaseEmbeddingFunction
-from .litellm import LiteLLMEmbeddingFunction
+from .builtin import BuiltInEmbeddingFunction
 
-EmbeddingFunction = LiteLLMEmbeddingFunction
+EmbeddingFunction = BuiltInEmbeddingFunction
 
-__all__ = ["BaseEmbeddingFunction", "LiteLLMEmbeddingFunction", "EmbeddingFunction"]
+__all__ = ["BaseEmbeddingFunction", "EmbeddingFunction"]

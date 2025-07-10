@@ -12,7 +12,9 @@
 **Python SDK for TiDB AI**: A unified data platform empowering developers to build next-generation AI applications.
 
 - 🔍 Multiple search modes: vector, full-text, and hybrid search
-- 🔄 Automatic embedding generation
+- 🎭 Multi-modal storage and processing: text, images, and more
+- 🔄 Automatic embedding generation for text and images
+- 🖼️ Image search: text-to-image and image-to-image capabilities
 - 🎯 Advanced filtering capabilities
 - 🥇 Reranker for search result tuning
 - 💱 Transaction support
@@ -145,6 +147,39 @@ df = (
 
 See the [Hybrid Search example](https://github.com/pingcap/pytidb/blob/main/examples/hybrid_search) for more details.
 
+**Image Search**
+
+Image search lets you find visually similar images using natural language descriptions or another image as a reference.
+
+```python
+from PIL import Image
+from pytidb.schema import TableModel, Field
+from pytidb.embeddings import EmbeddingFunction
+
+# Define a multi-modal embedding model.
+jina_embed_fn = EmbeddingFunction("jinaai/jina-embeddings-v4")  # Using multi-modal embedding model.
+
+class Pet(TableModel):
+    __tablename__ = "pets"
+    id: int = Field(primary_key=True)
+    image_uri: str = Field()
+    image_vec: list[float] = jina_embed_fn.VectorField(
+        source_field="image_uri",
+        source_type="image"
+    )
+
+table = db.create_table(schema=Pet, mode="exist_ok")
+
+# Insert sample images ...
+
+# Search for images using natural language
+results = table.search("shiba inu dog").limit(1).to_list()
+
+# Search for images using an image ...
+query_image = Image.open("shiba_inu_15.jpg")
+results = table.search(query_image).limit(1).to_pydantic()
+```
+
 #### Advanced Filtering
 
 PyTiDB supports a variety of operators for flexible filtering:
@@ -203,5 +238,6 @@ with db.session() as session:
 
 ## Getting Help
 
-- Join our Discord: [TiDB Community](https://discord.com/invite/vYU9h56kAX)
-- Ask questions on our forum: [TiDB Forum](https://ask.pingcap.com/)
+- 💬 Join our Discord: [TiDB Community](https://discord.com/invite/vYU9h56kAX)
+- 🐛 Report issues or request features: [Open an issue](https://github.com/pingcap/pytidb/issues)
+- 📝 Contact sales or get enterprise support: [PingCAP Contact Form](https://www.pingcap.com/contact-us/)

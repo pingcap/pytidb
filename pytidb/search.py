@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -13,12 +14,12 @@ from typing import (
     Generic,
     overload,
 )
-
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, Row, Select, asc, desc, select, and_, text
 from pytidb.orm.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
-from pytidb.schema import DistanceMetric, QueryBundle, VectorDataType, TableModel
+from pytidb.schema import QueryBundle, VectorDataType, TableModel
+from pytidb.orm.types import DistanceMetric, validate_distance_metric
 from pytidb.filters import build_filter_clauses
 from pytidb.utils import (
     RowKeyType,
@@ -33,6 +34,7 @@ from pytidb.logger import logger
 if TYPE_CHECKING:
     from pytidb.table import Table
     from pandas import DataFrame
+    from PIL.Image import Image
 
 
 SearchType = Literal["vector", "fulltext", "hybrid"]
@@ -81,31 +83,34 @@ class SearchQuery:
         self,
         table: "Table",
         search_type: SearchType = "vector",
-        query: Optional[Union[VectorDataType, str, QueryBundle]] = None,
+        query: Optional[Union[VectorDataType, str, Path, QueryBundle, "Image"]] = None,
     ):
-        # Table.
+        # Table information.
         self._table = table
         self._sa_table = table._sa_table
         self._client = table.client
         self._columns = table._columns
+
+        # Search parameters.
+        self._search_type = search_type
         self._vector_column = table._default_vector_column
         self._text_column = table._default_text_column
-        self._fusion_method = "rrf"
-        self._fusion_params = {
-            "k": 60,
-        }
+        self._limit = None
+        self._debug = False
 
         # Query.
-        self._search_type = search_type
-        self._query = query
-        if isinstance(query, dict):
-            self._query_vector = query["query_vector"]
-            self._query_text = query["query_text"]
-        else:
-            self._query_vector = query if isinstance(query, list) else None
-            self._query_text = query if isinstance(query, str) else None
+        self._query = None
+        self._query_vector = None
 
-        # Vector search.
+        if isinstance(query, dict):
+            self._query = query.get("query")
+            self._query_vector = query.get("query_vector")
+        elif isinstance(query, list):
+            self._query_vector = query
+        else:
+            self._query = query
+
+        # Vector search parameters.
         self._distance_metric = DistanceMetric.COSINE
         self._distance_threshold = None
         self._distance_lower_bound = None
@@ -114,20 +119,22 @@ class SearchQuery:
         self._prefilter = False
         self._num_candidate = None
 
-        # Reranker.
+        # Reranker parameters.
         self._reranker = None
         self._rerank_field_name = None
 
-        # Miscellaneous.
-        self._debug = False
-        self._limit = None
+        # Fusion parameters.
+        self._fusion_method = "rrf"
+        self._fusion_params = {
+            "k": 60,
+        }
 
     def vector(self, query_vector: VectorDataType):
         self._query_vector = query_vector
         return self
 
     def text(self, query_text: str):
-        self._query_text = query_text
+        self._query = query_text
         return self
 
     def vector_column(self, column_name: str):
@@ -138,8 +145,8 @@ class SearchQuery:
         self._text_column = check_text_column(self._columns, column_name)
         return self
 
-    def distance_metric(self, metric: DistanceMetric) -> "SearchQuery":
-        self._distance_metric = metric
+    def distance_metric(self, metric) -> "SearchQuery":
+        self._distance_metric = validate_distance_metric(metric)
         return self
 
     def distance_threshold(self, threshold: Optional[float] = None) -> "SearchQuery":
@@ -186,21 +193,21 @@ class SearchQuery:
 
     def fusion(self, method: FusionMethod = "rrf", **params) -> "SearchQuery":
         """
-        Fusion the search results.
+        Configure the fusion method for the search results.
 
         Args:
-            method: The fusion method to use.
+            method: The fusion method to use, supported methods are `rrf` and `weighted`.
             **params: The parameters for the fusion method.
         """
         if self._search_type != "hybrid":
             raise ValueError(
-                "fusion method is only supported for hybrid search, please specify the search type through "
-                ".search_type(type='hybrid')"
+                "fusion method is only supported for hybrid search, please specify the "
+                "search type through table.search(type='hybrid')"
             )
 
         if method not in ["rrf", "weighted"]:
             raise ValueError(
-                "invalid fusion method, allowed fusion methods are `rrf` and `weighted`"
+                "Invalid fusion method, supported methods: 'rrf', 'weighted'"
             )
 
         self._fusion_method = method
@@ -211,10 +218,10 @@ class SearchQuery:
         self, reranker: BaseReranker, rerank_field: Optional[str] = None
     ) -> "SearchQuery":
         """
-        Rerank the search results.
+        Configure the rerank method for the search results.
 
-        Reranker can be used for multiple-way (multi-vectors, hybrid) search result fusion or
-        improve the quality of vector search results.
+        Reranker is a component that sorts search results using a specific model to
+        improve search quality and relevance.
 
         Args:
             reranker: The reranker to use.
@@ -225,10 +232,17 @@ class SearchQuery:
         return self
 
     def _build_vector_query(self) -> Select:
+        # Validate parameters.
+        if self._query is None and self._query_vector is None:
+            raise ValueError(
+                "query is required for vector search, please specify it through "
+                ".search('<query>', search_type='vector')"
+            )
+
         if self._vector_column is None:
             if len(self._table.vector_columns) == 0:
                 raise ValueError(
-                    "vector column is not found, but is required for vector search"
+                    "no vector column found in table, but vector column is required for vector search"
                 )
             elif len(self._table.vector_columns) >= 1:
                 raise ValueError(
@@ -239,16 +253,18 @@ class SearchQuery:
         else:
             vector_column = self._vector_column
 
-        # Auto embedding
+        # Auto embedding for query.
         if self._query_vector is None:
             if vector_column.name not in self._table.auto_embedding_configs:
                 raise ValueError(
-                    "query should be a vector, because the vector column didn't configure the embed_fn parameter"
+                    "query should be a vector, because the vector column didn't "
+                    "configure the embed_fn parameter"
                 )
 
             config = self._table.auto_embedding_configs[vector_column.name]
+            source_type = config["source_type"]
             self._query_vector = config["embed_fn"].get_query_embedding(
-                self._query_text
+                self._query, source_type
             )
 
         # Distance metric.
@@ -389,7 +405,7 @@ class SearchQuery:
         return stmt
 
     def _build_fulltext_query(self) -> Select:
-        if self._query_text is None:
+        if self._query is None:
             raise ValueError(
                 "query string is required for fulltext search, please specify it through "
                 ".text('<your query string>')"
@@ -420,9 +436,9 @@ class SearchQuery:
         table_name = self._table.table_name
         stmt = select(
             *select_columns,
-            fts_match_word(self._query_text, text_column).label(MATCH_SCORE_LABEL),
-            fts_match_word(self._query_text, text_column).label(SCORE_LABEL),
-        ).filter(fts_match_word(self._query_text, text_column))
+            fts_match_word(self._query, text_column).label(MATCH_SCORE_LABEL),
+            fts_match_word(self._query, text_column).label(SCORE_LABEL),
+        ).filter(fts_match_word(self._query, text_column))
 
         if self._filters is not None:
             filter_clauses = build_filter_clauses(self._filters, columns)
@@ -554,16 +570,14 @@ class SearchQuery:
         """
         rerank_field_name = self._get_rerank_field_name()
 
-        if self._query_text is None:
+        if self._query is None:
             raise ValueError(
                 "query text is required for reranker, please specify it through "
                 ".text('<your query string>')"
             )
 
         documents = [row._mapping[rerank_field_name] for row in rows]
-        reranked_results = self._reranker.rerank(
-            self._query_text, documents, self._limit
-        )
+        reranked_results = self._reranker.rerank(self._query, documents, self._limit)
         reranked_rows = []
         for item in reranked_results:
             row = rows[item.index]

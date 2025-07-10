@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from sqlalchemy import insert
 
 from pytidb import TiDBClient
-from pytidb.schema import TableModel, Field as TidbField
+from pytidb.schema import TableModel, Field
 from pytidb.sql import select
 
 
@@ -59,8 +59,8 @@ def test_raw_sql(client: TiDBClient):
 def test_query_select_base(client: TiDBClient):
     class Record(TableModel, table=True):
         __tablename__ = "test_query_select_base"
-        id: int = TidbField(default=None, primary_key=True)
-        name: str = TidbField(default=None)
+        id: int = Field(default=None, primary_key=True)
+        name: str = Field(default=None)
 
     tbl = client.create_table(schema=Record, mode="overwrite")
 
