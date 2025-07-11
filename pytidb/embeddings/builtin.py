@@ -117,8 +117,15 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             if is_valid:
                 if image_url.scheme == "file":
                     file_path = urllib.request.url2pathname(image_url.path)
-                    return {"image": encode_local_file_to_base64(file_path)}
+                    base64_str = encode_local_file_to_base64(file_path, compress_for_bedrock=self.model_name.startswith("bedrock/"))
+                    # For bedrock models, return base64 string directly
+                    if self.model_name.startswith("bedrock/"):
+                        return base64_str
+                    return {"image": base64_str}
                 elif image_url.scheme == "http" or image_url.scheme == "https":
+                    # For bedrock models, return URL directly
+                    if self.model_name.startswith("bedrock/"):
+                        return image_url.geturl()
                     return {"image": image_url.geturl()}
                 else:
                     raise ValueError(
@@ -128,7 +135,11 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
                 # For image search, the query can be string contains some keywords.
                 return query
         elif isinstance(query, Image):
-            return {"image": encode_pil_image_to_base64(query)}
+            base64_str = encode_pil_image_to_base64(query, compress_for_bedrock=self.model_name.startswith("bedrock/"))
+            # For bedrock models, return base64 string directly
+            if self.model_name.startswith("bedrock/"):
+                return base64_str
+            return {"image": base64_str}
         else:
             raise ValueError(
                 "invalid input for image vector search, current supported input types: "
@@ -193,8 +204,15 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             if is_valid:
                 if image_url.scheme == "file":
                     file_path = urllib.request.url2pathname(image_url.path)
-                    return {"image": encode_local_file_to_base64(file_path)}
+                    base64_str = encode_local_file_to_base64(file_path, compress_for_bedrock=self.model_name.startswith("bedrock/"))
+                    # For bedrock models, return base64 string directly
+                    if self.model_name.startswith("bedrock/"):
+                        return base64_str
+                    return {"image": base64_str}
                 elif image_url.scheme == "http" or image_url.scheme == "https":
+                    # For bedrock models, return URL directly
+                    if self.model_name.startswith("bedrock/"):
+                        return image_url.geturl()
                     return {"image": image_url.geturl()}
                 else:
                     raise ValueError(
@@ -203,7 +221,11 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             else:
                 raise ValueError(f"invalid url format for image source: {source}")
         elif isinstance(source, Image):
-            return {"image": encode_pil_image_to_base64(source)}
+            base64_str = encode_pil_image_to_base64(source, compress_for_bedrock=self.model_name.startswith("bedrock/"))
+            # For bedrock models, return base64 string directly
+            if self.model_name.startswith("bedrock/"):
+                return base64_str
+            return {"image": base64_str}
         else:
             raise ValueError(
                 "invalid input for source, current supported input types: "
