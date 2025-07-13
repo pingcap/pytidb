@@ -180,6 +180,8 @@ query_image = Image.open("shiba_inu_15.jpg")
 results = table.search(query_image).limit(1).to_pydantic()
 ```
 
+See the [Image Search example](https://github.com/pingcap/pytidb/blob/main/examples/image_search) for more details.
+
 #### Advanced Filtering
 
 PyTiDB supports a variety of operators for flexible filtering:

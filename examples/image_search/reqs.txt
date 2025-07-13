@@ -1,0 +1,7 @@
+pytidb>=0.0.9.dev1
+pytidb[models]>=0.0.9.dev1
+streamlit
+pandas
+python-dotenv
+requests
+Pillow
