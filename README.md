@@ -171,7 +171,7 @@ class Pet(TableModel):
 table = db.create_table(schema=Pet, mode="exist_ok")
 
 # Insert sample images ...
-table.insert(Pet(image_uri="path/to/shiba_inu_15.jpg"))
+table.insert(Pet(image_uri="path/to/shiba_inu_14.jpg"))
 
 # Search for images using natural language
 results = table.search("shiba inu dog").limit(1).to_list()
