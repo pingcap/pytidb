@@ -16,6 +16,10 @@
   <a href="https://pingcap.github.io/ai/">Documentation</a>
   •
   <a href="https://github.com/orgs/pingcap/projects/69/views/4">Roadmap</a>
+  •
+  <a href="https://discord.com/invite/vYU9h56kAX">Discord</a>
+  •
+  <a href="https://github.com/pingcap/pytidb/issues">Report Bug</a>
 </h4>
 
 ## Introduction
@@ -246,9 +250,3 @@ with db.session() as session:
     final_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
     assert final_total_balance == initial_total_balance
 ```
-
-## Getting Help
-
-- 💬 Join our Discord: [TiDB Community](https://discord.com/invite/vYU9h56kAX)
-- 🐛 Report issues or request features: [Open an issue](https://github.com/pingcap/pytidb/issues)
-- 📝 Contact sales or get enterprise support: [PingCAP Contact Form](https://www.pingcap.com/contact-us/)
