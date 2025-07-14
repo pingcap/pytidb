@@ -1,13 +1,24 @@
-# TiDB Python SDK
+<h1 align="center">TiDB Python SDK</h1>
 
-<p>
+
+<div align="center">
   <a href="https://pypi.org/project/pytidb">
     <img src="https://img.shields.io/pypi/v/pytidb.svg" alt="Python Package Index"/>
   </a>
   <a href="https://pypistats.org/packages/pytidb">
     <img src="https://img.shields.io/pypi/dm/pytidb.svg" alt="Downloads"/>
   </a>
-</p>
+</div>
+
+<h4 align="center">
+  <a href="https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb">Quick Start</a>
+  •
+  <a href="https://pingcap.github.io/ai/">Documentation</a>
+  •
+  <a href="https://github.com/orgs/pingcap/projects/69/views/4">Roadmap</a>
+</h4>
+
+## Introduction
 
 **Python SDK for TiDB AI**: A unified data platform empowering developers to build next-generation AI applications.
 
@@ -20,9 +31,6 @@
 - 💱 Transaction support
 - 🔌 [Built-in MCP support](https://pingcap.github.io/ai/integrations/mcp)
 
-**Documentation:** https://pingcap.github.io/ai/
-
-**Quick Start:** [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
 
 > [!TIP]
 > Click the button below to install **TiDB MCP Server** in Cursor. Then, confirm by clicking **Install** when prompted.
