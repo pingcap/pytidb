@@ -15,6 +15,8 @@
   •
   <a href="https://pingcap.github.io/ai/">Documentation</a>
   •
+  <a href="https://pingcap.github.io/ai/examples/">Demos</a>
+  •
   <a href="https://github.com/orgs/pingcap/projects/69/views/4">Roadmap</a>
   •
   <a href="https://discord.com/invite/vYU9h56kAX">Discord</a>
