@@ -11,7 +11,7 @@ st.set_page_config(
 
 
 # Initialize clients
-@st.cache_resource
+@st.cache_resource(show_spinner="Initializing memory...")
 def init_clients_cached():
     return init_clients()
 
