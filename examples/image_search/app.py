@@ -159,9 +159,9 @@ def display_search_results(
                     st.markdown(
                         f"""
                         <div style="line-height: 1.2; margin-bottom: 20px;">
-                            <strong>{result['breed']}</strong><br>
+                            <strong>{result["breed"]}</strong><br>
                             <small>Similarity: {similarity:.3f}</small><br>
-                            <small>File: {result['image_name']}</small>
+                            <small>File: {result["image_name"]}</small>
                         </div>
                     """,
                         unsafe_allow_html=True,
