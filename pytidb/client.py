@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import List, Literal, Optional, Type, Generator, Union
+from typing import List, Literal, Optional, Type, Generator
 
 from pydantic import PrivateAttr
 import sqlalchemy
