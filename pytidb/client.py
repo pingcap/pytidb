@@ -145,7 +145,10 @@ class TiDBClient:
         return None
 
     def list_tables(self) -> List[str]:
-        return self._inspector.get_list_tables()
+        stmt = text("SHOW TABLES;")
+        with self._db_engine.connect() as conn:
+            result = conn.execute(stmt)
+            return [row[0] for row in result]
 
     def has_table(self, table_name: str) -> bool:
         return self._inspector.has_table(table_name)
