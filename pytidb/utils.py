@@ -17,6 +17,12 @@ TIDB_SERVERLESS_HOST_PATTERN = re.compile(
 )
 
 
+def create_engine_without_db(url, echo=False, **kwargs):
+    temp_db_url = make_url(url)
+    temp_db_url = temp_db_url._replace(database=None)
+    return create_engine(temp_db_url, echo=echo, **kwargs)
+
+
 class TiDBConnectionURL(AnyUrl):
     """A URL that enforces specific constraints for TiDB connections.
 
@@ -39,12 +45,6 @@ class TiDBConnectionURL(AnyUrl):
         default_port=4000,
         host_required=True,
     )
-
-
-def create_engine_without_db(url, echo=False, **kwargs):
-    temp_db_url = make_url(url)
-    temp_db_url = temp_db_url._replace(database=None)
-    return create_engine(temp_db_url, echo=echo, **kwargs)
 
 
 def build_tidb_connection_url(
