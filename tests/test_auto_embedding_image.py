@@ -31,7 +31,7 @@ def pet_table(client: TiDBClient, image_embed_fn: EmbeddingFunction):
         )
 
     # Create table.
-    tbl = client.create_table(schema=Pet, mode="overwrite")
+    tbl = client.create_table(schema=Pet, if_exists="overwrite")
 
     # INSERT.
     tbl.insert(

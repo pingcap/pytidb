@@ -98,7 +98,7 @@ class Chunk(TableModel):
     )  # 👈 Defines the vector field.
     user_id: int = Field()
 
-table = db.create_table(schema=Chunk, mode="skip_existing")
+table = db.create_table(schema=Chunk, if_exists="skip")
 ```
 
 **Bulk insert data:**
@@ -180,7 +180,7 @@ class Pet(TableModel):
         source_type="image"
     )
 
-table = db.create_table(schema=Pet, mode="skip_existing")
+table = db.create_table(schema=Pet, if_exists="skip")
 
 # Insert sample images ...
 table.insert(Pet(image_uri="path/to/shiba_inu_14.jpg"))

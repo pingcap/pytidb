@@ -93,8 +93,10 @@ class TiDBClient:
 
     # Database Management API
 
-    def create_database(self, name: str, skip_existing: bool = False):
-        return create_database(self._db_engine, name, skip_existing)
+    def create_database(
+        self, name: str, if_exists: Optional[Literal["raise", "skip"]] = "raise"
+    ):
+        return create_database(self._db_engine, name, if_exists=if_exists)
 
     def drop_database(self, name: str):
         db_name = self._identifier_preparer.quote(name)
@@ -117,19 +119,17 @@ class TiDBClient:
         self,
         *,
         schema: Optional[Type[TableModel]] = None,
-        mode: Optional[
-            Literal["raise_existing", "overwrite", "skip_existing"]
-        ] = "raise_existing",
+        if_exists: Optional[Literal["raise", "overwrite", "skip"]] = "raise",
     ) -> Table:
-        if mode == "raise_existing":
+        if if_exists == "raise":
+            table = Table(schema=schema, client=self, if_exists="raise")
+        elif if_exists == "overwrite":
+            self.drop_table(schema.__tablename__, if_not_exists="skip")
             table = Table(schema=schema, client=self)
-        elif mode == "overwrite":
-            self.drop_table(schema.__tablename__)
-            table = Table(schema=schema, client=self)
-        elif mode == "skip_existing":
-            table = Table(schema=schema, client=self, skip_existing=True)
+        elif if_exists == "skip":
+            table = Table(schema=schema, client=self, if_exists="skip")
         else:
-            raise ValueError(f"Invalid mode: {mode}")
+            raise ValueError(f"Invalid if_exists value: {if_exists}")
         return table
 
     def _get_table_model(self, table_name: str) -> Optional[Type[DeclarativeMeta]]:
@@ -142,7 +142,7 @@ class TiDBClient:
         # If the table in the mapper registry.
         table_model = self._get_table_model(table_name)
         if table_model is not None:
-            table = Table(schema=table_model, client=self, skip_existing=True)
+            table = Table(schema=table_model, client=self, if_exists="skip")
             return table
 
         return None
@@ -156,11 +156,18 @@ class TiDBClient:
     def has_table(self, table_name: str) -> bool:
         return self._inspector.has_table(table_name)
 
-    def drop_table(self, table_name: str):
+    def drop_table(
+        self,
+        table_name: str,
+        if_not_exists: Optional[Literal["raise", "skip"]] = "raise",
+    ):
+        if if_not_exists not in ["raise", "skip"]:
+            raise ValueError(f"Invalid if_not_exists value: {if_not_exists}")
+
         table = sqlalchemy.Table(
             table_name, Base.metadata, autoload_with=self._db_engine
         )
-        return table.drop(self._db_engine, checkfirst=True)
+        return table.drop(self._db_engine, checkfirst=(if_not_exists == "skip"))
 
     # Raw SQL API
 

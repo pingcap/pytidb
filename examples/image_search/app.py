@@ -87,7 +87,7 @@ def setup_table(db: TiDBClient, embed_fn: EmbeddingFunction) -> Table:
                 source_type="image",
             )
 
-        table = db.create_table(schema=Pet, mode="skip_existing")
+        table = db.create_table(schema=Pet, if_exists="skip")
         return table
     except Exception as e:
         st.error(f"Failed to create table: {str(e)}")
@@ -159,9 +159,9 @@ def display_search_results(
                     st.markdown(
                         f"""
                         <div style="line-height: 1.2; margin-bottom: 20px;">
-                            <strong>{result['breed']}</strong><br>
+                            <strong>{result["breed"]}</strong><br>
                             <small>Similarity: {similarity:.3f}</small><br>
-                            <small>File: {result['image_name']}</small>
+                            <small>File: {result["image_name"]}</small>
                         </div>
                     """,
                         unsafe_allow_html=True,

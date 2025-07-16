@@ -53,7 +53,7 @@ class Memory:
             )
 
         self.MemoryRecord = MemoryRecord
-        self.table = tidb_client.create_table(schema=MemoryRecord, mode="skip_existing")
+        self.table = tidb_client.create_table(schema=MemoryRecord, if_exists="skip")
 
     def add(self, messages: List[Dict[str, Any]], user_id: str = "default_user"):
         """Add a new memory by extracting key facts from conversation."""

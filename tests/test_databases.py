@@ -11,7 +11,7 @@ def test_databases(client):
     client.create_database(db_name)
     with pytest.raises(Exception):
         client.create_database(db_name)
-    client.create_database(db_name, skip_existing=True)
+    client.create_database(db_name, if_exists="skip")
 
     # list database names.
     db_names = client.list_databases()

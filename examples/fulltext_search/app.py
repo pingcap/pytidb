@@ -33,7 +33,7 @@ class Item(TableModel):
 table = db.open_table(Item)
 if table is None:
     with st.spinner("Loading sample items, it may take a while..."):
-        table = db.create_table(schema=Item, mode="skip_existing")
+        table = db.create_table(schema=Item, if_exists="skip")
         if table.rows() == 0:
             with open("sample_items.json", "r", encoding="utf-8") as f:
                 sample_items = json.load(f)

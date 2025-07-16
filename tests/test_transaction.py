@@ -13,7 +13,7 @@ def player_table(client):
         name: str = Field(max_length=20)
         balance: int = Field(default=0)
 
-    table = client.create_table(schema=Player, mode="overwrite")
+    table = client.create_table(schema=Player, if_exists="overwrite")
     table.truncate()
     table.bulk_insert(
         [

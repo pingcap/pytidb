@@ -54,8 +54,11 @@ class Table(Generic[T]):
         *,
         client: "TiDBClient",
         schema: Optional[Type[T]] = None,
-        skip_existing: bool = False,
+        if_exists: Optional[Literal["raise", "skip"]] = "raise",
     ):
+        if if_exists not in ["raise", "skip"]:
+            raise ValueError(f"Invalid if_exists value: {if_exists}")
+
         self._client = client
         self._db_engine = client.db_engine
         self._identifier_preparer = self._db_engine.dialect.identifier_preparer
@@ -113,7 +116,7 @@ class Table(Generic[T]):
 
         # Create table.
         Base.metadata.create_all(
-            self._db_engine, tables=[self._sa_table], checkfirst=skip_existing
+            self._db_engine, tables=[self._sa_table], checkfirst=(if_exists == "skip")
         )
 
     @property
@@ -484,7 +487,7 @@ class Table(Generic[T]):
         return self._has_tiflash_index(column_name, "FullText")
 
     def create_vector_index(self, column_name: str, name: Optional[str] = None):
-        # TODO: Support skip_existing.
+        # TODO: Support if_exists.
         warnings.warn(
             "table.create_vector_index() is an experimental API, use VectorField instead."
         )
@@ -493,11 +496,14 @@ class Table(Generic[T]):
         vec_idx.create(self.client.db_engine)
 
     def create_fts_index(
-        self, column_name: str, name: Optional[str] = None, skip_existing: bool = False
+        self,
+        column_name: str,
+        name: Optional[str] = None,
+        if_exists: Optional[Literal["raise", "skip"]] = "raise",
     ):
         warnings.warn(
             "table.create_fts_index() is an experimental API, use FullTextField instead."
         )
         index_name = name or f"fts_idx_{column_name}"
         fts_idx = FullTextIndex(index_name, self._columns[column_name])
-        fts_idx.create(self.client.db_engine, checkfirst=skip_existing)
+        fts_idx.create(self.client.db_engine, checkfirst=(if_exists == "skip"))

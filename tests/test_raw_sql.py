@@ -62,7 +62,7 @@ def test_query_select_base(client: TiDBClient):
         id: int = Field(default=None, primary_key=True)
         name: str = Field(default=None)
 
-    tbl = client.create_table(schema=Record, mode="overwrite")
+    tbl = client.create_table(schema=Record, if_exists="overwrite")
 
     # Insert data via execute()
     stmt = insert(tbl.table_model).values(id=1, name="test")

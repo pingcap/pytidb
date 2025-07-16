@@ -9,14 +9,14 @@ def test_open_table(fresh_client):
         id: int = Field(primary_key=True)
         name: str
 
-    table = fresh_client.create_table(schema=TestOpenTable, mode="overwrite")
+    table = fresh_client.create_table(schema=TestOpenTable, if_exists="overwrite")
     table.truncate()
     table.insert(TestOpenTable(id=1, name="foo"))
     table = fresh_client.open_table("test_open_table")
     assert table.rows() == 1
 
 
-def test_create_table_mode(fresh_client):
+def test_create_table_if_exists(fresh_client):
     test_table_name = "test_create_table"
 
     class TestCreateTable(TableModel):
@@ -24,27 +24,27 @@ def test_create_table_mode(fresh_client):
         id: int = Field(primary_key=True)
         name: str
 
-    # create mode: raise_existing
-    fresh_client.create_table(schema=TestCreateTable, mode="raise_existing")
+    # if_exists=raise
+    fresh_client.create_table(schema=TestCreateTable, if_exists="raise")
     assert fresh_client.has_table(test_table_name)
 
     tables = fresh_client.list_tables()
     assert test_table_name in tables
 
     with pytest.raises(Exception):
-        fresh_client.create_table(schema=TestCreateTable, mode="raise_existing")
+        fresh_client.create_table(schema=TestCreateTable, if_exists="raise")
 
-    # create mode: skip_existing
-    fresh_client.create_table(schema=TestCreateTable, mode="skip_existing")
+    # if_exists=skip
+    fresh_client.create_table(schema=TestCreateTable, if_exists="skip")
     assert fresh_client.has_table(test_table_name)
 
-    # create mode: overwrite
-    fresh_client.create_table(schema=TestCreateTable, mode="overwrite")
+    # if_exists=overwrite
+    fresh_client.create_table(schema=TestCreateTable, if_exists="overwrite")
     assert fresh_client.has_table(test_table_name)
 
-    # create mode: invalid
+    # if_exists=invalid
     with pytest.raises(ValueError):
-        fresh_client.create_table(schema=TestCreateTable, mode="invalid")
+        fresh_client.create_table(schema=TestCreateTable, if_exists="invalid")
 
 
 def test_list_tables_empty(fresh_client):
@@ -69,7 +69,7 @@ def test_list_tables_with_tables(fresh_client):
         id: int = Field(primary_key=True)
         name: str
 
-    fresh_client.create_table(schema=TestTable1, mode="raise_existing")
+    fresh_client.create_table(schema=TestTable1, if_exists="raise")
     assert fresh_client.has_table("test_table_1")
     tables = fresh_client.list_tables()
 
@@ -82,7 +82,7 @@ def test_list_tables_with_tables(fresh_client):
         id: int = Field(primary_key=True)
         value: int
 
-    fresh_client.create_table(schema=TestTable2, mode="raise_existing")
+    fresh_client.create_table(schema=TestTable2, if_exists="raise")
     tables = fresh_client.list_tables()
     assert len(tables) == 2
     assert "test_table_1" in tables

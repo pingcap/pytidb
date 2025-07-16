@@ -77,7 +77,7 @@ sample_documents = [
 table = db.open_table(Document)
 if table is None:
     with st.spinner("Loading sample documents, it may take a while..."):
-        table = db.create_table(schema=Document, mode="skip_existing")
+        table = db.create_table(schema=Document, if_exists="skip")
         if table.rows() == 0:
             table.bulk_insert([Document(text=text) for text in sample_documents])
 

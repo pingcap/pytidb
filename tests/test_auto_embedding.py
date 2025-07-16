@@ -17,7 +17,7 @@ def test_auto_embedding(client: TiDBClient):
         )
         user_id: int = Field()
 
-    tbl = client.create_table(schema=Chunk, mode="overwrite")
+    tbl = client.create_table(schema=Chunk, if_exists="overwrite")
 
     tbl.insert(Chunk(id=1, text="foo", user_id=1))
     tbl.bulk_insert(
@@ -50,11 +50,17 @@ def test_auto_embedding(client: TiDBClient):
     assert len(dict_chunk.text_vec) == 1536
 
     # Test dict bulk_insert
-    dict_chunks = tbl.bulk_insert([
-        {"id": 6, "text": "dict_bulk_1", "user_id": 6},
-        {"id": 7, "text": "dict_bulk_2", "user_id": 7},
-        {"id": 8, "text": "", "user_id": 8},  # Empty string will skip auto embedding
-    ])
+    dict_chunks = tbl.bulk_insert(
+        [
+            {"id": 6, "text": "dict_bulk_1", "user_id": 6},
+            {"id": 7, "text": "dict_bulk_2", "user_id": 7},
+            {
+                "id": 8,
+                "text": "",
+                "user_id": 8,
+            },  # Empty string will skip auto embedding
+        ]
+    )
     assert len(dict_chunks) == 3
     assert dict_chunks[0].id == 6
     assert dict_chunks[0].text == "dict_bulk_1"
@@ -67,10 +73,12 @@ def test_auto_embedding(client: TiDBClient):
     assert dict_chunks[2].text_vec is None
 
     # Test mixed bulk_insert (dict and model instances)
-    mixed_chunks = tbl.bulk_insert([
-        Chunk(id=9, text="model_instance", user_id=9),
-        {"id": 10, "text": "dict_mixed", "user_id": 10},
-    ])
+    mixed_chunks = tbl.bulk_insert(
+        [
+            Chunk(id=9, text="model_instance", user_id=9),
+            {"id": 10, "text": "dict_mixed", "user_id": 10},
+        ]
+    )
     assert len(mixed_chunks) == 2
     assert mixed_chunks[0].id == 9
     assert mixed_chunks[0].text == "model_instance"
