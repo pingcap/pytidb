@@ -18,7 +18,11 @@ from pytidb.base import Base, default_registry
 from pytidb.databases import create_database, database_exists
 from pytidb.schema import TableModel
 from pytidb.table import Table
-from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN, build_tidb_dsn, create_engine_without_db
+from pytidb.utils import (
+    TIDB_SERVERLESS_HOST_PATTERN,
+    build_tidb_connection_url,
+    create_engine_without_db,
+)
 from pytidb.logger import logger
 from pytidb.result import SQLExecuteResult, SQLQueryResult
 
@@ -35,10 +39,11 @@ class TiDBClient:
         self._inspector = sqlalchemy.inspect(self._db_engine)
         self._identifier_preparer = self._db_engine.dialect.identifier_preparer
 
+    # TODO: Better typing for kwargs, including what's supported by pymysql and SQLAlchemy.
     @classmethod
     def connect(
         cls,
-        database_url: Optional[str] = None,
+        url: Optional[str] = None,
         *,
         host: Optional[str] = "localhost",
         port: Optional[int] = 4000,
@@ -50,35 +55,32 @@ class TiDBClient:
         debug: Optional[bool] = None,
         **kwargs,
     ) -> "TiDBClient":
-        if database_url is None:
-            database_url = str(
-                build_tidb_dsn(
-                    host=host,
-                    port=port,
-                    username=username,
-                    password=password,
-                    database=database,
-                    enable_ssl=enable_ssl,
-                )
+        if url is None:
+            url = build_tidb_connection_url(
+                host=host,
+                port=port,
+                username=username,
+                password=password,
+                database=database,
+                enable_ssl=enable_ssl,
             )
+            # TODO: When URL is passed in directly, it should be validated.
 
         if ensure_db:
             try:
-                temp_engine = create_engine_without_db(
-                    database_url, echo=debug, **kwargs
-                )
+                temp_engine = create_engine_without_db(url, echo=debug, **kwargs)
                 if not database_exists(temp_engine, database):
                     create_database(temp_engine, database)
             except Exception as e:
-                logger.error(f"Failed to ensure database exists: {str(e)}")
+                logger.error("Failed to ensure database exists: %s", str(e))
                 raise
-        
+
         if kwargs.get("pool_recycle") is None and kwargs.get("pool_pre_ping") is None:
             if host and TIDB_SERVERLESS_HOST_PATTERN.match(host):
                 kwargs["pool_recycle"] = 300
                 kwargs["pool_pre_ping"] = True
 
-        db_engine = create_engine(database_url, echo=debug, **kwargs)
+        db_engine = create_engine(url, echo=debug, **kwargs)
 
         return cls(db_engine)
 
@@ -100,7 +102,7 @@ class TiDBClient:
             stmt = text(f"DROP DATABASE IF EXISTS {db_name};")
             return conn.execute(stmt)
 
-    def database_names(self) -> List[str]:
+    def list_databases(self) -> List[str]:
         stmt = text("SHOW DATABASES;")
         with self._db_engine.connect() as conn:
             result = conn.execute(stmt)
@@ -143,8 +145,11 @@ class TiDBClient:
 
         return None
 
-    def table_names(self) -> List[str]:
-        return self._inspector.get_table_names()
+    def list_tables(self) -> List[str]:
+        stmt = text("SHOW TABLES;")
+        with self._db_engine.connect() as conn:
+            result = conn.execute(stmt)
+            return [row[0] for row in result]
 
     def has_table(self, table_name: str) -> bool:
         return self._inspector.has_table(table_name)
