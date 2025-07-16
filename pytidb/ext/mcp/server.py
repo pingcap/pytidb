@@ -40,7 +40,7 @@ class TiDBConnector:
         database: Optional[str] = None,
     ):
         self.tidb_client = TiDBClient.connect(
-            dsn=database_url,
+            url=database_url,
             host=host,
             port=port,
             username=username,

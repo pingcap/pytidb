@@ -23,7 +23,7 @@ def create_engine_without_db(url, echo=False, **kwargs):
     return create_engine(temp_db_url, echo=echo, **kwargs)
 
 
-def build_tidb_dsn(
+def build_tidb_connection_url(
     schema: str = "mysql+pymysql",
     host: str = "localhost",
     port: int = 4000,
@@ -33,7 +33,7 @@ def build_tidb_dsn(
     enable_ssl: Optional[bool] = None,
 ) -> str:
     """
-    Build a TiDB DSN (Data Source Name) string for database connection.
+    Build a TiDB Connection URL string for database connection.
 
     Args:
         schema (str, optional): The connection protocol. Defaults to "mysql+pymysql".
@@ -47,7 +47,7 @@ def build_tidb_dsn(
             and disabled for other hosts.
 
     Returns:
-        str: A DSN string that can be used to connect to a TiDB database.
+        str: A Connection URL string that can be used to connect to a TiDB database.
     """
 
     if enable_ssl is None:

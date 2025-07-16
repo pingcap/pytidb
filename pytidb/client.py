@@ -20,7 +20,7 @@ from pytidb.schema import TableModel
 from pytidb.table import Table
 from pytidb.utils import (
     TIDB_SERVERLESS_HOST_PATTERN,
-    build_tidb_dsn,
+    build_tidb_connection_url,
     create_engine_without_db,
 )
 from pytidb.logger import logger
@@ -43,7 +43,7 @@ class TiDBClient:
     @classmethod
     def connect(
         cls,
-        dsn: Optional[str] = None,
+        url: Optional[str] = None,
         *,
         host: Optional[str] = "localhost",
         port: Optional[int] = 4000,
@@ -55,8 +55,8 @@ class TiDBClient:
         debug: Optional[bool] = None,
         **kwargs,
     ) -> "TiDBClient":
-        if dsn is None:
-            dsn = build_tidb_dsn(
+        if url is None:
+            url = build_tidb_connection_url(
                 host=host,
                 port=port,
                 username=username,
@@ -67,7 +67,7 @@ class TiDBClient:
 
         if ensure_db:
             try:
-                temp_engine = create_engine_without_db(dsn, echo=debug, **kwargs)
+                temp_engine = create_engine_without_db(url, echo=debug, **kwargs)
                 if not database_exists(temp_engine, database):
                     create_database(temp_engine, database)
             except Exception as e:
@@ -79,7 +79,7 @@ class TiDBClient:
                 kwargs["pool_recycle"] = 300
                 kwargs["pool_pre_ping"] = True
 
-        db_engine = create_engine(dsn, echo=debug, **kwargs)
+        db_engine = create_engine(url, echo=debug, **kwargs)
 
         return cls(db_engine)
 
