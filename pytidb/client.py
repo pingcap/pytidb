@@ -34,10 +34,14 @@ class TiDBClient:
     _db_engine: Engine = PrivateAttr()
     _inspector: Inspector = PrivateAttr()
 
-    def __init__(self, db_engine: Engine):
+    # Necessary connection parameters for use_database functionality
+    _reconnect_params: dict = PrivateAttr()
+
+    def __init__(self, db_engine: Engine, reconnect_params: dict):
         self._db_engine = db_engine
         self._inspector = sqlalchemy.inspect(self._db_engine)
         self._identifier_preparer = self._db_engine.dialect.identifier_preparer
+        self._reconnect_params = reconnect_params
 
     # TODO: Better typing for kwargs, including what's supported by pymysql and SQLAlchemy.
     @classmethod
@@ -81,8 +85,15 @@ class TiDBClient:
                 kwargs["pool_pre_ping"] = True
 
         db_engine = create_engine(url, echo=debug, **kwargs)
+        reconnect_params = {
+            # host, port, etc is not needed because they will be built into the URL.
+            # url is also not needed because it is already in `db_engine`.
+            "ensure_db": ensure_db,
+            "debug": debug,
+            **kwargs,
+        }
 
-        return cls(db_engine)
+        return cls(db_engine, reconnect_params)
 
     def disconnect(self) -> None:
         self._db_engine.dispose()
@@ -112,6 +123,57 @@ class TiDBClient:
 
     def has_database(self, name: str) -> bool:
         return database_exists(self._db_engine, name)
+
+    def current_database(self) -> Optional[str]:
+        """Get the current database name.
+
+        Returns:
+            The name of the current database, or None if no database is selected.
+        """
+        stmt = text("SELECT DATABASE();")
+        with self._db_engine.connect() as conn:
+            result = conn.execute(stmt)
+            return result.scalar()
+
+    def use_database(self, database: str, *, ensure_db: Optional[bool] = False) -> None:
+        """Switch to a different database.
+
+        This method provides the same experience as if the database was specified
+        when calling connect(). It creates a new engine with the specified database
+        to ensure the database context persists across connection drops and reconnects.
+
+        Warning: Existing sessions will be destroyed.
+
+        Args:
+            database: The name of the database to switch to.
+            ensure_db: If True, create the database if it doesn't exist.
+
+        Raises:
+            Exception: If the database doesn't exist and ensure_db is False.
+        """
+
+        # TODO: Find some way to remove the restriction that old sessions will be destroyed.
+        # Generally we should allow using `use_database` in a chainable way where it opens a new
+        # "database session", for example, two lines below should be allowed to work simultaneously:
+        # client.use_database(a).create_table()
+        # client.use_database(b).create_table()
+
+        if ensure_db and not self.has_database(database):
+            self.create_database(database, if_exists="skip")
+        elif not ensure_db and not self.has_database(database):
+            raise ValueError(f"Database '{database}' does not exist")
+
+        new_url = self._db_engine.url.set(database=database)
+
+        self._db_engine.dispose()
+
+        new_client = TiDBClient.connect(
+            url=new_url.render_as_string(hide_password=False),
+            **self._reconnect_params,
+        )
+        self._db_engine = new_client._db_engine
+        self._inspector = new_client._inspector
+        self._reconnect_params = new_client._reconnect_params
 
     # Table Management API
 
