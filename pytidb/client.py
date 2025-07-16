@@ -64,6 +64,7 @@ class TiDBClient:
                 database=database,
                 enable_ssl=enable_ssl,
             )
+            # TODO: When URL is passed in directly, it should be validated.
 
         if ensure_db:
             try:

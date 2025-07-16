@@ -3,7 +3,7 @@ import re
 from urllib.parse import quote
 from typing import Dict, Optional, Any, List, TypeVar, Tuple
 
-from pydantic import AnyUrl
+from pydantic import AnyUrl, UrlConstraints
 from sqlalchemy import Column, Index, String, create_engine, make_url
 from sqlmodel import AutoString
 from tidb_vector.sqlalchemy import VectorType
@@ -15,6 +15,30 @@ from typing import Union
 TIDB_SERVERLESS_HOST_PATTERN = re.compile(
     r"gateway\d{2}\.(.+)\.(prod|dev|staging)\.(shared\.)?(aws|alicloud)\.tidbcloud\.com"
 )
+
+
+class TiDBConnectionURL(AnyUrl):
+    """A URL that enforces specific constraints for TiDB connections.
+
+    * User info required
+    * TLD not required
+    * Host not required
+    """
+
+    _constraints = UrlConstraints(
+        allowed_schemes=[
+            "mysql",
+            "mysql+mysqlconnector",
+            "mysql+aiomysql",
+            "mysql+asyncmy",
+            "mysql+mysqldb",
+            "mysql+pymysql",
+            "mysql+cymysql",
+            "mysql+pyodbc",
+        ],
+        default_port=4000,
+        host_required=True,
+    )
 
 
 def create_engine_without_db(url, echo=False, **kwargs):
@@ -57,7 +81,7 @@ def build_tidb_connection_url(
             enable_ssl = None
 
     return str(
-        AnyUrl.build(
+        TiDBConnectionURL.build(
             scheme=schema,
             host=host,
             port=port,
