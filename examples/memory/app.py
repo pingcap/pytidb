@@ -107,9 +107,7 @@ with col2:
         if memories:
             with st.container(height=500, border=False):
                 for i, mem in enumerate(memories):
-                    title = (
-                        f"Memory#{i+1} - {mem['created_at'].strftime('%Y-%m-%d %H:%M')}"
-                    )
+                    title = f"Memory#{i + 1} - {mem['created_at'].strftime('%Y-%m-%d %H:%M')}"
                     with st.expander(title, expanded=True):
                         st.write(mem["memory"])
                         st.caption(f"Created: {mem['created_at']}")
