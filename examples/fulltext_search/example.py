@@ -31,7 +31,7 @@ class Item(TableModel):
     title: str = FullTextField(fts_parser="MULTILINGUAL")
 
 
-table = db.create_table(schema=Item, mode="overwrite")
+table = db.create_table(schema=Item, if_exists="overwrite")
 print("Table created\n")
 
 # Insert data

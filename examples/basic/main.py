@@ -35,7 +35,7 @@ class Item(TableModel):
     meta: dict = Field(sa_type=JSON, default_factory=dict)
 
 
-table = db.create_table(schema=Item, mode="overwrite")
+table = db.create_table(schema=Item, if_exists="overwrite")
 print("Table created")
 
 # Truncate table

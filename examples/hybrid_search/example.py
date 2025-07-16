@@ -40,7 +40,7 @@ class Chunk(TableModel, table=True):
     text_vec: list[float] = embed_fn.VectorField(source_field="text")
 
 
-table = db.create_table(schema=Chunk, mode="overwrite")
+table = db.create_table(schema=Chunk, if_exists="overwrite")
 print("Table created.\n")
 
 

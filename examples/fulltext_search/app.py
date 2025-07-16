@@ -33,7 +33,7 @@ class Item(TableModel):
 table = db.open_table(Item)
 if table is None:
     with st.spinner("Loading sample items, it may take a while..."):
-        table = db.create_table(schema=Item, mode="exist_ok")
+        table = db.create_table(schema=Item, if_exists="skip")
         if table.rows() == 0:
             with open("sample_items.json", "r", encoding="utf-8") as f:
                 sample_items = json.load(f)
@@ -47,14 +47,16 @@ with st.sidebar:
     st.logo(
         "../assets/logo-full.svg", size="large", link="https://pingcap.github.io/ai/"
     )
-    st.markdown("""#### Overview
+    st.markdown(
+        """#### Overview
 
 **Full-text search** is a technique that finds documents or data by matching keywords or phrases
 within the entire text content.
 
-TiDB provides full-text search capabilities for **massive datasets** with high performance and 
+TiDB provides full-text search capabilities for **massive datasets** with high performance and
 built-in **multilingual support**.
-    """)
+    """
+    )
     st.write("#### Settings")
     language = st.selectbox(
         "Select your preferred language for search:",

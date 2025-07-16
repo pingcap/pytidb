@@ -20,7 +20,7 @@ PROMPT_TEMPLATE = """Context information is below.
 ---------------------
 {context}
 ---------------------
-Given the information and not prior knowledge, answer the query 
+Given the information and not prior knowledge, answer the query
 in a detailed and precise manner.
 
 Query: {question}
@@ -58,7 +58,7 @@ class Chunk(TableModel):
     )
 
 
-table = db.create_table(schema=Chunk, mode="exist_ok")
+table = db.create_table(schema=Chunk, if_exists="skip")
 
 
 # Insert sample chunks
@@ -99,13 +99,15 @@ if len(st.session_state.messages) > 0:
         st.chat_message(message["role"]).markdown(message["content"])
 else:
     with st.chat_message("assistant"):
-        st.markdown("""
+        st.markdown(
+            """
         👋 Hello! I'm your AI assistant powered by TiDB.
 
         Try asking me:
         - What's TiDB?
         - How to deploy LLM locally?
-        """)
+        """
+        )
 
 # React to user input
 final_response = ""
