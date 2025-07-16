@@ -3,7 +3,7 @@ import re
 from urllib.parse import quote
 from typing import Dict, Optional, Any, List, TypeVar, Tuple
 
-from pydantic import AnyUrl, UrlConstraints
+from pydantic import AnyUrl
 from sqlalchemy import Column, Index, String, create_engine, make_url
 from sqlmodel import AutoString
 from tidb_vector.sqlalchemy import VectorType
@@ -23,30 +23,6 @@ def create_engine_without_db(url, echo=False, **kwargs):
     return create_engine(temp_db_url, echo=echo, **kwargs)
 
 
-class TiDBDsn(AnyUrl):
-    """A type that will accept any TiDB DSN.
-
-    * User info required
-    * TLD not required
-    * Host not required
-    """
-
-    _constraints = UrlConstraints(
-        allowed_schemes=[
-            "mysql",
-            "mysql+mysqlconnector",
-            "mysql+aiomysql",
-            "mysql+asyncmy",
-            "mysql+mysqldb",
-            "mysql+pymysql",
-            "mysql+cymysql",
-            "mysql+pyodbc",
-        ],
-        default_port=4000,
-        host_required=True,
-    )
-
-
 def build_tidb_dsn(
     schema: str = "mysql+pymysql",
     host: str = "localhost",
@@ -55,23 +31,45 @@ def build_tidb_dsn(
     password: str = "",
     database: str = "test",
     enable_ssl: Optional[bool] = None,
-) -> TiDBDsn:
+) -> str:
+    """
+    Build a TiDB DSN (Data Source Name) string for database connection.
+
+    Args:
+        schema (str, optional): The connection protocol. Defaults to "mysql+pymysql".
+        host (str, optional): The host address of TiDB server. Defaults to "localhost".
+        port (int, optional): The port number of TiDB server. Defaults to 4000.
+        username (str, optional): The username for authentication. Defaults to "root".
+        password (str, optional): The password for authentication. Defaults to "".
+        database (str, optional): The database name to connect to. Defaults to "test".
+        enable_ssl (Optional[bool], optional): Whether to enable SSL for the connection.
+            If None (default), SSL is automatically enabled for TiDB Serverless hosts
+            and disabled for other hosts.
+
+    Returns:
+        str: A DSN string that can be used to connect to a TiDB database.
+    """
+
     if enable_ssl is None:
         if host and TIDB_SERVERLESS_HOST_PATTERN.match(host):
             enable_ssl = True
         else:
             enable_ssl = None
 
-    return TiDBDsn.build(
-        scheme=schema,
-        host=host,
-        port=port,
-        username=username,
-        # TODO: remove quote after following issue is fixed:
-        # https://github.com/pydantic/pydantic/issues/8061
-        password=quote(password) if password else None,
-        path=database,
-        query="ssl_verify_cert=true&ssl_verify_identity=true" if enable_ssl else None,
+    return str(
+        AnyUrl.build(
+            scheme=schema,
+            host=host,
+            port=port,
+            username=username,
+            # TODO: remove quote after following issue is fixed:
+            # https://github.com/pydantic/pydantic/issues/8061
+            password=quote(password) if password else None,
+            path=database,
+            query=(
+                "ssl_verify_cert=true&ssl_verify_identity=true" if enable_ssl else None
+            ),
+        )
     )
 
 

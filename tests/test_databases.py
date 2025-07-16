@@ -14,7 +14,7 @@ def test_databases(client):
     client.create_database(db_name, skip_exists=True)
 
     # list database names.
-    db_names = client.database_names()
+    db_names = client.list_databases()
     assert db_name in db_names
     assert client.has_database(db_name)
 

@@ -40,7 +40,7 @@ class TiDBConnector:
         database: Optional[str] = None,
     ):
         self.tidb_client = TiDBClient.connect(
-            database_url=database_url,
+            dsn=database_url,
             host=host,
             port=port,
             username=username,
@@ -79,7 +79,7 @@ class TiDBConnector:
         )
 
     def show_tables(self) -> list[str]:
-        return self.tidb_client.table_names()
+        return self.tidb_client.list_tables()
 
     def query(self, sql_stmt: str) -> list[dict]:
         return self.tidb_client.query(sql_stmt).to_list()
@@ -174,13 +174,13 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
 # MCP Server
 mcp = FastMCP(
     "tidb",
-    instructions="""You are a tidb database expert, you can help me query, create, and execute sql 
+    instructions="""You are a tidb database expert, you can help me query, create, and execute sql
 statements on the tidb database.
 
 Notice:
 - use TiDB instead of MySQL syntax for sql statements
 - use `db_query("SHOW DATABASES()")` to get the current database.
-- use switch_database tool only if there's explicit instruction, you can reference different databases 
+- use switch_database tool only if there's explicit instruction, you can reference different databases
 via the `<db_name>.<table_name>` syntax.
 - TiDB using VECTOR to store the vector data
 
@@ -202,7 +202,7 @@ via the `<db_name>.<table_name>` syntax.
     ORDER BY similarity DESC
     LIMIT 3;
     ```
-    
+
     """,
     lifespan=app_lifespan,
 )
@@ -224,9 +224,9 @@ def show_databases(ctx: Context) -> list[dict]:
 @mcp.tool(
     description="""
     Switch to a specific database.
-    
+
     Note:
-    - The user has already specified the database in the configuration, so you don't need to switch 
+    - The user has already specified the database in the configuration, so you don't need to switch
     database before you execute the sql statements.
     """
 )
