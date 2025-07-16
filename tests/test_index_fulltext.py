@@ -69,5 +69,5 @@ class TestCreateFullTextIndex:
             text: str = FullTextField(index=True)  # Create index by declarative API.
 
         tbl = self.client.create_table(schema=Chunk, mode="overwrite")
-        tbl.create_fts_index("text", exist_ok=True)
+        tbl.create_fts_index("text", skip_existing=True)
         assert tbl.has_fts_index("text")

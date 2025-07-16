@@ -1,6 +1,5 @@
 <h1 align="center">TiDB Python SDK</h1>
 
-
 <div align="center">
   <a href="https://pypi.org/project/pytidb">
     <img src="https://img.shields.io/pypi/v/pytidb.svg" alt="Python Package Index"/>
@@ -37,10 +36,9 @@
 - 💱 Transaction support
 - 🔌 [Built-in MCP support](https://pingcap.github.io/ai/integrations/mcp)
 
-
 > [!TIP]
 > Click the button below to install **TiDB MCP Server** in Cursor. Then, confirm by clicking **Install** when prompted.
-> 
+>
 > [![Install TiDB MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=TiDB&config=eyJjb21tYW5kIjoidXZ4IC0tZnJvbSBweXRpZGJbbWNwXSB0aWRiLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiVElEQl9IT1NUIjoibG9jYWxob3N0IiwiVElEQl9QT1JUIjoiNDAwMCIsIlRJREJfVVNFUk5BTUUiOiJyb290IiwiVElEQl9QQVNTV09SRCI6IiIsIlRJREJfREFUQUJBU0UiOiJ0ZXN0In19)
 
 ## Installation
@@ -100,7 +98,7 @@ class Chunk(TableModel):
     )  # 👈 Defines the vector field.
     user_id: int = Field()
 
-table = db.create_table(schema=Chunk, mode="exist_ok")
+table = db.create_table(schema=Chunk, mode="skip_existing")
 ```
 
 **Bulk insert data:**
@@ -182,7 +180,7 @@ class Pet(TableModel):
         source_type="image"
     )
 
-table = db.create_table(schema=Pet, mode="exist_ok")
+table = db.create_table(schema=Pet, mode="skip_existing")
 
 # Insert sample images ...
 table.insert(Pet(image_uri="path/to/shiba_inu_14.jpg"))

@@ -77,7 +77,7 @@ sample_documents = [
 table = db.open_table(Document)
 if table is None:
     with st.spinner("Loading sample documents, it may take a while..."):
-        table = db.create_table(schema=Document, mode="exist_ok")
+        table = db.create_table(schema=Document, mode="skip_existing")
         if table.rows() == 0:
             table.bulk_insert([Document(text=text) for text in sample_documents])
 
@@ -88,12 +88,14 @@ with st.sidebar:
     st.logo(
         "../assets/logo-full.svg", size="large", link="https://pingcap.github.io/ai/"
     )
-    st.markdown("""#### Overview
+    st.markdown(
+        """#### Overview
 
-**Hybrid search** fuses **exact matching** from full-text search with **semantic understanding** 
+**Hybrid search** fuses **exact matching** from full-text search with **semantic understanding**
 from vector search, delivering more relevant and reliable results.
 
-    """)
+    """
+    )
     st.markdown("#### Settings")
     search_type = st.selectbox(
         label="Search type",

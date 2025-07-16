@@ -41,7 +41,7 @@ class Chunk(TableModel):
     meta: dict = Field(sa_type=JSON)
 
 
-table = db.create_table(schema=Chunk, mode="exist_ok")
+table = db.create_table(schema=Chunk, mode="skip_existing")
 
 # Insert sample data.
 sample_chunks = [
@@ -147,11 +147,13 @@ with st.sidebar:
     st.logo(
         "../assets/logo-full.svg", size="large", link="https://pingcap.github.io/ai/"
     )
-    st.markdown("""#### Overview
-                
-**Vector search** offers a powerful solution for **semantic similarity** searches across 
+    st.markdown(
+        """#### Overview
+
+**Vector search** offers a powerful solution for **semantic similarity** searches across
 diverse data types, such as documents, images, audio, and video.
-""")
+"""
+    )
     st.markdown("#### Settings")
     query_limit = st.sidebar.slider("query limit", min_value=1, max_value=20, value=5)
     distance_threshold = st.sidebar.slider(

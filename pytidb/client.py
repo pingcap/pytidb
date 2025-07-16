@@ -93,8 +93,8 @@ class TiDBClient:
 
     # Database Management API
 
-    def create_database(self, name: str, skip_exists: bool = False):
-        return create_database(self._db_engine, name, skip_exists)
+    def create_database(self, name: str, skip_existing: bool = False):
+        return create_database(self._db_engine, name, skip_existing)
 
     def drop_database(self, name: str):
         db_name = self._identifier_preparer.quote(name)
@@ -117,17 +117,19 @@ class TiDBClient:
         self,
         *,
         schema: Optional[Type[TableModel]] = None,
-        mode: Optional[Literal["create", "overwrite", "exist_ok"]] = "create",
+        mode: Optional[
+            Literal["raise_existing", "overwrite", "skip_existing"]
+        ] = "raise_existing",
     ) -> Table:
-        if mode == "create":
+        if mode == "raise_existing":
             table = Table(schema=schema, client=self)
         elif mode == "overwrite":
             self.drop_table(schema.__tablename__)
             table = Table(schema=schema, client=self)
-        elif mode == "exist_ok":
-            table = Table(schema=schema, client=self, exist_ok=True)
+        elif mode == "skip_existing":
+            table = Table(schema=schema, client=self, skip_existing=True)
         else:
-            raise ValueError(f"Invalid create mode: {mode}")
+            raise ValueError(f"Invalid mode: {mode}")
         return table
 
     def _get_table_model(self, table_name: str) -> Optional[Type[DeclarativeMeta]]:
@@ -140,7 +142,7 @@ class TiDBClient:
         # If the table in the mapper registry.
         table_model = self._get_table_model(table_name)
         if table_model is not None:
-            table = Table(schema=table_model, client=self, exist_ok=True)
+            table = Table(schema=table_model, client=self, skip_existing=True)
             return table
 
         return None

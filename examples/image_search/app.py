@@ -87,7 +87,7 @@ def setup_table(db: TiDBClient, embed_fn: EmbeddingFunction) -> Table:
                 source_type="image",
             )
 
-        table = db.create_table(schema=Pet, mode="exist_ok")
+        table = db.create_table(schema=Pet, mode="skip_existing")
         return table
     except Exception as e:
         st.error(f"Failed to create table: {str(e)}")
@@ -175,9 +175,11 @@ def display_search_results(
 def main():
     # Header
     st.title("🐕 Pet Image Search")
-    st.markdown("""
+    st.markdown(
+        """
         Upload a photo or describe your ideal pet - find your perfect furry friend!
-    """)
+    """
+    )
 
     # Initialize...
     if st.session_state.db is None:
