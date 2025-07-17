@@ -58,7 +58,7 @@ class Chunk(TableModel):
     )
 
 
-table = db.create_table(schema=Chunk, mode="skip")
+table = db.create_table(schema=Chunk, mode="exist_ok")
 
 
 # Insert sample chunks
