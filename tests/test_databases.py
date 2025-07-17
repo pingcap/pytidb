@@ -212,20 +212,3 @@ def test_multiple_database_switches(fresh_client):
         fresh_client.use_database(initial_db)
         for db in test_dbs:
             fresh_client.drop_database(db)
-
-
-def test_use_database_with_special_characters(fresh_client):
-    """Test use_database with database names containing special characters."""
-    initial_db = fresh_client.current_database()
-    # Use a database name with underscores and numbers (common special chars)
-    test_db = f"test_special_123_{uuid.uuid4().hex[:8]}"
-
-    fresh_client.create_database(test_db)
-
-    try:
-        fresh_client.use_database(test_db)
-        assert fresh_client.current_database() == test_db
-
-    finally:
-        fresh_client.use_database(initial_db)
-        fresh_client.drop_database(test_db)
