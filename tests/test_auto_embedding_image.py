@@ -17,7 +17,7 @@ def image_embed_fn():
 
 
 @pytest.fixture(scope="module")
-def pet_table(client: TiDBClient, image_embed_fn: EmbeddingFunction):
+def pet_table(shared_client: TiDBClient, image_embed_fn: EmbeddingFunction):
     class Pet(TableModel):
         __tablename__ = "pets"
         id: int = Field(primary_key=True)
@@ -31,7 +31,7 @@ def pet_table(client: TiDBClient, image_embed_fn: EmbeddingFunction):
         )
 
     # Create table.
-    tbl = client.create_table(schema=Pet, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=Pet, if_exists="overwrite")
 
     # INSERT.
     tbl.insert(

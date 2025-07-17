@@ -1,5 +1,6 @@
 import os
 import uuid
+import logging
 from typing import Generator
 
 import pytest
@@ -7,54 +8,66 @@ from dotenv import load_dotenv
 
 from pytidb import TiDBClient
 
+logger = logging.getLogger(__name__)
+
 
 @pytest.fixture(scope="session", autouse=True)
 def env():
     print("Loading environment variables")
-    load_dotenv()
+    load_dotenv("tests/.env")
+
+
+def create_tidb_client(database: str) -> TiDBClient:
+    return TiDBClient.connect(
+        host=os.getenv("TIDB_HOST", "localhost"),
+        port=int(os.getenv("TIDB_PORT", "4000")),
+        username=os.getenv("TIDB_USERNAME", "root"),
+        password=os.getenv("TIDB_PASSWORD", ""),
+        database=database,
+        ensure_db=True,  # This will create the database if it doesn't exist
+        # debug=True,
+    )
+
+
+def generate_db_name(prefix: str = "test_pytidb") -> str:
+    return f"{prefix}_{uuid.uuid4().hex[:8]}"
 
 
 @pytest.fixture(scope="session", autouse=True)
-def client(env) -> TiDBClient:
+def shared_client(env) -> Generator[TiDBClient, None, None]:
     """
-    Create a TiDBClient connected to the test database.
-    Recommend to use fresh_client instead for isolated tests.
-    """
+    Create a shared TiDBClient instance that persists across multiple test functions.
 
-    return TiDBClient.connect(
-        # database_url=os.getenv("TIDB_DATABASE_URL", None),
-        host=os.getenv("TIDB_HOST", "localhost"),
-        port=int(os.getenv("TIDB_PORT", "4000")),
-        username=os.getenv("TIDB_USERNAME", "root"),
-        password=os.getenv("TIDB_PASSWORD", ""),
-        database=os.getenv("TIDB_DATABASE", "test"),
-        ensure_db=True,  # This will create the database if it doesn't exist
-        # debug=True,
-    )
+    A test database will be created before the tests start and dropped
+    after all tests complete.
+    """
+    db_name = generate_db_name()
+    tidb_client = create_tidb_client(db_name)
+
+    yield tidb_client
+
+    try:
+        tidb_client.drop_database(db_name)
+        tidb_client.disconnect()
+    except Exception as e:
+        logger.error(f"Failed to drop test database {db_name}: {e}")
 
 
 @pytest.fixture()
-def fresh_client() -> Generator[TiDBClient, None, None]:
+def isolated_client(env) -> Generator[TiDBClient, None, None]:
     """
-    Create a TiDBClient connected to a fresh test database.
+    Create an isolated TiDBClient instance that exists only for the lifetime of a single test function.
+
+    A test database will be created before the test function starts and dropped
+    after the test function completes.
     """
+    db_name = generate_db_name()
+    client = create_tidb_client(db_name)
 
-    unique_db_name = f"test_pytidb_{uuid.uuid4().hex[:8]}"
+    yield client
 
-    c = TiDBClient.connect(
-        host=os.getenv("TIDB_HOST", "localhost"),
-        port=int(os.getenv("TIDB_PORT", "4000")),
-        username=os.getenv("TIDB_USERNAME", "root"),
-        password=os.getenv("TIDB_PASSWORD", ""),
-        database=unique_db_name,
-        ensure_db=True,  # This will create the database if it doesn't exist
-        # debug=True,
-    )
-
-    yield c
-
-    # Cleanup: drop the test database when session ends
     try:
-        c.drop_database(unique_db_name)
+        client.drop_database(db_name)
+        client.disconnect()
     except Exception as e:
-        print(f"Warning: Failed to drop temp database {unique_db_name}: {e}")
+        logger.error(f"Failed to drop test database {db_name}: {e}")

@@ -8,14 +8,14 @@ from pytidb.schema import TableModel, Field, VectorField
 logger = logging.getLogger(__name__)
 
 
-def test_table_crud(client):
+def test_table_crud(shared_client):
     class Chunk(TableModel, table=True):
         __tablename__ = "test_crud_table"
         id: int = Field(primary_key=True)
         text: str = Field(max_length=20)
         text_vec: Any = VectorField(dimensions=3, index=False)
 
-    tbl = client.create_table(schema=Chunk, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=Chunk, if_exists="overwrite")
 
     # CREATE
     tbl.insert(Chunk(id=1, text="foo", text_vec=[1, 2, 3]))
@@ -58,14 +58,14 @@ def test_table_crud(client):
     assert tbl.rows() == 0
 
 
-def test_table_query(client):
+def test_table_query(shared_client):
     class Chunk(TableModel):
         __tablename__ = "test_query_table"
         id: int = Field(primary_key=True)
         text: str = Field(max_length=20)
         text_vec: Any = VectorField(dimensions=3, index=False)
 
-    tbl = client.create_table(schema=Chunk, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=Chunk, if_exists="overwrite")
 
     tbl.insert(Chunk(id=1, text="foo", text_vec=[1, 2, 3]))
     tbl.insert(Chunk(id=2, text="bar", text_vec=[4, 5, 6]))

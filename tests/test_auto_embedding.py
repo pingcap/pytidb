@@ -4,7 +4,7 @@ from pytidb.embeddings import EmbeddingFunction
 from pytidb.schema import TableModel, Field
 
 
-def test_auto_embedding(client: TiDBClient):
+def test_auto_embedding(shared_client: TiDBClient):
     text_embed_small = EmbeddingFunction("openai/text-embedding-3-small")
     test_table_name = "test_auto_embedding"
 
@@ -17,7 +17,7 @@ def test_auto_embedding(client: TiDBClient):
         )
         user_id: int = Field()
 
-    tbl = client.create_table(schema=Chunk, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=Chunk, if_exists="overwrite")
 
     tbl.insert(Chunk(id=1, text="foo", user_id=1))
     tbl.bulk_insert(

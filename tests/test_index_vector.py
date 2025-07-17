@@ -9,15 +9,11 @@ class TestCreateVectorIndex:
     """Test class for vector index functionality."""
 
     @pytest.fixture(autouse=True)
-    def setup_and_teardown(self, client: TiDBClient):
+    def setup_and_teardown(self, isolated_client: TiDBClient):
         """Setup and teardown for each test method."""
-        self.client = client
+        self.client = isolated_client
         yield
-        # Cleanup: drop test table if it exists
-        try:
-            self.client.drop_table("test_vector_index")
-        except Exception:
-            pass
+        self.client = None
 
     def test_auto_create(self):
         class Chunk(TableModel):

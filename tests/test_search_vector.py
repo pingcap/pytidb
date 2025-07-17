@@ -15,7 +15,7 @@ from pytidb.search import SCORE_LABEL
 
 
 @pytest.fixture(scope="module")
-def vector_table(client: TiDBClient):
+def vector_table(shared_client: TiDBClient):
     class Chunk(TableModel):
         __tablename__ = "test_vector_search"
         id: int = Field(None, primary_key=True)
@@ -24,7 +24,7 @@ def vector_table(client: TiDBClient):
         user_id: int = Field(None)
         meta: dict = Field(sa_type=JSON)
 
-    tbl = client.create_table(schema=Chunk, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=Chunk, if_exists="overwrite")
 
     # Prepare test data.
     tbl.bulk_insert(
@@ -214,7 +214,7 @@ def test_rerank(vector_table: Table, reranker: BaseReranker):
     assert reranked_results[0]["_score"] > 0
 
 
-def test_with_multi_vector_fields(client: TiDBClient):
+def test_with_multi_vector_fields(shared_client: TiDBClient):
     class ChunkWithMultiVec(TableModel):
         __tablename__ = "test_vector_search_multi_vec"
         id: int = Field(None, primary_key=True)
@@ -223,7 +223,7 @@ def test_with_multi_vector_fields(client: TiDBClient):
         body: str = Field(None)
         body_vec: list[float] = Field(sa_column=Column(Vector(3)))
 
-    tbl = client.create_table(schema=ChunkWithMultiVec, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=ChunkWithMultiVec, if_exists="overwrite")
     tbl.bulk_insert(
         [
             ChunkWithMultiVec(

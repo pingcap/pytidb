@@ -5,7 +5,7 @@ from pytidb.client import TiDBClient
 from sqlmodel import SQLModel, Field, Relationship as SQLRelationship
 
 
-def test_static_create_models(client: TiDBClient):
+def test_static_create_models(shared_client: TiDBClient):
     class Entity(SQLModel, table=True):
         __tablename__ = "entities_1111"
         id: Optional[int] = Field(default=None, primary_key=True)
@@ -23,10 +23,10 @@ def test_static_create_models(client: TiDBClient):
             },
         )
 
-    SQLModel.metadata.create_all(client.db_engine)
+    SQLModel.metadata.create_all(shared_client.db_engine)
 
 
-def test_dynamic_create_models(client: TiDBClient):
+def test_dynamic_create_models(shared_client: TiDBClient):
     entity_table_name = "entities_2222"
     entity_model_name = f"EntityModel_{entity_table_name}"
 
@@ -67,4 +67,4 @@ def test_dynamic_create_models(client: TiDBClient):
         table=True,
     )
 
-    SQLModel.metadata.create_all(client.db_engine)
+    SQLModel.metadata.create_all(shared_client.db_engine)
