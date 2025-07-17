@@ -41,7 +41,7 @@ class Chunk(TableModel):
     meta: dict = Field(sa_type=JSON)
 
 
-table = db.create_table(schema=Chunk, if_exists="skip")
+table = db.create_table(schema=Chunk, mode="exist_ok")
 
 # Insert sample data.
 sample_chunks = [
