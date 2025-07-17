@@ -8,14 +8,14 @@ from pytidb.schema import TableModel, Field, FullTextField
 
 
 @pytest.fixture(scope="module")
-def text_table(client: TiDBClient):
+def text_table(shared_client: TiDBClient):
     class Chunk(TableModel):
         __tablename__ = "test_fulltext_search"
         id: int = Field(primary_key=True)
         name: str = Field()
         description: str = FullTextField()
 
-    tbl = client.create_table(schema=Chunk, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=Chunk, if_exists="overwrite")
 
     # Prepare test data.
     tbl.bulk_insert(
@@ -41,6 +41,7 @@ def text_table(client: TiDBClient):
     return tbl
 
 
+@pytest.mark.serial
 def test_fulltext_search(text_table: Table):
     # to_pydantic()
     results = (
@@ -86,6 +87,7 @@ def reranker():
     )
 
 
+@pytest.mark.serial
 def test_rerank(text_table: Table, reranker: BaseReranker):
     reranked_results = (
         text_table.search(
@@ -102,14 +104,15 @@ def test_rerank(text_table: Table, reranker: BaseReranker):
     assert reranked_results[0]["_score"] > 0
 
 
-def test_with_multiple_text_fields(client: TiDBClient):
+@pytest.mark.serial
+def test_with_multiple_text_fields(shared_client: TiDBClient):
     class Article(TableModel):
         __tablename__ = "test_fts_with_multi_text_fields"
         id: int = Field(primary_key=True)
         title: str = FullTextField()
         body: str = FullTextField()
 
-    tbl = client.create_table(schema=Article, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=Article, if_exists="overwrite")
     tbl.bulk_insert(
         [
             Article(

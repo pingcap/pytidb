@@ -11,16 +11,13 @@ class TestCreateFullTextIndex:
     """Test class for full text index functionality."""
 
     @pytest.fixture(autouse=True)
-    def setup_and_teardown(self, client: TiDBClient):
+    def setup_and_teardown(self, shared_client: TiDBClient):
         """Setup and teardown for each test method."""
-        self.client = client
+        self.client = shared_client
         yield
-        # Cleanup: drop test table if it exists
-        try:
-            self.client.drop_table("test_fulltext_index")
-        except Exception:
-            pass
+        self.client = None
 
+    @pytest.mark.serial
     def test_auto_create(self):
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_auto_create"
@@ -30,6 +27,7 @@ class TestCreateFullTextIndex:
         tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_fts_index("text")
 
+    @pytest.mark.serial
     def test_auto_with_standard_parser(self):
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_auto_with_standard_parser"
@@ -39,6 +37,7 @@ class TestCreateFullTextIndex:
         tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_fts_index("text")
 
+    @pytest.mark.serial
     def test_declare_with_index_cls(self):
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_declare_index_cls"
@@ -49,6 +48,7 @@ class TestCreateFullTextIndex:
         tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_fts_index("text")
 
+    @pytest.mark.serial
     def test_manual_with_table_api(self):
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_manual_table_api"
@@ -60,7 +60,7 @@ class TestCreateFullTextIndex:
         assert tbl.has_fts_index("text")
 
     @pytest.mark.skip(
-        reason="Unknown schema content: '  FULLTEXT INDEX `fts_idx_text`(`text`) WITH PARSER MULTILINGUAL'"
+        reason="Unknown schema content: 'FULLTEXT INDEX `fts_idx_text`(`text`) WITH PARSER MULTILINGUAL'"
     )
     def test_manual_with_table_api_exist_ok(self):
         class Chunk(TableModel):
