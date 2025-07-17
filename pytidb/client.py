@@ -165,14 +165,17 @@ class TiDBClient:
 
         new_url = self._db_engine.url.set(database=database)
 
-        self._db_engine.dispose()
-
+        # Attempt to create the new client first, only dispose and update attributes if successful
         new_client = TiDBClient.connect(
             url=new_url.render_as_string(hide_password=False),
             **self._reconnect_params,
         )
+
+        # Now that new_client is successfully created, dispose the old engine and update all attributes
+        self._db_engine.dispose()
         self._db_engine = new_client._db_engine
         self._inspector = new_client._inspector
+        self._identifier_preparer = new_client._db_engine.dialect.identifier_preparer
         self._reconnect_params = new_client._reconnect_params
 
     # Table Management API
