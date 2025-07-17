@@ -17,7 +17,7 @@ class TestCreateFullTextIndex:
         yield
         self.client = None
 
-    @pytest.mark.serial
+    @pytest.mark.xdist_group(name="fulltext_index_1")
     def test_auto_create(self):
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_auto_create"
@@ -27,7 +27,7 @@ class TestCreateFullTextIndex:
         tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_fts_index("text")
 
-    @pytest.mark.serial
+    @pytest.mark.xdist_group(name="fulltext_index_1")
     def test_auto_with_standard_parser(self):
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_auto_with_standard_parser"
@@ -37,7 +37,7 @@ class TestCreateFullTextIndex:
         tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_fts_index("text")
 
-    @pytest.mark.serial
+    @pytest.mark.xdist_group(name="fulltext_index_1")
     def test_declare_with_index_cls(self):
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_declare_index_cls"
@@ -48,7 +48,7 @@ class TestCreateFullTextIndex:
         tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_fts_index("text")
 
-    @pytest.mark.serial
+    @pytest.mark.xdist_group(name="fulltext_index_1")
     def test_manual_with_table_api(self):
         class Chunk(TableModel):
             __tablename__ = "test_fts_index_manual_table_api"

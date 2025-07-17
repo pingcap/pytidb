@@ -41,7 +41,7 @@ def text_table(shared_client: TiDBClient):
     return tbl
 
 
-@pytest.mark.serial
+@pytest.mark.xdist_group(name="fulltext_index_1")
 def test_fulltext_search(text_table: Table):
     # to_pydantic()
     results = (
@@ -87,7 +87,7 @@ def reranker():
     )
 
 
-@pytest.mark.serial
+@pytest.mark.xdist_group(name="fulltext_index_1")
 def test_rerank(text_table: Table, reranker: BaseReranker):
     reranked_results = (
         text_table.search(
@@ -104,7 +104,7 @@ def test_rerank(text_table: Table, reranker: BaseReranker):
     assert reranked_results[0]["_score"] > 0
 
 
-@pytest.mark.serial
+@pytest.mark.xdist_group(name="fulltext_index_1")
 def test_with_multiple_text_fields(shared_client: TiDBClient):
     class Article(TableModel):
         __tablename__ = "test_fts_with_multi_text_fields"
