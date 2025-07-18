@@ -94,7 +94,7 @@ def compress_image_if_needed(image: "Image", max_base64_length: int = 100000) ->
     return resized_image
 
 
-def encode_local_file_to_base64(file_path: Union[str, Path], compress_for_bedrock: bool = False) -> str:
+def encode_local_file_to_base64(file_path: Union[str, Path], max_base64_length: Optional[int] = None) -> str:
     try:
         # Convert to Path object for better path handling
         path = Path(file_path) if isinstance(file_path, str) else file_path
@@ -107,18 +107,15 @@ def encode_local_file_to_base64(file_path: Union[str, Path], compress_for_bedroc
         if not path.is_file():
             raise ValueError(f"Path is not a file: {file_path}")
 
-        # If compression is needed and it's an image file, compress it
-        if compress_for_bedrock and path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.webp', '.bmp']:
+        # If a max length is provided and it's an image file, compress it
+        if max_base64_length is not None and path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.webp', '.bmp']:
             try:
                 from PIL import Image
                 image = Image.open(path)
-                compressed_image = compress_image_if_needed(image, max_base64_length=100000)
+                compressed_image = compress_image_if_needed(image, max_base64_length=max_base64_length)
                 buffer = io.BytesIO()
                 compressed_image.save(buffer, format="JPEG", quality=70)
-                base64_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
-                if compress_for_bedrock:
-                    return f"data:image/jpeg;base64,{base64_str}"
-                return base64_str
+                return base64.b64encode(buffer.getvalue()).decode("utf-8")
             except ImportError:
                 # Fall back to normal encoding if PIL is not available
                 pass
@@ -126,24 +123,18 @@ def encode_local_file_to_base64(file_path: Union[str, Path], compress_for_bedroc
         # Read file content and encode to base64
         with open(path, "rb") as file:
             buffer = io.BytesIO(file.read())
-            base64_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
-            if compress_for_bedrock:
-                return f"data:image/jpeg;base64,{base64_str}"
-            return base64_str
+            return base64.b64encode(buffer.getvalue()).decode("utf-8")
     except Exception as e:
         raise ValueError(f"Error converting file to base64: {str(e)}")
 
 
-def encode_pil_image_to_base64(image: "Image", compress_for_bedrock: bool = False) -> str:
+def encode_pil_image_to_base64(image: "Image", max_base64_length: Optional[int] = None) -> str:
     try:
-        if compress_for_bedrock:
-            image = compress_image_if_needed(image, max_base64_length=100000)
+        if max_base64_length is not None:
+            image = compress_image_if_needed(image, max_base64_length=max_base64_length)
         
         buffer = io.BytesIO()
         image.save(buffer, format=image.format or "PNG")
-        base64_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
-        if compress_for_bedrock:
-            return f"data:image/jpeg;base64,{base64_str}"
-        return base64_str
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
     except Exception as e:
         raise ValueError(f"Failed to encode PIL Image to base64: {str(e)}")
