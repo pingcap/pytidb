@@ -39,14 +39,16 @@ def parse_url_safely(url_text: str) -> tuple[bool, Optional[ParseResult]]:
         return False, None
 
 
-def compress_image_if_needed(image: "Image", max_base64_length: int = 100000) -> "Image":
+def compress_image_if_needed(
+    image: "Image", max_base64_length: int = 100000
+) -> "Image":
     """
     Compress an image if its base64 representation would be too large.
-    
+
     Args:
         image: PIL Image object
         max_base64_length: Maximum allowed base64 string length
-        
+
     Returns:
         Compressed PIL Image object
     """
@@ -56,45 +58,47 @@ def compress_image_if_needed(image: "Image", max_base64_length: int = 100000) ->
         raise ImportError(
             "PIL (Pillow) is required for image processing. Install it with: pip install Pillow"
         )
-    
+
     # First try with original quality
     buffer = io.BytesIO()
     image.save(buffer, format=image.format or "JPEG", quality=95)
     base64_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    
+
     if len(base64_str) <= max_base64_length:
         return image
-    
+
     # If too large, try reducing quality progressively
     for quality in [85, 70, 50, 30]:
         buffer = io.BytesIO()
         image.save(buffer, format="JPEG", quality=quality)
         base64_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
-        
+
         if len(base64_str) <= max_base64_length:
             # Return compressed image
             buffer.seek(0)
             return Image.open(buffer)
-    
+
     # If still too large, resize the image
     original_size = image.size
     for scale in [0.8, 0.6, 0.4, 0.2]:
         new_size = (int(original_size[0] * scale), int(original_size[1] * scale))
         resized_image = image.resize(new_size, Image.Resampling.LANCZOS)
-        
+
         buffer = io.BytesIO()
         resized_image.save(buffer, format="JPEG", quality=70)
         base64_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
-        
+
         if len(base64_str) <= max_base64_length:
             buffer.seek(0)
             return Image.open(buffer)
-    
+
     # If even the smallest version is too large, return the smallest version anyway
     return resized_image
 
 
-def encode_local_file_to_base64(file_path: Union[str, Path], max_base64_length: Optional[int] = None) -> str:
+def encode_local_file_to_base64(
+    file_path: Union[str, Path], max_base64_length: Optional[int] = None
+) -> str:
     try:
         # Convert to Path object for better path handling
         path = Path(file_path) if isinstance(file_path, str) else file_path
@@ -108,18 +112,27 @@ def encode_local_file_to_base64(file_path: Union[str, Path], max_base64_length: 
             raise ValueError(f"Path is not a file: {file_path}")
 
         # If a max length is provided and it's an image file, compress it
-        if max_base64_length is not None and path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.webp', '.bmp']:
+        if max_base64_length is not None and path.suffix.lower() in [
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp",
+            ".bmp",
+        ]:
             try:
                 from PIL import Image
+
                 image = Image.open(path)
-                compressed_image = compress_image_if_needed(image, max_base64_length=max_base64_length)
+                compressed_image = compress_image_if_needed(
+                    image, max_base64_length=max_base64_length
+                )
                 buffer = io.BytesIO()
                 compressed_image.save(buffer, format="JPEG", quality=70)
                 return base64.b64encode(buffer.getvalue()).decode("utf-8")
             except ImportError:
                 # Fall back to normal encoding if PIL is not available
                 pass
-        
+
         # Read file content and encode to base64
         with open(path, "rb") as file:
             buffer = io.BytesIO(file.read())
@@ -128,11 +141,13 @@ def encode_local_file_to_base64(file_path: Union[str, Path], max_base64_length: 
         raise ValueError(f"Error converting file to base64: {str(e)}")
 
 
-def encode_pil_image_to_base64(image: "Image", max_base64_length: Optional[int] = None) -> str:
+def encode_pil_image_to_base64(
+    image: "Image", max_base64_length: Optional[int] = None
+) -> str:
     try:
         if max_base64_length is not None:
             image = compress_image_if_needed(image, max_base64_length=max_base64_length)
-        
+
         buffer = io.BytesIO()
         image.save(buffer, format=image.format or "PNG")
         return base64.b64encode(buffer.getvalue()).decode("utf-8")

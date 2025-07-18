@@ -18,7 +18,11 @@ from pytidb.base import Base, default_registry
 from pytidb.databases import create_database, database_exists
 from pytidb.schema import TableModel
 from pytidb.table import Table
-from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN, build_tidb_dsn, create_engine_without_db
+from pytidb.utils import (
+    TIDB_SERVERLESS_HOST_PATTERN,
+    build_tidb_dsn,
+    create_engine_without_db,
+)
 from pytidb.logger import logger
 from pytidb.result import SQLExecuteResult, SQLQueryResult
 
@@ -72,7 +76,7 @@ class TiDBClient:
             except Exception as e:
                 logger.error(f"Failed to ensure database exists: {str(e)}")
                 raise
-        
+
         if kwargs.get("pool_recycle") is None and kwargs.get("pool_pre_ping") is None:
             if host and TIDB_SERVERLESS_HOST_PATTERN.match(host):
                 kwargs["pool_recycle"] = 300

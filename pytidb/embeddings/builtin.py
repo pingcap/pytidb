@@ -127,7 +127,9 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
                 if image_url.scheme == "file":
                     file_path = urllib.request.url2pathname(image_url.path)
                     max_len = _MAX_B64_LENGTH_PER_MODEL.get(self.model_name)
-                    base64_str = encode_local_file_to_base64(file_path, max_base64_length=max_len)
+                    base64_str = encode_local_file_to_base64(
+                        file_path, max_base64_length=max_len
+                    )
                     # For bedrock models, prepend data URL prefix and return string
                     if self.model_name.startswith("bedrock/"):
                         return f"data:image/jpeg;base64,{base64_str}"
@@ -215,7 +217,9 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
                 if image_url.scheme == "file":
                     file_path = urllib.request.url2pathname(image_url.path)
                     max_len = _MAX_B64_LENGTH_PER_MODEL.get(self.model_name)
-                    base64_str = encode_local_file_to_base64(file_path, max_base64_length=max_len)
+                    base64_str = encode_local_file_to_base64(
+                        file_path, max_base64_length=max_len
+                    )
                     if self.model_name.startswith("bedrock/"):
                         return f"data:image/jpeg;base64,{base64_str}"
                     return {"image": base64_str}

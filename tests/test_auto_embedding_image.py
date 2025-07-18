@@ -117,9 +117,12 @@ def test_image_search_with_pil_image(
 
 # Bedrock Tests
 
+
 @pytest.fixture(scope="module")
 def bedrock_image_embed_fn():
-    return EmbeddingFunction(model_name="bedrock/amazon.titan-embed-image-v1", timeout=60)
+    return EmbeddingFunction(
+        model_name="bedrock/amazon.titan-embed-image-v1", timeout=60
+    )
 
 
 @pytest.fixture(scope="module")
