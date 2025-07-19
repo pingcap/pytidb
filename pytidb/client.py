@@ -20,7 +20,7 @@ from pytidb.schema import TableModel
 from pytidb.table import Table
 from pytidb.utils import (
     TIDB_SERVERLESS_HOST_PATTERN,
-    build_tidb_dsn,
+    build_tidb_connection_url,
     create_engine_without_db,
 )
 from pytidb.logger import logger
@@ -39,10 +39,11 @@ class TiDBClient:
         self._inspector = sqlalchemy.inspect(self._db_engine)
         self._identifier_preparer = self._db_engine.dialect.identifier_preparer
 
+    # TODO: Better typing for kwargs, including what's supported by pymysql and SQLAlchemy.
     @classmethod
     def connect(
         cls,
-        database_url: Optional[str] = None,
+        url: Optional[str] = None,
         *,
         host: Optional[str] = "localhost",
         port: Optional[int] = 4000,
@@ -54,27 +55,24 @@ class TiDBClient:
         debug: Optional[bool] = None,
         **kwargs,
     ) -> "TiDBClient":
-        if database_url is None:
-            database_url = str(
-                build_tidb_dsn(
-                    host=host,
-                    port=port,
-                    username=username,
-                    password=password,
-                    database=database,
-                    enable_ssl=enable_ssl,
-                )
+        if url is None:
+            url = build_tidb_connection_url(
+                host=host,
+                port=port,
+                username=username,
+                password=password,
+                database=database,
+                enable_ssl=enable_ssl,
             )
+            # TODO: When URL is passed in directly, it should be validated.
 
         if ensure_db:
             try:
-                temp_engine = create_engine_without_db(
-                    database_url, echo=debug, **kwargs
-                )
+                temp_engine = create_engine_without_db(url, echo=debug, **kwargs)
                 if not database_exists(temp_engine, database):
                     create_database(temp_engine, database)
             except Exception as e:
-                logger.error(f"Failed to ensure database exists: {str(e)}")
+                logger.error("Failed to ensure database exists: %s", str(e))
                 raise
 
         if kwargs.get("pool_recycle") is None and kwargs.get("pool_pre_ping") is None:
@@ -82,7 +80,7 @@ class TiDBClient:
                 kwargs["pool_recycle"] = 300
                 kwargs["pool_pre_ping"] = True
 
-        db_engine = create_engine(database_url, echo=debug, **kwargs)
+        db_engine = create_engine(url, echo=debug, **kwargs)
 
         return cls(db_engine)
 
@@ -95,8 +93,10 @@ class TiDBClient:
 
     # Database Management API
 
-    def create_database(self, name: str, skip_exists: bool = False):
-        return create_database(self._db_engine, name, skip_exists)
+    def create_database(
+        self, name: str, if_exists: Optional[Literal["raise", "skip"]] = "raise"
+    ):
+        return create_database(self._db_engine, name, if_exists=if_exists)
 
     def drop_database(self, name: str):
         db_name = self._identifier_preparer.quote(name)
@@ -104,7 +104,7 @@ class TiDBClient:
             stmt = text(f"DROP DATABASE IF EXISTS {db_name};")
             return conn.execute(stmt)
 
-    def database_names(self) -> List[str]:
+    def list_databases(self) -> List[str]:
         stmt = text("SHOW DATABASES;")
         with self._db_engine.connect() as conn:
             result = conn.execute(stmt)
@@ -119,17 +119,17 @@ class TiDBClient:
         self,
         *,
         schema: Optional[Type[TableModel]] = None,
-        mode: Optional[Literal["create", "overwrite", "exist_ok"]] = "create",
+        if_exists: Optional[Literal["raise", "overwrite", "skip"]] = "raise",
     ) -> Table:
-        if mode == "create":
+        if if_exists == "raise":
+            table = Table(schema=schema, client=self, if_exists="raise")
+        elif if_exists == "overwrite":
+            self.drop_table(schema.__tablename__, if_not_exists="skip")
             table = Table(schema=schema, client=self)
-        elif mode == "overwrite":
-            self.drop_table(schema.__tablename__)
-            table = Table(schema=schema, client=self)
-        elif mode == "exist_ok":
-            table = Table(schema=schema, client=self, exist_ok=True)
+        elif if_exists == "skip":
+            table = Table(schema=schema, client=self, if_exists="skip")
         else:
-            raise ValueError(f"Invalid create mode: {mode}")
+            raise ValueError(f"Invalid if_exists value: {if_exists}")
         return table
 
     def _get_table_model(self, table_name: str) -> Optional[Type[DeclarativeMeta]]:
@@ -142,22 +142,32 @@ class TiDBClient:
         # If the table in the mapper registry.
         table_model = self._get_table_model(table_name)
         if table_model is not None:
-            table = Table(schema=table_model, client=self, exist_ok=True)
+            table = Table(schema=table_model, client=self, if_exists="skip")
             return table
 
         return None
 
-    def table_names(self) -> List[str]:
-        return self._inspector.get_table_names()
+    def list_tables(self) -> List[str]:
+        stmt = text("SHOW TABLES;")
+        with self._db_engine.connect() as conn:
+            result = conn.execute(stmt)
+            return [row[0] for row in result]
 
     def has_table(self, table_name: str) -> bool:
         return self._inspector.has_table(table_name)
 
-    def drop_table(self, table_name: str):
+    def drop_table(
+        self,
+        table_name: str,
+        if_not_exists: Optional[Literal["raise", "skip"]] = "raise",
+    ):
+        if if_not_exists not in ["raise", "skip"]:
+            raise ValueError(f"Invalid if_not_exists value: {if_not_exists}")
+
         table = sqlalchemy.Table(
             table_name, Base.metadata, autoload_with=self._db_engine
         )
-        return table.drop(self._db_engine, checkfirst=True)
+        return table.drop(self._db_engine, checkfirst=(if_not_exists == "skip"))
 
     # Raw SQL API
 

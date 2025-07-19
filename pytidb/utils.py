@@ -23,8 +23,8 @@ def create_engine_without_db(url, echo=False, **kwargs):
     return create_engine(temp_db_url, echo=echo, **kwargs)
 
 
-class TiDBDsn(AnyUrl):
-    """A type that will accept any TiDB DSN.
+class TiDBConnectionURL(AnyUrl):
+    """A URL that enforces specific constraints for TiDB connections.
 
     * User info required
     * TLD not required
@@ -47,7 +47,7 @@ class TiDBDsn(AnyUrl):
     )
 
 
-def build_tidb_dsn(
+def build_tidb_connection_url(
     schema: str = "mysql+pymysql",
     host: str = "localhost",
     port: int = 4000,
@@ -55,23 +55,45 @@ def build_tidb_dsn(
     password: str = "",
     database: str = "test",
     enable_ssl: Optional[bool] = None,
-) -> TiDBDsn:
+) -> str:
+    """
+    Build a TiDB Connection URL string for database connection.
+
+    Args:
+        schema (str, optional): The connection protocol. Defaults to "mysql+pymysql".
+        host (str, optional): The host address of TiDB server. Defaults to "localhost".
+        port (int, optional): The port number of TiDB server. Defaults to 4000.
+        username (str, optional): The username for authentication. Defaults to "root".
+        password (str, optional): The password for authentication. Defaults to "".
+        database (str, optional): The database name to connect to. Defaults to "test".
+        enable_ssl (Optional[bool], optional): Whether to enable SSL for the connection.
+            If None (default), SSL is automatically enabled for TiDB Serverless hosts
+            and disabled for other hosts.
+
+    Returns:
+        str: A Connection URL string that can be used to connect to a TiDB database.
+    """
+
     if enable_ssl is None:
         if host and TIDB_SERVERLESS_HOST_PATTERN.match(host):
             enable_ssl = True
         else:
             enable_ssl = None
 
-    return TiDBDsn.build(
-        scheme=schema,
-        host=host,
-        port=port,
-        username=username,
-        # TODO: remove quote after following issue is fixed:
-        # https://github.com/pydantic/pydantic/issues/8061
-        password=quote(password) if password else None,
-        path=database,
-        query="ssl_verify_cert=true&ssl_verify_identity=true" if enable_ssl else None,
+    return str(
+        TiDBConnectionURL.build(
+            scheme=schema,
+            host=host,
+            port=port,
+            username=username,
+            # TODO: remove quote after following issue is fixed:
+            # https://github.com/pydantic/pydantic/issues/8061
+            password=quote(password) if password else None,
+            path=database,
+            query=(
+                "ssl_verify_cert=true&ssl_verify_identity=true" if enable_ssl else None
+            ),
+        )
     )
 
 

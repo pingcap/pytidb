@@ -1,13 +1,29 @@
-# TiDB Python SDK
+<h1 align="center">TiDB Python SDK</h1>
 
-<p>
+<div align="center">
   <a href="https://pypi.org/project/pytidb">
     <img src="https://img.shields.io/pypi/v/pytidb.svg" alt="Python Package Index"/>
   </a>
   <a href="https://pypistats.org/packages/pytidb">
     <img src="https://img.shields.io/pypi/dm/pytidb.svg" alt="Downloads"/>
   </a>
-</p>
+</div>
+
+<h4 align="center">
+  <a href="https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb">Quick Start</a>
+  •
+  <a href="https://pingcap.github.io/ai/">Documentation</a>
+  •
+  <a href="https://pingcap.github.io/ai/examples/">Demos</a>
+  •
+  <a href="https://github.com/orgs/pingcap/projects/69/views/4">Roadmap</a>
+  •
+  <a href="https://discord.com/invite/vYU9h56kAX">Discord</a>
+  •
+  <a href="https://github.com/pingcap/pytidb/issues">Report Bug</a>
+</h4>
+
+## Introduction
 
 **Python SDK for TiDB AI**: A unified data platform empowering developers to build next-generation AI applications.
 
@@ -20,13 +36,9 @@
 - 💱 Transaction support
 - 🔌 [Built-in MCP support](https://pingcap.github.io/ai/integrations/mcp)
 
-**Documentation:** https://pingcap.github.io/ai/
-
-**Quick Start:** [Jupyter Notebook](https://github.com/pingcap/pytidb/blob/main/docs/quickstart.ipynb)
-
 > [!TIP]
 > Click the button below to install **TiDB MCP Server** in Cursor. Then, confirm by clicking **Install** when prompted.
-> 
+>
 > [![Install TiDB MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=TiDB&config=eyJjb21tYW5kIjoidXZ4IC0tZnJvbSBweXRpZGJbbWNwXSB0aWRiLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiVElEQl9IT1NUIjoibG9jYWxob3N0IiwiVElEQl9QT1JUIjoiNDAwMCIsIlRJREJfVVNFUk5BTUUiOiJyb290IiwiVElEQl9QQVNTV09SRCI6IiIsIlRJREJfREFUQUJBU0UiOiJ0ZXN0In19)
 
 ## Installation
@@ -86,7 +98,7 @@ class Chunk(TableModel):
     )  # 👈 Defines the vector field.
     user_id: int = Field()
 
-table = db.create_table(schema=Chunk, mode="exist_ok")
+table = db.create_table(schema=Chunk, if_exists="skip")
 ```
 
 **Bulk insert data:**
@@ -157,7 +169,7 @@ from pytidb.schema import TableModel, Field
 from pytidb.embeddings import EmbeddingFunction
 
 # Define a multi-modal embedding model.
-jina_embed_fn = EmbeddingFunction("jinaai/jina-embeddings-v4")  # Using multi-modal embedding model.
+jina_embed_fn = EmbeddingFunction("jina_ai/jina-embeddings-v4")  # Using multi-modal embedding model.
 
 class Pet(TableModel):
     __tablename__ = "pets"
@@ -168,9 +180,10 @@ class Pet(TableModel):
         source_type="image"
     )
 
-table = db.create_table(schema=Pet, mode="exist_ok")
+table = db.create_table(schema=Pet, if_exists="skip")
 
 # Insert sample images ...
+table.insert(Pet(image_uri="path/to/shiba_inu_14.jpg"))
 
 # Search for images using natural language
 results = table.search("shiba inu dog").limit(1).to_list()
@@ -179,6 +192,8 @@ results = table.search("shiba inu dog").limit(1).to_list()
 query_image = Image.open("shiba_inu_15.jpg")
 results = table.search(query_image).limit(1).to_pydantic()
 ```
+
+See the [Image Search example](https://github.com/pingcap/pytidb/blob/main/examples/image_search) for more details.
 
 #### Advanced Filtering
 
@@ -235,9 +250,3 @@ with db.session() as session:
     final_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
     assert final_total_balance == initial_total_balance
 ```
-
-## Getting Help
-
-- 💬 Join our Discord: [TiDB Community](https://discord.com/invite/vYU9h56kAX)
-- 🐛 Report issues or request features: [Open an issue](https://github.com/pingcap/pytidb/issues)
-- 📝 Contact sales or get enterprise support: [PingCAP Contact Form](https://www.pingcap.com/contact-us/)
