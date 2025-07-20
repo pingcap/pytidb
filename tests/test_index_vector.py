@@ -25,7 +25,7 @@ class TestCreateVectorIndex:
             id: int = Field(primary_key=True)
             text_vec: list[float] = VectorField(dimensions=3)
 
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
+        tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_vector_index("text_vec")
 
     def test_auto_create_with_l2(self):
@@ -36,7 +36,7 @@ class TestCreateVectorIndex:
                 dimensions=3, distance_metric=DistanceMetric.L2
             )
 
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
+        tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_vector_index("text_vec")
 
     def test_declare_with_index_cls(self):
@@ -46,7 +46,7 @@ class TestCreateVectorIndex:
             id: int = Field(primary_key=True)
             text_vec: list[float] = VectorField(dimensions=3, index=False)
 
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
+        tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_vector_index("text_vec")
 
     def test_manual_with_table_api(self):
@@ -55,6 +55,6 @@ class TestCreateVectorIndex:
             id: int = Field(primary_key=True)
             text_vec: list[float] = VectorField(dimensions=3, index=False)
 
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
+        tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         tbl.create_vector_index("text_vec")
         assert tbl.has_vector_index("text_vec")

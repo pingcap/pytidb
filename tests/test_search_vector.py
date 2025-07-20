@@ -24,7 +24,7 @@ def vector_table(client: TiDBClient):
         user_id: int = Field(None)
         meta: dict = Field(sa_type=JSON)
 
-    tbl = client.create_table(schema=Chunk, mode="overwrite")
+    tbl = client.create_table(schema=Chunk, if_exists="overwrite")
 
     # Prepare test data.
     tbl.bulk_insert(
@@ -223,7 +223,7 @@ def test_with_multi_vector_fields(client: TiDBClient):
         body: str = Field(None)
         body_vec: list[float] = Field(sa_column=Column(Vector(3)))
 
-    tbl = client.create_table(schema=ChunkWithMultiVec, mode="overwrite")
+    tbl = client.create_table(schema=ChunkWithMultiVec, if_exists="overwrite")
     tbl.bulk_insert(
         [
             ChunkWithMultiVec(
