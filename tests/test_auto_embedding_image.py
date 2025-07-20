@@ -140,7 +140,7 @@ def bedrock_pet_table(client: TiDBClient, bedrock_image_embed_fn: EmbeddingFunct
         )
 
     # Create table.
-    tbl = client.create_table(schema=BedrockPet, mode="overwrite")
+    tbl = client.create_table(schema=BedrockPet, if_exists="overwrite")
 
     # INSERT.
     tbl.insert(
