@@ -52,7 +52,7 @@ def hybrid_table(shared_client: TiDBClient):
 # Test case with various result formats.
 
 
-@pytest.mark.xdist_group(name="fulltext_index_1")
+@pytest.mark.low_concurrent
 def test_hybrid_search_to_list(hybrid_table: Table):
     expected_results = [
         {"id": 1, "_distance": 0.46569, "_match_score": 1.75128, "_score": 0.03279},
@@ -74,7 +74,7 @@ def test_hybrid_search_to_list(hybrid_table: Table):
         assert abs(actual["_score"] - expected["_score"]) < 1e-5
 
 
-@pytest.mark.xdist_group(name="fulltext_index_1")
+@pytest.mark.low_concurrent
 def test_hybrid_search_to_rows(hybrid_table: Table):
     expected_results = [
         {"id": 1, "_distance": 0.46569, "_match_score": 1.75128, "_score": 0.03279},
@@ -96,7 +96,7 @@ def test_hybrid_search_to_rows(hybrid_table: Table):
         assert abs(actual._mapping["_score"] - expected["_score"]) < 1e-5
 
 
-@pytest.mark.xdist_group(name="fulltext_index_1")
+@pytest.mark.low_concurrent
 def test_hybrid_search_to_pydantic(hybrid_table: Table):
     expected_results = [
         {"id": 1, "_distance": 0.46569, "_match_score": 1.75128, "_score": 0.03279},
@@ -118,7 +118,7 @@ def test_hybrid_search_to_pydantic(hybrid_table: Table):
         assert abs(actual.score - expected["_score"]) < 1e-5
 
 
-@pytest.mark.xdist_group(name="fulltext_index_1")
+@pytest.mark.low_concurrent
 def test_hybrid_search_to_pandas(hybrid_table: Table):
     expected_results = [
         {"id": 1, "_distance": 0.46569, "_match_score": 1.75128, "_score": 0.03279},
@@ -150,7 +150,7 @@ def reranker():
     )
 
 
-@pytest.mark.xdist_group(name="fulltext_index_1")
+@pytest.mark.low_concurrent
 def test_rerank(hybrid_table: Table, reranker: BaseReranker):
     reranked_results = (
         hybrid_table.search(search_type="hybrid")
@@ -177,7 +177,7 @@ def test_rerank(hybrid_table: Table, reranker: BaseReranker):
 # Test cases for weighted fusion.
 
 
-@pytest.mark.xdist_group(name="fulltext_index_1")
+@pytest.mark.low_concurrent
 def test_hybrid_search_weighted_fusion(hybrid_table: Table):
     expected_results = [
         {"id": 1, "_distance": 0.46570, "_match_score": 1.409642, "_score": 0.687175},
@@ -199,7 +199,7 @@ def test_hybrid_search_weighted_fusion(hybrid_table: Table):
         assert abs(actual["_score"] - expected["_score"]) < 1e-3
 
 
-@pytest.mark.xdist_group(name="fulltext_index_1")
+@pytest.mark.low_concurrent
 def test_hybrid_search_weighted_fusion_l2(hybrid_table: Table):
     expected_results = [
         {"id": 1, "_distance": 0.965127, "_match_score": 1.409642, "_score": 0.559248},

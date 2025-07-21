@@ -59,9 +59,16 @@ log_cli_level = "INFO"
 log_cli_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 filterwarnings = [
-    "ignore:.*:DeprecationWarning:litellm.*"
+    "ignore:.*:DeprecationWarning:litellm.*",
+    "ignore:datetime.datetime.utcnow.*:DeprecationWarning:botocore.*",
+    "ignore:Support for class-based `config` is deprecated.*:DeprecationWarning:pydantic.*"
 ]
-addopts = "--durations=10 -v --dist=loadscope -n 8"
+testpaths = [
+    "tests",
+]
+markers = [
+    "low_concurrent"
+]
 
 # Build
 [tool.setuptools]

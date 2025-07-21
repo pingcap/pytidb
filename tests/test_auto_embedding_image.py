@@ -126,7 +126,9 @@ def bedrock_image_embed_fn():
 
 
 @pytest.fixture(scope="module")
-def bedrock_pet_table(client: TiDBClient, bedrock_image_embed_fn: EmbeddingFunction):
+def bedrock_pet_table(
+    shared_client: TiDBClient, bedrock_image_embed_fn: EmbeddingFunction
+):
     class BedrockPet(TableModel):
         __tablename__ = "bedrock_pets"
         id: int = Field(primary_key=True)
@@ -140,7 +142,7 @@ def bedrock_pet_table(client: TiDBClient, bedrock_image_embed_fn: EmbeddingFunct
         )
 
     # Create table.
-    tbl = client.create_table(schema=BedrockPet, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=BedrockPet, if_exists="overwrite")
 
     # INSERT.
     tbl.insert(

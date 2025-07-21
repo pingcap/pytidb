@@ -45,6 +45,16 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      TIDB_HOST: ${{ secrets.TIDB_HOST }}
+      TIDB_PORT: 4000
+      TIDB_USERNAME: ${{ secrets.TIDB_USERNAME }}
+      TIDB_PASSWORD: ${{ secrets.TIDB_PASSWORD }}
+      TIDB_DATABASE: test
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      JINA_AI_API_KEY: ${{ secrets.JINA_AI_API_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,15 +64,7 @@ jobs:
           enable-cache: true
       - name: Install dependencies
         run: make install_dev
-      - name: Run Test
-        run: make test
-        env:
-          TIDB_HOST: ${{ secrets.TIDB_HOST }}
-          TIDB_PORT: 4000
-          TIDB_USERNAME: ${{ secrets.TIDB_USERNAME }}
-          TIDB_PASSWORD: ${{ secrets.TIDB_PASSWORD }}
-          TIDB_DATABASE: test
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          JINA_AI_API_KEY: ${{ secrets.JINA_AI_API_KEY }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Run Parallel Test
+        run: make high_concurrent_test
+      - name: Run Serial Test
+        run: make low_concurrent_test

@@ -2120,7 +2120,7 @@ wheels = [
 
 [[package]]
 name = "pytidb"
-version = "0.0.9"
+version = "0.0.10.dev1"
 source = { editable = "." }
 dependencies = [
     { name = "pymysql" },
