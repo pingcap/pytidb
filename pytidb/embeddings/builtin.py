@@ -57,6 +57,15 @@ def get_embeddings(
     return [result["embedding"] for result in response.data]
 
 
+# Map of model name -> maximum allowed base64 length (characters)
+_MAX_B64_LENGTH_PER_MODEL = {
+    # Despite the document says the input image size is up to 25MB,
+    # according to the https://docs.aws.amazon.com/bedrock/latest/userguide/titan-multiemb-models.html,
+    # the actual limit is 100k for base64 encoded string.
+    "bedrock/amazon.titan-embed-image-v1": 100000,
+}
+
+
 class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
     api_key: Optional[str] = Field(None, description="The API key for authentication.")
     api_base: Optional[str] = Field(
@@ -117,8 +126,18 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             if is_valid:
                 if image_url.scheme == "file":
                     file_path = urllib.request.url2pathname(image_url.path)
-                    return {"image": encode_local_file_to_base64(file_path)}
+                    max_len = _MAX_B64_LENGTH_PER_MODEL.get(self.model_name)
+                    base64_str = encode_local_file_to_base64(
+                        file_path, max_base64_length=max_len
+                    )
+                    # For bedrock models, prepend data URL prefix and return string
+                    if self.model_name.startswith("bedrock/"):
+                        return f"data:image/jpeg;base64,{base64_str}"
+                    return {"image": base64_str}
                 elif image_url.scheme == "http" or image_url.scheme == "https":
+                    # For bedrock models, Bedrock API expects base64 not URL; fall back to query string.
+                    if self.model_name.startswith("bedrock/"):
+                        return image_url.geturl()
                     return {"image": image_url.geturl()}
                 else:
                     raise ValueError(
@@ -128,7 +147,11 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
                 # For image search, the query can be string contains some keywords.
                 return query
         elif isinstance(query, Image):
-            return {"image": encode_pil_image_to_base64(query)}
+            max_len = _MAX_B64_LENGTH_PER_MODEL.get(self.model_name)
+            base64_str = encode_pil_image_to_base64(query, max_base64_length=max_len)
+            if self.model_name.startswith("bedrock/"):
+                return f"data:image/jpeg;base64,{base64_str}"
+            return {"image": base64_str}
         else:
             raise ValueError(
                 "invalid input for image vector search, current supported input types: "
@@ -193,8 +216,17 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             if is_valid:
                 if image_url.scheme == "file":
                     file_path = urllib.request.url2pathname(image_url.path)
-                    return {"image": encode_local_file_to_base64(file_path)}
+                    max_len = _MAX_B64_LENGTH_PER_MODEL.get(self.model_name)
+                    base64_str = encode_local_file_to_base64(
+                        file_path, max_base64_length=max_len
+                    )
+                    if self.model_name.startswith("bedrock/"):
+                        return f"data:image/jpeg;base64,{base64_str}"
+                    return {"image": base64_str}
                 elif image_url.scheme == "http" or image_url.scheme == "https":
+                    # For bedrock models, Bedrock API expects base64 not URL; fall back to query string.
+                    if self.model_name.startswith("bedrock/"):
+                        return image_url.geturl()
                     return {"image": image_url.geturl()}
                 else:
                     raise ValueError(
@@ -203,7 +235,11 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             else:
                 raise ValueError(f"invalid url format for image source: {source}")
         elif isinstance(source, Image):
-            return {"image": encode_pil_image_to_base64(source)}
+            max_len = _MAX_B64_LENGTH_PER_MODEL.get(self.model_name)
+            base64_str = encode_pil_image_to_base64(source, max_base64_length=max_len)
+            if self.model_name.startswith("bedrock/"):
+                return f"data:image/jpeg;base64,{base64_str}"
+            return {"image": base64_str}
         else:
             raise ValueError(
                 "invalid input for source, current supported input types: "
