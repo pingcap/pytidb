@@ -79,10 +79,10 @@ class TiDBClient:
                 logger.error("Failed to ensure database exists: %s", str(e))
                 raise
 
-        if kwargs.get("pool_recycle") is None and kwargs.get("pool_pre_ping") is None:
-            if host and TIDB_SERVERLESS_HOST_PATTERN.match(host):
-                kwargs["pool_recycle"] = 300
-                kwargs["pool_pre_ping"] = True
+        if host and TIDB_SERVERLESS_HOST_PATTERN.match(host):
+            kwargs.setdefault("pool_recycle", 300)
+            kwargs.setdefault("pool_pre_ping", True)
+            kwargs.setdefault("pool_timeout", 10)
 
         db_engine = create_engine(url, echo=debug, **kwargs)
         reconnect_params = {
