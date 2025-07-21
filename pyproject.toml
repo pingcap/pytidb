@@ -62,9 +62,6 @@ filterwarnings = [
     "ignore:.*:DeprecationWarning:litellm.*"
 ]
 addopts = "--durations=10 -v --dist=loadscope -n 8"
-env_files = [
-    "tests/.env",
-]
 
 # Build
 [tool.setuptools]
