@@ -314,6 +314,8 @@ class Table(Generic[T]):
             setattr(data, field_name, vector_embedding)
 
         with self._client.session() as db_session:
+
+            db_session.merge(data)
             # Check if record exists
             existing = db_session.get(self._table_model, pk_id)
             
