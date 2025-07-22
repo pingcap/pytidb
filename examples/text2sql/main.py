@@ -66,7 +66,7 @@ for item in ["generated", "past"]:
 
 table_definitions = []
 current_database = db._db_engine.url.database
-for table_name in db.table_names():
+for table_name in db.list_tables():
     table_definitions.append(db.query(f"SHOW CREATE TABLE `{table_name}`").to_rows()[0])
 
 

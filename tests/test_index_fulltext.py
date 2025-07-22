@@ -27,7 +27,7 @@ class TestCreateFullTextIndex:
             id: int = Field(primary_key=True)
             text: str = FullTextField()
 
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
+        tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_fts_index("text")
 
     def test_auto_with_standard_parser(self):
@@ -36,7 +36,7 @@ class TestCreateFullTextIndex:
             id: int = Field(primary_key=True)
             text: str = FullTextField(index=True, fts_parser="STANDARD")
 
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
+        tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_fts_index("text")
 
     def test_declare_with_index_cls(self):
@@ -46,7 +46,7 @@ class TestCreateFullTextIndex:
             id: int = Field(primary_key=True)
             text: str = FullTextField(index=False)
 
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
+        tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         assert tbl.has_fts_index("text")
 
     def test_manual_with_table_api(self):
@@ -55,7 +55,7 @@ class TestCreateFullTextIndex:
             id: int = Field(primary_key=True)
             text: str = FullTextField(index=False)
 
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
+        tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
         tbl.create_fts_index("text")  # Create index by imperative API.
         assert tbl.has_fts_index("text")
 
@@ -68,6 +68,6 @@ class TestCreateFullTextIndex:
             id: int = Field(primary_key=True)
             text: str = FullTextField(index=True)  # Create index by declarative API.
 
-        tbl = self.client.create_table(schema=Chunk, mode="overwrite")
-        tbl.create_fts_index("text", exist_ok=True)
+        tbl = self.client.create_table(schema=Chunk, if_exists="overwrite")
+        tbl.create_fts_index("text", if_exists="skip")
         assert tbl.has_fts_index("text")

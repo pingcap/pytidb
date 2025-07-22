@@ -15,7 +15,7 @@ def text_table(client: TiDBClient):
         name: str = Field()
         description: str = FullTextField()
 
-    tbl = client.create_table(schema=Chunk, mode="overwrite")
+    tbl = client.create_table(schema=Chunk, if_exists="overwrite")
 
     # Prepare test data.
     tbl.bulk_insert(
@@ -109,7 +109,7 @@ def test_with_multiple_text_fields(client: TiDBClient):
         title: str = FullTextField()
         body: str = FullTextField()
 
-    tbl = client.create_table(schema=Article, mode="overwrite")
+    tbl = client.create_table(schema=Article, if_exists="overwrite")
     tbl.bulk_insert(
         [
             Article(

@@ -1,5 +1,7 @@
 pytidb==0.0.9
 pytidb[models]==0.0.9
-openai
-python-dotenv
 streamlit
+pandas
+python-dotenv
+requests
+Pillow

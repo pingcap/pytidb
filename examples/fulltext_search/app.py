@@ -47,14 +47,16 @@ with st.sidebar:
     st.logo(
         "../assets/logo-full.svg", size="large", link="https://pingcap.github.io/ai/"
     )
-    st.markdown("""#### Overview
+    st.markdown(
+        """#### Overview
 
 **Full-text search** is a technique that finds documents or data by matching keywords or phrases
 within the entire text content.
 
-TiDB provides full-text search capabilities for **massive datasets** with high performance and 
+TiDB provides full-text search capabilities for **massive datasets** with high performance and
 built-in **multilingual support**.
-    """)
+    """
+    )
     st.write("#### Settings")
     language = st.selectbox(
         "Select your preferred language for search:",

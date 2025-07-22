@@ -88,12 +88,14 @@ with st.sidebar:
     st.logo(
         "../assets/logo-full.svg", size="large", link="https://pingcap.github.io/ai/"
     )
-    st.markdown("""#### Overview
+    st.markdown(
+        """#### Overview
 
-**Hybrid search** fuses **exact matching** from full-text search with **semantic understanding** 
+**Hybrid search** fuses **exact matching** from full-text search with **semantic understanding**
 from vector search, delivering more relevant and reliable results.
 
-    """)
+    """
+    )
     st.markdown("#### Settings")
     search_type = st.selectbox(
         label="Search type",
