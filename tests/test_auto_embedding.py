@@ -13,7 +13,8 @@ def test_auto_embedding(shared_client: TiDBClient):
         id: int = Field(primary_key=True)
         text: str = Field()
         text_vec: Optional[list[float]] = text_embed_small.VectorField(
-            source_field="text"
+            source_field="text",
+            index=False,
         )
         user_id: int = Field()
 

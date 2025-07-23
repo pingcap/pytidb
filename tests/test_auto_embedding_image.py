@@ -31,6 +31,7 @@ def pet_table(shared_client: TiDBClient, image_embed_fn: EmbeddingFunction):
             distance_metric=DistanceMetric.COSINE,
             source_field="image_uri",
             source_type="image",  # Configure the source field as image.
+            index=False,
         )
 
     # Create table.
@@ -142,6 +143,7 @@ def bedrock_pet_table(
             distance_metric=DistanceMetric.COSINE,
             source_field="image_uri",
             source_type="image",  # Configure the source field as image.
+            index=False,
         )
 
     # Create table.
