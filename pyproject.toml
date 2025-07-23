@@ -66,9 +66,6 @@ filterwarnings = [
 testpaths = [
     "tests",
 ]
-markers = [
-    "low_concurrent"
-]
 
 # Build
 [tool.setuptools]

@@ -17,7 +17,6 @@ class TestCreateFullTextIndex:
         yield
         self.client = None
 
-    @pytest.mark.low_concurrent
     def test_auto_create(self):
         class ChunkFullTextAutoCreate(TableModel):
             __tablename__ = "test_fts_index_auto_create"
@@ -29,7 +28,6 @@ class TestCreateFullTextIndex:
         )
         assert tbl.has_fts_index("text")
 
-    @pytest.mark.low_concurrent
     def test_auto_with_standard_parser(self):
         class ChunkFullTextAutoWithStandardParser(TableModel):
             __tablename__ = "test_fts_index_auto_with_standard_parser"
@@ -41,7 +39,6 @@ class TestCreateFullTextIndex:
         )
         assert tbl.has_fts_index("text")
 
-    @pytest.mark.low_concurrent
     def test_declare_with_index_cls(self):
         class ChunkFullTextDeclareIndexCls(TableModel):
             __tablename__ = "test_fts_index_declare_index_cls"
@@ -54,7 +51,6 @@ class TestCreateFullTextIndex:
         )
         assert tbl.has_fts_index("text")
 
-    @pytest.mark.low_concurrent
     def test_manual_with_table_api(self):
         class ChunkFullTextManualTableApi(TableModel):
             __tablename__ = "test_fts_index_manual_table_api"
