@@ -64,7 +64,5 @@ jobs:
           enable-cache: true
       - name: Install dependencies
         run: make install_dev
-      - name: Run Parallel Test
-        run: make high_concurrent_test
-      - name: Run Serial Test
-        run: make low_concurrent_test
+      - name: Run Test
+        run: make test
