@@ -8,29 +8,31 @@ from pytidb.schema import TableModel, Field, FullTextField
 
 
 @pytest.fixture(scope="module")
-def text_table(client: TiDBClient):
-    class Chunk(TableModel):
+def text_table(shared_client: TiDBClient):
+    class ChunkWithFullTextField(TableModel):
         __tablename__ = "test_fulltext_search"
         id: int = Field(primary_key=True)
         name: str = Field()
         description: str = FullTextField()
 
-    tbl = client.create_table(schema=Chunk, if_exists="overwrite")
+    tbl = shared_client.create_table(
+        schema=ChunkWithFullTextField, if_exists="overwrite"
+    )
 
     # Prepare test data.
     tbl.bulk_insert(
         [
-            Chunk(
+            ChunkWithFullTextField(
                 id=1,
                 name="TiDB",
                 description="TiDB is a distributed database that supports OLTP, OLAP, HTAP and AI workloads.",
             ),
-            Chunk(
+            ChunkWithFullTextField(
                 id=2,
                 name="LlamaIndex",
                 description="LlamaIndex is a framework for building AI applications.",
             ),
-            Chunk(
+            ChunkWithFullTextField(
                 id=3,
                 name="OpenAI",
                 description="OpenAI is a company that provides a platform for building AI models.",
@@ -102,14 +104,14 @@ def test_rerank(text_table: Table, reranker: BaseReranker):
     assert reranked_results[0]["_score"] > 0
 
 
-def test_with_multiple_text_fields(client: TiDBClient):
+def test_with_multiple_text_fields(shared_client: TiDBClient):
     class Article(TableModel):
         __tablename__ = "test_fts_with_multi_text_fields"
         id: int = Field(primary_key=True)
         title: str = FullTextField()
         body: str = FullTextField()
 
-    tbl = client.create_table(schema=Article, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=Article, if_exists="overwrite")
     tbl.bulk_insert(
         [
             Article(

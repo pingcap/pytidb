@@ -4,8 +4,8 @@ from pytidb.embeddings import EmbeddingFunction
 from pytidb.schema import TableModel, Field
 
 
-def test_auto_embedding(client: TiDBClient):
-    text_embed_small = EmbeddingFunction("openai/text-embedding-3-small")
+def test_auto_embedding(shared_client: TiDBClient):
+    text_embed_small = EmbeddingFunction("openai/text-embedding-3-small", timeout=20)
     test_table_name = "test_auto_embedding"
 
     class Chunk(TableModel):
@@ -13,11 +13,12 @@ def test_auto_embedding(client: TiDBClient):
         id: int = Field(primary_key=True)
         text: str = Field()
         text_vec: Optional[list[float]] = text_embed_small.VectorField(
-            source_field="text"
+            source_field="text",
+            index=False,
         )
         user_id: int = Field()
 
-    tbl = client.create_table(schema=Chunk, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=Chunk, if_exists="overwrite")
 
     tbl.insert(Chunk(id=1, text="foo", user_id=1))
     tbl.bulk_insert(
