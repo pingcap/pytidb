@@ -18,7 +18,7 @@ format:
 .PHONY: test
 test:
 	@echo "Running tests..."
-	@PYTHONPATH=$(PWD) uv run pytest tests --durations=10 -n auto --dist loadfile -v
+	@PYTHONPATH=$(PWD) uv run pytest tests --durations=10 -v
 
 .PHONY: build
 build:

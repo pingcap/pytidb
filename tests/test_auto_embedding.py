@@ -5,7 +5,7 @@ from pytidb.schema import TableModel, Field
 
 
 def test_auto_embedding(shared_client: TiDBClient):
-    text_embed_small = EmbeddingFunction("openai/text-embedding-3-small")
+    text_embed_small = EmbeddingFunction("openai/text-embedding-3-small", timeout=20)
     test_table_name = "test_auto_embedding"
 
     class Chunk(TableModel):

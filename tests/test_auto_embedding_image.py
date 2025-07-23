@@ -13,7 +13,10 @@ pet_images_dir = Path("./tests/fixtures/pet_images")
 
 @pytest.fixture(scope="module")
 def image_embed_fn():
-    return EmbeddingFunction(model_name="jina_ai/jina-embeddings-v4", timeout=60)
+    return EmbeddingFunction(
+        model_name="jina_ai/jina-embeddings-v4",
+        timeout=30,
+    )
 
 
 @pytest.fixture(scope="module")
@@ -121,7 +124,7 @@ def test_image_search_with_pil_image(
 @pytest.fixture(scope="module")
 def bedrock_image_embed_fn():
     return EmbeddingFunction(
-        model_name="bedrock/amazon.titan-embed-image-v1", timeout=60
+        model_name="bedrock/amazon.titan-embed-image-v1", timeout=30
     )
 
 

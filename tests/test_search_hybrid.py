@@ -11,7 +11,7 @@ from pytidb.datatype import Text
 
 @pytest.fixture(scope="module")
 def hybrid_table(shared_client: TiDBClient):
-    embed_fn = EmbeddingFunction("openai/text-embedding-3-small")
+    embed_fn = EmbeddingFunction("openai/text-embedding-3-small", timeout=20)
 
     class Item(TableModel, table=True):
         __tablename__ = "items_for_hybrid"
