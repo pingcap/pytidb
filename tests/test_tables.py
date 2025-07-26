@@ -68,19 +68,19 @@ def test_save(isolated_client):
     saved_record = tbl.save(new_record)
     assert saved_record.id == 1
     assert saved_record.text == "hello world"
-    
+
     # Test save - update existing record
     updated_record = TestModel(id=1, text="hello updated", user_id=1)
     saved_record = tbl.save(updated_record)
     assert saved_record.id == 1
     assert saved_record.text == "hello updated"
-    
+
     # Test save with dict
     dict_record = {"id": 2, "text": "dict insert", "user_id": 2}
     saved_dict = tbl.save(dict_record)
     assert saved_dict.id == 2
     assert saved_dict.text == "dict insert"
-    
+
     # Test save update with dict
     dict_update = {"id": 2, "text": "dict updated", "user_id": 2}
     saved_dict = tbl.save(dict_update)
