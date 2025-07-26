@@ -13,11 +13,14 @@ pet_images_dir = Path("./tests/fixtures/pet_images")
 
 @pytest.fixture(scope="module")
 def image_embed_fn():
-    return EmbeddingFunction(model_name="jina_ai/jina-embeddings-v4", timeout=60)
+    return EmbeddingFunction(
+        model_name="jina_ai/jina-embeddings-v4",
+        timeout=30,
+    )
 
 
 @pytest.fixture(scope="module")
-def pet_table(client: TiDBClient, image_embed_fn: EmbeddingFunction):
+def pet_table(shared_client: TiDBClient, image_embed_fn: EmbeddingFunction):
     class Pet(TableModel):
         __tablename__ = "pets"
         id: int = Field(primary_key=True)
@@ -28,10 +31,11 @@ def pet_table(client: TiDBClient, image_embed_fn: EmbeddingFunction):
             distance_metric=DistanceMetric.COSINE,
             source_field="image_uri",
             source_type="image",  # Configure the source field as image.
+            index=False,
         )
 
     # Create table.
-    tbl = client.create_table(schema=Pet, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=Pet, if_exists="overwrite")
 
     # INSERT.
     tbl.insert(
@@ -121,12 +125,14 @@ def test_image_search_with_pil_image(
 @pytest.fixture(scope="module")
 def bedrock_image_embed_fn():
     return EmbeddingFunction(
-        model_name="bedrock/amazon.titan-embed-image-v1", timeout=60
+        model_name="bedrock/amazon.titan-embed-image-v1", timeout=30
     )
 
 
 @pytest.fixture(scope="module")
-def bedrock_pet_table(client: TiDBClient, bedrock_image_embed_fn: EmbeddingFunction):
+def bedrock_pet_table(
+    shared_client: TiDBClient, bedrock_image_embed_fn: EmbeddingFunction
+):
     class BedrockPet(TableModel):
         __tablename__ = "bedrock_pets"
         id: int = Field(primary_key=True)
@@ -137,10 +143,11 @@ def bedrock_pet_table(client: TiDBClient, bedrock_image_embed_fn: EmbeddingFunct
             distance_metric=DistanceMetric.COSINE,
             source_field="image_uri",
             source_type="image",  # Configure the source field as image.
+            index=False,
         )
 
     # Create table.
-    tbl = client.create_table(schema=BedrockPet, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=BedrockPet, if_exists="overwrite")
 
     # INSERT.
     tbl.insert(
