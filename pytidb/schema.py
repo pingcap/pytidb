@@ -7,7 +7,7 @@ from sqlmodel.main import FieldInfo, RelationshipInfo, SQLModelMetaclass
 from tidb_vector.sqlalchemy import VectorType
 
 from pytidb.orm.indexes import VectorIndexAlgorithm
-from pytidb.orm.types import DistanceMetric
+from pytidb.orm.distance_metric import DistanceMetric
 
 
 if TYPE_CHECKING:

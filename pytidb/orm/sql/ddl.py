@@ -3,7 +3,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import elements, operators, functions
 
 
-@compiles(CreateIndex, "mysql")
+@compiles(CreateIndex, "tidb")
 def compile_create_index(create, compiler, **kw):
     # Copy from sqlalchemy.dialects.mysql.base.MySQLCompiler::visit_create_index
     index = create.element

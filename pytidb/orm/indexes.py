@@ -2,7 +2,7 @@ from typing import Literal, Union
 from sqlalchemy import text
 from sqlalchemy.sql.schema import Index
 from pytidb.orm.sql.ddl import TiDBSchemaGenerator
-from pytidb.orm.types import DistanceMetric, validate_distance_metric
+from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
 
 
 """

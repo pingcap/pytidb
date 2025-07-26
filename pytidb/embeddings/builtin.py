@@ -43,7 +43,13 @@ def get_embeddings(
     Returns:
         List[List[float]]: A list of embeddings, where each embedding corresponds to an input string.
     """
-    from litellm import embedding
+    try:
+        from litellm import embedding
+    except ImportError:
+        raise ImportError(
+            "To use the built-in embedding function, you need to install pytidb[models] with: "
+            "pip install pytidb[models]"
+        )
 
     response = embedding(
         api_key=api_key,
@@ -76,6 +82,14 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
     )
     caching: bool = Field(
         True, description="Whether to cache the embeddings, default True."
+    )
+    embed_in_sql: bool = Field(
+        False,
+        description=(
+            "Whether to enable auto embedding in SQL, it will compute "
+            "the embedding for the source data in the database. "
+            "Default False. "
+        ),
     )
 
     def __init__(

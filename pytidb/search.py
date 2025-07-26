@@ -19,7 +19,7 @@ from sqlalchemy import Column, Row, Select, asc, desc, select, and_, text
 from pytidb.orm.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import QueryBundle, VectorDataType, TableModel
-from pytidb.orm.types import DistanceMetric, validate_distance_metric
+from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
 from pytidb.filters import build_filter_clauses
 from pytidb.utils import (
     RowKeyType,
@@ -76,6 +76,20 @@ class SearchResult(BaseModel, Generic[T]):
             return 1 - self.distance
         else:
             return None
+
+
+distance_metric_to_column_op = {
+    DistanceMetric.L2: "l2_distance",
+    DistanceMetric.COSINE: "cosine_distance",
+    DistanceMetric.L1: "l1_distance",
+    DistanceMetric.NEGATIVE_INNER_PRODUCT: "negative_inner_product",
+}
+embed_distance_metric_to_column_op = {
+    DistanceMetric.L2: "embed_l2_distance",
+    DistanceMetric.COSINE: "embed_cosine_distance",
+    DistanceMetric.L1: "embed_l1_distance",
+    DistanceMetric.NEGATIVE_INNER_PRODUCT: "embed_negative_inner_product",
+}
 
 
 class SearchQuery:
@@ -254,28 +268,37 @@ class SearchQuery:
             vector_column = self._vector_column
 
         # Auto embedding for query.
+        embed_in_sql = False
         if self._query_vector is None:
-            if vector_column.name not in self._table.auto_embedding_configs:
+            auto_embedding_configs = self._table.auto_embedding_configs
+            if vector_column.name not in auto_embedding_configs:
                 raise ValueError(
                     "query should be a vector, because the vector column didn't "
                     "configure the embed_fn parameter"
                 )
 
-            config = self._table.auto_embedding_configs[vector_column.name]
-            source_type = config["source_type"]
-            self._query_vector = config["embed_fn"].get_query_embedding(
-                self._query, source_type
-            )
+            config = auto_embedding_configs[vector_column.name]
+            embed_in_sql = config.get("embed_in_sql", False)
+            if not embed_in_sql:
+                source_type = config["source_type"]
+                self._query_vector = config["embed_fn"].get_query_embedding(
+                    self._query, source_type
+                )
 
-        # Distance metric.
-        if self._distance_metric == DistanceMetric.L2:
-            distance_column = vector_column.l2_distance(self._query_vector).label(
-                DISTANCE_LABEL
+        # Distance metric mapping.
+        if embed_in_sql:
+            vector_op_name = embed_distance_metric_to_column_op.get(
+                self._distance_metric
             )
         else:
-            distance_column = vector_column.cosine_distance(self._query_vector).label(
-                DISTANCE_LABEL
-            )
+            vector_op_name = distance_metric_to_column_op.get(self._distance_metric)
+
+        if vector_op_name is None:
+            raise ValueError(f"Invalid distance metric: {self._distance_metric}")
+
+        distance_column = getattr(vector_column, vector_op_name)(
+            self._query_vector
+        ).label(DISTANCE_LABEL)
 
         if self._prefilter:
             stmt = self._build_vector_query_with_pre_filter(
