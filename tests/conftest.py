@@ -7,6 +7,7 @@ import pytest
 from dotenv import load_dotenv
 
 from pytidb import TiDBClient
+from pytidb.embeddings import EmbeddingFunction
 
 logger = logging.getLogger(__name__)
 
@@ -71,3 +72,8 @@ def isolated_client(env) -> Generator[TiDBClient, None, None]:
         client.disconnect()
     except Exception as e:
         logger.error(f"Failed to drop test database {db_name}: {e}")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def text_embed():
+    return EmbeddingFunction("openai/text-embedding-3-small", timeout=20)
