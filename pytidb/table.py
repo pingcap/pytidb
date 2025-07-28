@@ -277,24 +277,6 @@ class Table(Generic[T]):
         if isinstance(data, dict):
             data = self._table_model(**data)
 
-        # Get primary key value(s)
-        pk_constraint = self._sa_table.primary_key
-        if not pk_constraint.columns:
-            raise ValueError("save() requires a table with a primary key")
-
-        pk_column_names = [col.name for col in pk_constraint.columns]
-        pk_values = []
-        for col_name in pk_column_names:
-            if not hasattr(data, col_name):
-                raise ValueError(f"Primary key field '{col_name}' not found in data")
-            pk_value = getattr(data, col_name)
-            if pk_value is None:
-                raise ValueError(f"Primary key field '{col_name}' cannot be None")
-            pk_values.append(pk_value)
-
-        # For single primary key, use the value directly; for composite key, use tuple
-        pk_id = pk_values[0] if len(pk_values) == 1 else tuple(pk_values)
-
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if vector embeddings is provided.
@@ -310,32 +292,18 @@ class Table(Generic[T]):
             if embedding_source is None or embedding_source == "":
                 continue
 
-            vector_embedding = config["embed_fn"].get_source_embedding(embedding_source)
+            source_type = config.get("source_type", "text")
+            vector_embedding = config["embed_fn"].get_source_embedding(
+                embedding_source,
+                source_type=source_type,
+            )
             setattr(data, field_name, vector_embedding)
 
         with self._client.session() as db_session:
-            db_session.merge(data)
-            # Check if record exists
-            existing = db_session.get(self._table_model, pk_id)
-
-            if existing is None:
-                # Insert new record
-                db_session.add(data)
-                db_session.flush()
-                db_session.refresh(data)
-                return data
-            else:
-                # Update existing record
-                for column in self._columns:
-                    if (
-                        column.name not in pk_column_names
-                    ):  # Don't update primary key fields
-                        new_value = getattr(data, column.name)
-                        setattr(existing, column.name, new_value)
-
-                db_session.flush()
-                db_session.refresh(existing)
-                return existing
+            merged_data = db_session.merge(data)
+            db_session.flush()
+            db_session.refresh(merged_data)
+            return merged_data
 
     def bulk_insert(self, data: List[Union[T, dict]]) -> List[T]:
         if not isinstance(data, list):

@@ -2,6 +2,7 @@ import logging
 from typing import Any, Optional
 import numpy as np
 
+from pytidb import TiDBClient
 from pytidb.schema import TableModel, Field, VectorField
 
 
@@ -119,7 +120,7 @@ def test_table_query(shared_client):
     assert np.array_equal(chunks[0]["text_vec"], [1, 2, 3])
 
 
-def test_table_save(client):
+def test_table_save(shared_client: TiDBClient):
     class RecordForSaveData(TableModel):
         __tablename__ = "test_table_save"
         id: int = Field(primary_key=True)
@@ -129,7 +130,7 @@ def test_table_save(client):
 
     Record = RecordForSaveData
 
-    tbl = client.create_table(schema=Record, if_exists="overwrite")
+    tbl = shared_client.create_table(schema=Record, if_exists="overwrite")
 
     # Test save - insert new record
     new_record = Record(id=1, text="hello world", user_id=1)
