@@ -28,7 +28,7 @@ class VECTOR(sqlalchemy.types.UserDefinedType):
         if dim is not None and (dim < MIN_DIM or dim > MAX_DIM):
             raise ValueError(f"expected dimension to be in [{MIN_DIM}, {MAX_DIM}]")
 
-        super(sqlalchemy.types.UserDefinedType, self).__init__()
+        super().__init__()
         self.dim = dim
 
     def get_col_spec(self, **kw):
