@@ -53,6 +53,13 @@ def VectorField(
     algorithm: Optional[VectorIndexAlgorithm] = "HNSW",
     **kwargs,
 ):
+    # Notice: Currently, only L2 and COSINE distance metrics support indexing.
+    if index is None and distance_metric not in [
+        DistanceMetric.L2,
+        DistanceMetric.COSINE,
+    ]:
+        index = False
+
     return Field(
         sa_column=Column(VECTOR(dimensions)),
         schema_extra={

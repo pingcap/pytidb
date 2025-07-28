@@ -66,13 +66,17 @@ def validate_distance_metric(value: Union[str, DistanceMetric]) -> DistanceMetri
         return value
     elif isinstance(value, str):
         value_upper = value.upper()
-        if value_upper == "COSINE":
-            return DistanceMetric.COSINE
+        if value_upper == "L1":
+            return DistanceMetric.L1
         elif value_upper == "L2":
             return DistanceMetric.L2
+        elif value_upper == "COSINE":
+            return DistanceMetric.COSINE
+        elif value_upper == "NEGATIVE_INNER_PRODUCT":
+            return DistanceMetric.NEGATIVE_INNER_PRODUCT
         else:
             raise ValueError(
-                f"Invalid distance metric: {value}. Valid options: COSINE, L2"
+                f"Invalid distance metric: {value}. Valid options: L1, L2, COSINE, NEGATIVE_INNER_PRODUCT"
             )
     else:
         raise ValueError(
