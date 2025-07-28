@@ -273,7 +273,12 @@ class Table(Generic[T]):
             return data
 
     def save(self, data: Union[T, dict]) -> T:
-        # Convert dict to table model instance if needed
+        if not isinstance(data, self._table_model) and not isinstance(data, dict):
+            raise ValueError(
+                f"Invalid data type: {type(data)}, expected {self._table_model}, dict"
+            )
+
+        # Convert dict to table model instance.
         if isinstance(data, dict):
             data = self._table_model(**data)
 
