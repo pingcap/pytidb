@@ -34,9 +34,6 @@ def test_create_table_if_exists(isolated_client):
     with pytest.raises(Exception):
         isolated_client.create_table(schema=TestCreateTable, if_exists="raise")
 
-    isolated_client.create_table(schema=TestCreateTable, if_exists="skip")
-    assert isolated_client.has_table(test_table_name)
-
     # if_exists=skip
     isolated_client.create_table(schema=TestCreateTable, if_exists="skip")
     assert isolated_client.has_table(test_table_name)
