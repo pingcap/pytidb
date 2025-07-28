@@ -248,6 +248,11 @@ class Table(Generic[T]):
 
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
+            # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
+            embed_in_sql = config.get("embed_in_sql", False)
+            if embed_in_sql:
+                continue
+
             # Skip if vector embeddings is provided.
             if getattr(data, field_name) is not None:
                 continue
@@ -259,11 +264,7 @@ class Table(Generic[T]):
             # Skip if source field is None or empty.
             embedding_source = getattr(data, config["source_field_name"])
             if embedding_source is None or embedding_source == "":
-                continue
-
-            # Skip if auto embedding in SQL is enabled, it will compute the embedding in database side.
-            embed_in_sql = config.get("embed_in_sql", False)
-            if embed_in_sql:
+                setattr(data, field_name, None)
                 continue
 
             source_type = config.get("source_type", "text")
@@ -291,6 +292,11 @@ class Table(Generic[T]):
 
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
+            # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
+            embed_in_sql = config.get("embed_in_sql", False)
+            if embed_in_sql:
+                continue
+
             # Skip if vector embeddings is provided.
             if getattr(data, field_name) is not None:
                 continue
@@ -325,26 +331,23 @@ class Table(Generic[T]):
             )
 
         # Convert dict items to table model instances.
-        converted_data = []
-        for item in data:
-            if isinstance(item, dict):
-                converted_data.append(self._table_model(**item))
-            else:
-                converted_data.append(item)
-        data = converted_data
+        data = [
+            self._table_model(**item) if isinstance(item, dict) else item
+            for item in data
+        ]
 
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             items_need_embedding = []
             sources_to_embedding = []
 
-            # Skip if no embedding function is provided.
-            if "embed_fn" not in config or config["embed_fn"] is None:
-                continue
-
-            # Skip if auto embedding in SQL is enabled, it will compute the embedding in database side.
+            # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
             embed_in_sql = config.get("embed_in_sql", False)
             if embed_in_sql:
+                continue
+
+            # Skip if no embedding function is provided.
+            if "embed_fn" not in config or config["embed_fn"] is None:
                 continue
 
             for item in data:
@@ -384,6 +387,11 @@ class Table(Generic[T]):
     def update(self, values: dict, filters: Optional[Filters] = None) -> object:
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
+            # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
+            embed_in_sql = config.get("embed_in_sql", False)
+            if embed_in_sql:
+                continue
+
             # Skip if vector embeddings is provided.
             if field_name in values:
                 continue
@@ -396,11 +404,6 @@ class Table(Generic[T]):
             embedding_source = values[config["source_field_name"]]
             if embedding_source is None or embedding_source == "":
                 values[field_name] = None
-                continue
-
-            # Skip if auto embedding in SQL is enabled, it will compute the embedding in database side.
-            embed_in_sql = config.get("embed_in_sql", False)
-            if embed_in_sql:
                 continue
 
             source_type = config.get("source_type", "text")

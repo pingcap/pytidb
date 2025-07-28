@@ -76,6 +76,8 @@ MODEL_DEFAULT_DIMENSIONS = {
     "tidbcloud-free/amazon/titan-embed-text-v2": 1024,
     "tidbcloud-free/cohere/embed-english-v3": 1024,
     "tidbcloud-free/cohere/embed-multilingual-v3": 1024,
+    "jina/jina-embeddings-v4": 2048,
+    "openai/text-embedding-3-small": 1536,
 }
 
 
