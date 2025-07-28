@@ -78,13 +78,13 @@ class SearchResult(BaseModel, Generic[T]):
             return None
 
 
-distance_metric_to_column_op = {
+distance_function_map = {
     DistanceMetric.L2: "l2_distance",
     DistanceMetric.COSINE: "cosine_distance",
     DistanceMetric.L1: "l1_distance",
     DistanceMetric.NEGATIVE_INNER_PRODUCT: "negative_inner_product",
 }
-embed_distance_metric_to_column_op = {
+embed_distance_function_map = {
     DistanceMetric.L2: "embed_l2_distance",
     DistanceMetric.COSINE: "embed_cosine_distance",
     DistanceMetric.L1: "embed_l1_distance",
@@ -268,8 +268,11 @@ class SearchQuery:
             vector_column = self._vector_column
 
         # Auto embedding for query.
-        embed_in_sql = False
-        if self._query_vector is None:
+        if self._query_vector is not None:
+            # Already have query vector, no need for auto embedding
+            embed_in_sql = False
+        else:
+            # Need to generate query vector through auto embedding
             auto_embedding_configs = self._table.auto_embedding_configs
             if vector_column.name not in auto_embedding_configs:
                 raise ValueError(
@@ -287,18 +290,18 @@ class SearchQuery:
 
         # Distance metric mapping.
         if embed_in_sql:
-            vector_op_name = embed_distance_metric_to_column_op.get(
-                self._distance_metric
-            )
+            vector_op_name = embed_distance_function_map.get(self._distance_metric)
         else:
-            vector_op_name = distance_metric_to_column_op.get(self._distance_metric)
+            vector_op_name = distance_function_map.get(self._distance_metric)
 
         if vector_op_name is None:
             raise ValueError(f"Invalid distance metric: {self._distance_metric}")
 
-        distance_column = getattr(vector_column, vector_op_name)(
-            self._query_vector
-        ).label(DISTANCE_LABEL)
+        # Pass the appropriate query value based on embedding mode.
+        query_value = self._query if embed_in_sql else self._query_vector
+        distance_column = getattr(vector_column, vector_op_name)(query_value).label(
+            DISTANCE_LABEL
+        )
 
         if self._prefilter:
             stmt = self._build_vector_query_with_pre_filter(
