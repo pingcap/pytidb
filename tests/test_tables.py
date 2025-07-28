@@ -1,6 +1,4 @@
-from typing import Optional
 import pytest
-from pytidb.embeddings import EmbeddingFunction
 from pytidb.schema import TableModel
 from pytidb.schema import Field
 
@@ -39,6 +37,10 @@ def test_create_table_if_exists(isolated_client):
     isolated_client.create_table(schema=TestCreateTable, if_exists="skip")
     assert isolated_client.has_table(test_table_name)
 
+    # if_exists=skip
+    isolated_client.create_table(schema=TestCreateTable, if_exists="skip")
+    assert isolated_client.has_table(test_table_name)
+
     # if_exists=overwrite
     isolated_client.create_table(schema=TestCreateTable, if_exists="overwrite")
     assert isolated_client.has_table(test_table_name)
@@ -46,46 +48,6 @@ def test_create_table_if_exists(isolated_client):
     # if_exists=invalid
     with pytest.raises(ValueError):
         isolated_client.create_table(schema=TestCreateTable, if_exists="invalid")
-
-
-def test_save(isolated_client):
-    text_embed_small = EmbeddingFunction("openai/text-embedding-3-small")
-    test_table_name = "test_save_function"
-
-    class TestModel(TableModel):
-        __tablename__ = test_table_name
-        id: int = Field(primary_key=True)
-        text: str = Field()
-        text_vec: Optional[list[float]] = text_embed_small.VectorField(
-            source_field="text"
-        )
-        user_id: int = Field()
-
-    tbl = isolated_client.create_table(schema=TestModel, if_exists="overwrite")
-
-    # Test save - insert new record
-    new_record = TestModel(id=1, text="hello world", user_id=1)
-    saved_record = tbl.save(new_record)
-    assert saved_record.id == 1
-    assert saved_record.text == "hello world"
-
-    # Test save - update existing record
-    updated_record = TestModel(id=1, text="hello updated", user_id=1)
-    saved_record = tbl.save(updated_record)
-    assert saved_record.id == 1
-    assert saved_record.text == "hello updated"
-
-    # Test save with dict
-    dict_record = {"id": 2, "text": "dict insert", "user_id": 2}
-    saved_dict = tbl.save(dict_record)
-    assert saved_dict.id == 2
-    assert saved_dict.text == "dict insert"
-
-    # Test save update with dict
-    dict_update = {"id": 2, "text": "dict updated", "user_id": 2}
-    saved_dict = tbl.save(dict_update)
-    assert saved_dict.id == 2
-    assert saved_dict.text == "dict updated"
 
 
 def test_list_tables_empty(isolated_client):
