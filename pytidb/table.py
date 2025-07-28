@@ -295,6 +295,7 @@ class Table(Generic[T]):
             # Skip if source field is None or empty.
             embedding_source = getattr(data, config["source_field_name"])
             if embedding_source is None or embedding_source == "":
+                setattr(data, field_name, None)
                 continue
 
             source_type = config.get("source_type", "text")
