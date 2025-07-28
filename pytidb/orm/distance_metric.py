@@ -6,13 +6,15 @@ class DistanceMetric(str, enum.Enum):
     """
     An enumeration representing different types of distance metrics.
 
+    - `DistanceMetric.L1`: L1 (Manhattan) distance metric.
     - `DistanceMetric.L2`: L2 (Euclidean) distance metric.
     - `DistanceMetric.COSINE`: Cosine distance metric.
+    - `DistanceMetric.NEGATIVE_INNER_PRODUCT`: Negative inner product distance metric.
     """
 
+    L1 = "L1"
     L2 = "L2"
     COSINE = "COSINE"
-    L1 = "L1"
     NEGATIVE_INNER_PRODUCT = "NEGATIVE_INNER_PRODUCT"
 
     def to_sql_func(self):
@@ -25,12 +27,12 @@ class DistanceMetric(str, enum.Enum):
         Raises:
             ValueError: If the DistanceMetric enum member is not supported.
         """
-        if self == DistanceMetric.L2:
+        if self == DistanceMetric.L1:
+            return "VEC_L1_DISTANCE"
+        elif self == DistanceMetric.L2:
             return "VEC_L2_DISTANCE"
         elif self == DistanceMetric.COSINE:
             return "VEC_COSINE_DISTANCE"
-        elif self == DistanceMetric.L1:
-            return "VEC_L1_DISTANCE"
         elif self == DistanceMetric.NEGATIVE_INNER_PRODUCT:
             return "VEC_NEGATIVE_INNER_PRODUCT"
         else:
@@ -64,13 +66,17 @@ def validate_distance_metric(value: Union[str, DistanceMetric]) -> DistanceMetri
         return value
     elif isinstance(value, str):
         value_upper = value.upper()
-        if value_upper == "COSINE":
-            return DistanceMetric.COSINE
+        if value_upper == "L1":
+            return DistanceMetric.L1
         elif value_upper == "L2":
             return DistanceMetric.L2
+        elif value_upper == "COSINE":
+            return DistanceMetric.COSINE
+        elif value_upper == "NEGATIVE_INNER_PRODUCT":
+            return DistanceMetric.NEGATIVE_INNER_PRODUCT
         else:
             raise ValueError(
-                f"Invalid distance metric: {value}. Valid options: COSINE, L2"
+                f"Invalid distance metric: {value}. Valid options: L1, L2, COSINE, NEGATIVE_INNER_PRODUCT"
             )
     else:
         raise ValueError(

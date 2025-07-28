@@ -1,6 +1,7 @@
 from typing import Optional, Union, List
 import numpy as np
 import sqlalchemy
+from sqlalchemy.dialects.mysql.base import ischema_names
 
 # TiDB Vector has a limitation on the dimension length
 MAX_DIM = 16000
@@ -27,7 +28,7 @@ class VECTOR(sqlalchemy.types.UserDefinedType):
         if dim is not None and (dim < MIN_DIM or dim > MAX_DIM):
             raise ValueError(f"expected dimension to be in [{MIN_DIM}, {MAX_DIM}]")
 
-        super(sqlalchemy.types.UserDefinedType, self).__init__()
+        super().__init__()
         self.dim = dim
 
     def get_col_spec(self, **kw):
@@ -65,25 +66,25 @@ class VECTOR(sqlalchemy.types.UserDefinedType):
         """Returns a comparator factory that provides the distance functions."""
 
         def l1_distance(self, other: VectorDataType):
-            formatted_other = encode_vector(other)
+            formatted_other = encode_vector(other, self.type.dim)
             return sqlalchemy.func.VEC_L1_DISTANCE(self, formatted_other).label(
                 "l1_distance"
             )
 
         def l2_distance(self, other: VectorDataType):
-            formatted_other = encode_vector(other)
+            formatted_other = encode_vector(other, self.type.dim)
             return sqlalchemy.func.VEC_L2_DISTANCE(self, formatted_other).label(
                 "l2_distance"
             )
 
         def cosine_distance(self, other: VectorDataType):
-            formatted_other = encode_vector(other)
+            formatted_other = encode_vector(other, self.type.dim)
             return sqlalchemy.func.VEC_COSINE_DISTANCE(self, formatted_other).label(
                 "cosine_distance"
             )
 
         def negative_inner_product(self, other: VectorDataType):
-            formatted_other = encode_vector(other)
+            formatted_other = encode_vector(other, self.type.dim)
             return sqlalchemy.func.VEC_NEGATIVE_INNER_PRODUCT(
                 self, formatted_other
             ).label("negative_inner_product")
@@ -107,6 +108,10 @@ class VECTOR(sqlalchemy.types.UserDefinedType):
             return sqlalchemy.func.VEC_EMBED_NEGATIVE_INNER_PRODUCT(self, query).label(
                 "embed_negative_inner_product"
             )
+
+          
+# For reflection, make mysql dialect aware of VECTOR type.
+ischema_names["vector"] = VECTOR
 
 
 def encode_vector(value: VectorDataType, dim=None):

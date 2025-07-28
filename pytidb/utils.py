@@ -6,11 +6,10 @@ from typing import Dict, Optional, Any, List, TypeVar, Tuple
 from pydantic import AnyUrl, UrlConstraints
 from sqlalchemy import Column, Index, String, create_engine, make_url
 from sqlmodel import AutoString
-from tidb_vector.sqlalchemy import VectorType
 from sqlalchemy.engine import Row
 from sqlalchemy import Table
 from typing import Union
-
+from pytidb.orm.vector import VECTOR
 
 TIDB_SERVERLESS_HOST_PATTERN = re.compile(
     r"gateway\d{2}\.(.+)\.(prod|dev|staging)\.(shared\.)?(aws|alicloud)\.tidbcloud\.com"
@@ -100,7 +99,7 @@ def build_tidb_connection_url(
 def filter_vector_columns(columns: Dict) -> List[Column]:
     vector_columns = []
     for column in columns:
-        if isinstance(column.type, VectorType):
+        if isinstance(column.type, VECTOR):
             vector_columns.append(column)
     return vector_columns
 
@@ -113,7 +112,7 @@ def check_vector_column(columns: Dict, column_name: str) -> Optional[Column]:
         raise ValueError(f"Non-exists vector column: {column_name}")
 
     vector_column = columns[column_name]
-    if not isinstance(vector_column.type, VectorType):
+    if not isinstance(vector_column.type, VECTOR):
         raise ValueError(f"Invalid vector column: {column_name}")
 
     return vector_column
