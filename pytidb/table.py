@@ -279,6 +279,45 @@ class Table(Generic[T]):
             db_session.refresh(data)
             return data
 
+    def save(self, data: Union[T, dict]) -> T:
+        if not isinstance(data, self._table_model) and not isinstance(data, dict):
+            raise ValueError(
+                f"Invalid data type: {type(data)}, expected {self._table_model}, dict"
+            )
+
+        # Convert dict to table model instance.
+        if isinstance(data, dict):
+            data = self._table_model(**data)
+
+        # Auto embedding.
+        for field_name, config in self._auto_embedding_configs.items():
+            # Skip if vector embeddings is provided.
+            if getattr(data, field_name) is not None:
+                continue
+
+            # Skip if source field is not provided.
+            if not hasattr(data, config["source_field_name"]):
+                continue
+
+            # Skip if source field is None or empty.
+            embedding_source = getattr(data, config["source_field_name"])
+            if embedding_source is None or embedding_source == "":
+                setattr(data, field_name, None)
+                continue
+
+            source_type = config.get("source_type", "text")
+            vector_embedding = config["embed_fn"].get_source_embedding(
+                embedding_source,
+                source_type=source_type,
+            )
+            setattr(data, field_name, vector_embedding)
+
+        with self._client.session() as db_session:
+            merged_data = db_session.merge(data)
+            db_session.flush()
+            db_session.refresh(merged_data)
+            return merged_data
+
     def bulk_insert(self, data: List[Union[T, dict]]) -> List[T]:
         if not isinstance(data, list):
             raise ValueError(
