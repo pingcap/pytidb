@@ -109,7 +109,7 @@ class VECTOR(sqlalchemy.types.UserDefinedType):
                 "embed_negative_inner_product"
             )
 
-          
+
 # For reflection, make mysql dialect aware of VECTOR type.
 ischema_names["vector"] = VECTOR
 
