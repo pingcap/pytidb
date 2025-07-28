@@ -62,7 +62,6 @@ def VectorField(
         else:
             index = False
 
-
     embed_in_sql = embed_fn.embed_in_sql if embed_fn else False
     if embed_in_sql:
         embed_extra = kwargs.get("embed_extra", {})
@@ -76,14 +75,14 @@ def VectorField(
                 }
         query_str = json.dumps(embed_extra)
         default_sa_column = Column(
-            VectorType(dimensions),
+            VECTOR(dimensions),
             Computed(
-                f"EMBED_TEXT('{model_name}', {source_field}, '{query_str}')",
+                f"EMBED_TEXT('{model_name}', `{source_field}`, '{query_str}')",
                 persisted=True,
             ),
         )
     else:
-       default_sa_column =  Column(VECTOR(dimensions))
+        default_sa_column = Column(VECTOR(dimensions))
 
     sa_column = kwargs.pop("sa_column", default_sa_column)
 
