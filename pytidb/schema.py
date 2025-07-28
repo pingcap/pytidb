@@ -60,7 +60,7 @@ def VectorField(
         else:
             index = False
 
-    sa_column = kwargs.get("sa_column", Column(VECTOR(dimensions)))
+    sa_column = kwargs.pop("sa_column", Column(VECTOR(dimensions)))
 
     return Field(
         sa_column=sa_column,
@@ -85,7 +85,7 @@ def FullTextField(
     fts_parser: Optional[str] = "MULTILINGUAL",
     **kwargs,
 ):
-    sa_column = kwargs.get("sa_column", Column(TEXT))
+    sa_column = kwargs.pop("sa_column", Column(TEXT))
     return Field(
         sa_column=sa_column,
         schema_extra={
