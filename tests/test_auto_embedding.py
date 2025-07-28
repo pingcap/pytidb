@@ -4,98 +4,89 @@ from pytidb.embeddings import EmbeddingFunction
 from pytidb.schema import TableModel, Field
 
 
-def test_auto_embedding(shared_client: TiDBClient):
-    text_embed_small = EmbeddingFunction("openai/text-embedding-3-small", timeout=20)
-    test_table_name = "test_auto_embedding"
-
-    class Chunk(TableModel):
-        __tablename__ = test_table_name
+def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction):
+    class ChunkForAutoEmbedding(TableModel):
+        __tablename__ = "test_auto_embedding"
         id: int = Field(primary_key=True)
         text: str = Field()
-        text_vec: Optional[list[float]] = text_embed_small.VectorField(
+        text_vec: Optional[list[float]] = text_embed.VectorField(
             source_field="text",
             index=False,
         )
         user_id: int = Field()
 
+    Chunk = ChunkForAutoEmbedding
     tbl = shared_client.create_table(schema=Chunk, if_exists="overwrite")
 
-    tbl.insert(Chunk(id=1, text="foo", user_id=1))
-    tbl.bulk_insert(
-        [
-            Chunk(id=2, text="bar", user_id=2),
-            Chunk(id=3, text="baz", user_id=3),
-            Chunk(
-                id=4,
-                text="",  # Empty string will skip auto embedding.
-                user_id=4,
-            ),
-        ]
-    )
-    chunks = tbl.query(filters=Chunk.user_id == 3).to_pydantic()
-    assert len(chunks) == 1
-    assert chunks[0].text == "baz"
-    assert len(chunks[0].text_vec) == 1536
+    # Test insert with auto embedding
+    chunk = tbl.insert(Chunk(id=1, text="foo", user_id=1))
+    assert len(chunk.text_vec) == 1536
 
+    # Test dict insert with auto embedding
+    chunk = tbl.insert({"id": 2, "text": "bar", "user_id": 1})
+    assert len(chunk.text_vec) == 1536
+
+    # Test bulk_insert with auto embedding (including empty text case)
+    chunks_via_model_instance = [
+        Chunk(id=3, text="baz", user_id=2),
+        Chunk(id=4, text="", user_id=2),  # Empty string will skip auto embedding.
+    ]
+    chunks_via_dict = [
+        {
+            "id": 5,
+            "text": "qux",
+            "user_id": 3,
+        },  # Empty string will skip auto embedding.
+        {"id": 6, "text": "", "user_id": 3},
+    ]
+    chunks = tbl.bulk_insert(chunks_via_model_instance + chunks_via_dict)
+    for chunk in chunks:
+        if chunk.text == "":
+            assert chunk.text_vec is None
+        else:
+            assert len(chunk.text_vec) == 1536
+
+    # Test vector search with auto embedding
     results = tbl.search("bar").limit(1).to_pydantic(with_score=True)
     assert len(results) == 1
     assert results[0].id == 2
     assert results[0].text == "bar"
     assert results[0].similarity_score >= 0.9
 
-    # Test dict insert
-    dict_chunk = tbl.insert({"id": 5, "text": "dict_test", "user_id": 5})
-    assert dict_chunk.id == 5
-    assert dict_chunk.text == "dict_test"
-    assert dict_chunk.user_id == 5
-    assert len(dict_chunk.text_vec) == 1536
-
-    # Test dict bulk_insert
-    dict_chunks = tbl.bulk_insert(
-        [
-            {"id": 6, "text": "dict_bulk_1", "user_id": 6},
-            {"id": 7, "text": "dict_bulk_2", "user_id": 7},
-            {
-                "id": 8,
-                "text": "",
-                "user_id": 8,
-            },  # Empty string will skip auto embedding
-        ]
-    )
-    assert len(dict_chunks) == 3
-    assert dict_chunks[0].id == 6
-    assert dict_chunks[0].text == "dict_bulk_1"
-    assert len(dict_chunks[0].text_vec) == 1536
-    assert dict_chunks[1].id == 7
-    assert dict_chunks[1].text == "dict_bulk_2"
-    assert len(dict_chunks[1].text_vec) == 1536
-    assert dict_chunks[2].id == 8
-    assert dict_chunks[2].text == ""
-    assert dict_chunks[2].text_vec is None
-
-    # Test mixed bulk_insert (dict and model instances)
-    mixed_chunks = tbl.bulk_insert(
-        [
-            Chunk(id=9, text="model_instance", user_id=9),
-            {"id": 10, "text": "dict_mixed", "user_id": 10},
-        ]
-    )
-    assert len(mixed_chunks) == 2
-    assert mixed_chunks[0].id == 9
-    assert mixed_chunks[0].text == "model_instance"
-    assert len(mixed_chunks[0].text_vec) == 1536
-    assert mixed_chunks[1].id == 10
-    assert mixed_chunks[1].text == "dict_mixed"
-    assert len(mixed_chunks[1].text_vec) == 1536
-
-    # Update,
+    # Test update with auto embedding, from empty to non-empty string
     chunk = tbl.get(4)
     assert chunk.text == ""
     assert chunk.text_vec is None
-    tbl.update(
-        values={"text": "qux"},
-        filters={"id": 4},
+    tbl.update(values={"text": "another baz"}, filters={"id": 4})
+    updated_chunk = tbl.get(4)
+    assert updated_chunk.text == "another baz"
+    assert len(updated_chunk.text_vec) == 1536
+
+    # Test update with auto embedding, from non-empty to empty string
+    tbl.update(values={"text": ""}, filters={"id": 4})
+    updated_chunk = tbl.get(4)
+    assert updated_chunk.text == ""
+    assert updated_chunk.text_vec is None
+
+    # Test save with auto embedding
+    saved_chunk = tbl.save(Chunk(id=7, text="save_test", user_id=4))
+    assert saved_chunk.text == "save_test"
+    assert len(saved_chunk.text_vec) == 1536
+
+    # Test save with empty string - should skip auto embedding
+    save_empty = tbl.save(Chunk(id=8, text="", user_id=4))
+    assert save_empty.text == ""
+    assert save_empty.text_vec is None
+
+    # Test save with pre-existing vector field - should skip auto embedding
+    existing_vector = [0.1] * 1536
+    save_with_vector = tbl.save(
+        Chunk(id=9, text="save_with_vector", text_vec=existing_vector, user_id=4)
     )
-    chunk = tbl.get(4)
-    assert chunk.text == "qux"
-    assert chunk.text_vec is not None
+    assert len(save_with_vector.text_vec) == 1536
+
+    # Test save update from empty to text - should trigger auto embedding
+    saved_chunk = tbl.get(6)
+    saved_chunk.text = "another qux"
+    tbl.save(saved_chunk)
+    assert len(saved_chunk.text_vec) == 1536
