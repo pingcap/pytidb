@@ -66,25 +66,25 @@ class VECTOR(sqlalchemy.types.UserDefinedType):
         """Returns a comparator factory that provides the distance functions."""
 
         def l1_distance(self, other: VectorDataType):
-            formatted_other = encode_vector(other)
+            formatted_other = encode_vector(other, self.type.dim)
             return sqlalchemy.func.VEC_L1_DISTANCE(self, formatted_other).label(
                 "l1_distance"
             )
 
         def l2_distance(self, other: VectorDataType):
-            formatted_other = encode_vector(other)
+            formatted_other = encode_vector(other, self.type.dim)
             return sqlalchemy.func.VEC_L2_DISTANCE(self, formatted_other).label(
                 "l2_distance"
             )
 
         def cosine_distance(self, other: VectorDataType):
-            formatted_other = encode_vector(other)
+            formatted_other = encode_vector(other, self.type.dim)
             return sqlalchemy.func.VEC_COSINE_DISTANCE(self, formatted_other).label(
                 "cosine_distance"
             )
 
         def negative_inner_product(self, other: VectorDataType):
-            formatted_other = encode_vector(other)
+            formatted_other = encode_vector(other, self.type.dim)
             return sqlalchemy.func.VEC_NEGATIVE_INNER_PRODUCT(
                 self, formatted_other
             ).label("negative_inner_product")
