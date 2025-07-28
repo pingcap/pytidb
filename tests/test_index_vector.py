@@ -1,7 +1,7 @@
 import pytest
 from pytidb import TiDBClient
 from pytidb.orm.indexes import VectorIndex
-from pytidb.orm.types import DistanceMetric
+from pytidb.orm.distance_metric import DistanceMetric
 from pytidb.schema import TableModel, Field, VectorField
 
 

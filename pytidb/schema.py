@@ -4,10 +4,10 @@ from pydantic import BaseModel
 from sqlalchemy import Column, Index
 from sqlmodel import SQLModel, Field, Relationship
 from sqlmodel.main import FieldInfo, RelationshipInfo, SQLModelMetaclass
-from tidb_vector.sqlalchemy import VectorType
 
+from pytidb.orm.types import TEXT, VECTOR
 from pytidb.orm.indexes import VectorIndexAlgorithm
-from pytidb.orm.types import DistanceMetric
+from pytidb.orm.distance_metric import DistanceMetric
 
 
 if TYPE_CHECKING:
@@ -48,13 +48,22 @@ def VectorField(
     source_field: Optional[str] = None,
     embed_fn: Optional["BaseEmbeddingFunction"] = None,
     source_type: "EmbeddingSourceType" = "text",
-    index: Optional[bool] = True,
+    index: Optional[bool] = None,
     distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
     algorithm: Optional[VectorIndexAlgorithm] = "HNSW",
     **kwargs,
 ):
+    # Notice: Currently, only L2 and COSINE distance metrics support indexing.
+    if index is None:
+        if distance_metric in [DistanceMetric.L2, DistanceMetric.COSINE]:
+            index = True
+        else:
+            index = False
+
+    sa_column = kwargs.pop("sa_column", Column(VECTOR(dimensions)))
+
     return Field(
-        sa_column=Column(VectorType(dimensions)),
+        sa_column=sa_column,
         schema_extra={
             "field_type": "vector",
             "dimensions": dimensions,
@@ -76,7 +85,9 @@ def FullTextField(
     fts_parser: Optional[str] = "MULTILINGUAL",
     **kwargs,
 ):
+    sa_column = kwargs.pop("sa_column", Column(TEXT))
     return Field(
+        sa_column=sa_column,
         schema_extra={
             "field_type": "text",
             # Fulltext index related.

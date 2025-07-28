@@ -7,7 +7,7 @@ from pytidb import TiDBClient, Table
 from pytidb.rerankers import Reranker
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, TableModel, Field, Column
-from pytidb.datatype import Vector, JSON
+from pytidb.datatype import VECTOR, JSON
 from pytidb.search import SCORE_LABEL
 
 
@@ -20,7 +20,7 @@ def vector_table(shared_client: TiDBClient):
         __tablename__ = "test_vector_search"
         id: int = Field(None, primary_key=True)
         text: str = Field(None)
-        text_vec: Any = Field(sa_column=Column(Vector(3)))
+        text_vec: Any = Field(sa_column=Column(VECTOR(3)))
         user_id: int = Field(None)
         meta: dict = Field(sa_type=JSON)
 
@@ -219,9 +219,9 @@ def test_with_multi_vector_fields(shared_client: TiDBClient):
         __tablename__ = "test_vector_search_multi_vec"
         id: int = Field(None, primary_key=True)
         title: str = Field(None)
-        title_vec: list[float] = Field(sa_column=Column(Vector(3)))
+        title_vec: list[float] = Field(sa_column=Column(VECTOR(3)))
         body: str = Field(None)
-        body_vec: list[float] = Field(sa_column=Column(Vector(3)))
+        body_vec: list[float] = Field(sa_column=Column(VECTOR(3)))
 
     tbl = shared_client.create_table(schema=ChunkWithMultiVec, if_exists="overwrite")
     tbl.bulk_insert(
