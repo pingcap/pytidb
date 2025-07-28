@@ -2,7 +2,7 @@ import os
 import dotenv
 from pytidb.embeddings import EmbeddingFunction
 from pytidb.schema import TableModel, Field
-from pytidb.datatype import Text
+from pytidb.datatype import TEXT
 from pytidb import TiDBClient
 
 # Load environment variables
@@ -31,7 +31,7 @@ print("\n=== Define table schema ===")
 
 class Chunk(TableModel):
     id: int = Field(primary_key=True)
-    text: str = Field(sa_type=Text)
+    text: str = Field(sa_type=TEXT)
     text_vec: list[float] = embed_func.VectorField(source_field="text")
 
 

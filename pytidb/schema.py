@@ -1,7 +1,8 @@
 from typing import Any, Literal, Optional, TYPE_CHECKING, List, TypedDict
+import json
 
 from pydantic import BaseModel
-from sqlalchemy import Column, Index
+from sqlalchemy import Column, Computed, Index
 from sqlmodel import SQLModel, Field, Relationship
 from sqlmodel.main import FieldInfo, RelationshipInfo, SQLModelMetaclass
 from tidb_vector.sqlalchemy import VectorType
@@ -11,7 +12,8 @@ from pytidb.orm.distance_metric import DistanceMetric
 
 
 if TYPE_CHECKING:
-    from pytidb.embeddings.base import BaseEmbeddingFunction, EmbeddingSourceType
+    from pytidb.embeddings.function import EmbeddingFunction
+    from pytidb.embeddings.types import EmbeddingSourceType
 
 
 VectorDataType = List[float]
@@ -46,15 +48,37 @@ RelationshipInfo = RelationshipInfo
 def VectorField(
     dimensions: int,
     source_field: Optional[str] = None,
-    embed_fn: Optional["BaseEmbeddingFunction"] = None,
+    embed_fn: Optional["EmbeddingFunction"] = None,
     source_type: "EmbeddingSourceType" = "text",
     index: Optional[bool] = True,
     distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
     algorithm: Optional[VectorIndexAlgorithm] = "HNSW",
     **kwargs,
 ):
+    embed_in_sql = embed_fn.embed_in_sql if embed_fn else False
+    if embed_in_sql:
+        embed_extra = kwargs.get("embed_extra", {})
+        if not embed_extra:
+            model_name = embed_fn.model_name
+            provider_name = model_name.split("/")[0]
+            if provider_name == "jina_ai":
+                embed_extra = {
+                    "task": "retrieval.passage",
+                    "task@search": "retrieval.query",
+                }
+        query_str = json.dumps(embed_extra)
+        sa_column = Column(
+            VectorType(dimensions),
+            Computed(
+                f"EMBED_TEXT('{model_name}', {source_field}, '{query_str}')",
+                persisted=True,
+            ),
+        )
+    else:
+        sa_column = Column(VectorType(dimensions))
+
     return Field(
-        sa_column=Column(VectorType(dimensions)),
+        sa_column=sa_column,
         schema_extra={
             "field_type": "vector",
             "dimensions": dimensions,
@@ -62,6 +86,7 @@ def VectorField(
             "embed_fn": embed_fn,
             "source_field": source_field,
             "source_type": source_type,
+            "embed_in_sql": embed_in_sql,
             # Vector index related.
             "skip_index": not index,
             "distance_metric": distance_metric,

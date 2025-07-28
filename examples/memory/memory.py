@@ -6,7 +6,7 @@ import datetime
 from typing import List, Dict, Any
 from pytidb.embeddings import EmbeddingFunction
 from pytidb.schema import TableModel, Field, Column
-from pytidb.datatype import Text
+from pytidb.datatype import TEXT
 
 dotenv.load_dotenv()
 
@@ -46,7 +46,7 @@ class Memory:
 
             id: int = Field(default=None, primary_key=True)
             user_id: str
-            memory: str = Field(sa_column=Column(Text))
+            memory: str = Field(sa_column=Column(TEXT))
             embedding: List[float] = embedding_fn.VectorField(source_field="memory")
             created_at: datetime.datetime = Field(
                 default_factory=lambda: datetime.datetime.now(datetime.UTC)

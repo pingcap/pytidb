@@ -303,6 +303,11 @@ class Table(Generic[T]):
             if "embed_fn" not in config or config["embed_fn"] is None:
                 continue
 
+            # Skip if auto embedding in SQL is enabled, it will compute the embedding in database side.
+            embed_in_sql = config.get("embed_in_sql", False)
+            if embed_in_sql:
+                continue
+
             for item in data:
                 # Skip if vector embeddings is provided.
                 if getattr(item, field_name) is not None:
@@ -315,11 +320,6 @@ class Table(Generic[T]):
                 # Skip if source field is None or empty.
                 embedding_source = getattr(item, config["source_field_name"])
                 if embedding_source is None or embedding_source == "":
-                    continue
-
-                # Skip if auto embedding in SQL is enabled, it will compute the embedding in database side.
-                embed_in_sql = config.get("embed_in_sql", False)
-                if embed_in_sql:
                     continue
 
                 items_need_embedding.append(item)
