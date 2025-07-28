@@ -6,7 +6,7 @@ from pytidb.embeddings import EmbeddingFunction
 from pytidb.rerankers import Reranker
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import TableModel, Field, DistanceMetric
-from pytidb.datatype import Text
+from pytidb.datatype import TEXT
 
 
 @pytest.fixture(scope="module")
@@ -17,7 +17,7 @@ def hybrid_table(shared_client: TiDBClient):
         __tablename__ = "items_for_hybrid"
         id: int = Field(None, primary_key=True)
         name: str = Field()
-        description: str = Field(sa_type=Text)
+        description: str = Field(sa_type=TEXT)
         embedding: list[float] = embed_fn.VectorField(source_field="description")
 
     tbl = shared_client.create_table(schema=Item, if_exists="overwrite")

@@ -19,7 +19,7 @@ from sqlalchemy import Column, Row, Select, asc, desc, select, and_, text
 from pytidb.orm.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import QueryBundle, VectorDataType, TableModel
-from pytidb.orm.types import DistanceMetric, validate_distance_metric
+from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
 from pytidb.filters import build_filter_clauses
 from pytidb.utils import (
     RowKeyType,

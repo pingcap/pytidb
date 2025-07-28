@@ -4,10 +4,10 @@ from pydantic import BaseModel
 from sqlalchemy import Column, Index
 from sqlmodel import SQLModel, Field, Relationship
 from sqlmodel.main import FieldInfo, RelationshipInfo, SQLModelMetaclass
-from tidb_vector.sqlalchemy import VectorType
 
+from pytidb.orm.types import TEXT, VECTOR
 from pytidb.orm.indexes import VectorIndexAlgorithm
-from pytidb.orm.types import DistanceMetric
+from pytidb.orm.distance_metric import DistanceMetric
 
 
 if TYPE_CHECKING:
@@ -54,7 +54,7 @@ def VectorField(
     **kwargs,
 ):
     return Field(
-        sa_column=Column(VectorType(dimensions)),
+        sa_column=Column(VECTOR(dimensions)),
         schema_extra={
             "field_type": "vector",
             "dimensions": dimensions,
@@ -77,6 +77,7 @@ def FullTextField(
     **kwargs,
 ):
     return Field(
+        sa_column=Column(TEXT),
         schema_extra={
             "field_type": "text",
             # Fulltext index related.
