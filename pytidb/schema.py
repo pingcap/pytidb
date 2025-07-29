@@ -12,8 +12,7 @@ from pytidb.orm.distance_metric import DistanceMetric
 
 
 if TYPE_CHECKING:
-    from pytidb.embeddings.function import EmbeddingFunction
-    from pytidb.embeddings.types import EmbeddingSourceType
+    from pytidb.embeddings.base import BaseEmbeddingFunction, EmbeddingSourceType
 
 
 VectorDataType = List[float]
@@ -48,7 +47,7 @@ RelationshipInfo = RelationshipInfo
 def VectorField(
     dimensions: int,
     source_field: Optional[str] = None,
-    embed_fn: Optional["EmbeddingFunction"] = None,
+    embed_fn: Optional["BaseEmbeddingFunction"] = None,
     source_type: "EmbeddingSourceType" = "text",
     index: Optional[bool] = None,
     distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,

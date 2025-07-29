@@ -5,32 +5,12 @@ from pytidb.embeddings import EmbeddingFunction
 from pytidb.schema import TableModel, Field
 
 
-@pytest.fixture(scope="function")
-def text_embed(request):
-    """Parametrized EmbeddingFunction fixture for both client-side and server-side embedding"""
-    use_server = request.param
-    if use_server:
-        # For server-side embedding, use TiDB Cloud free model
-        return EmbeddingFunction(
-            "openai/text-embedding-3-small",
-            timeout=20,
-            use_server=True,
-        )
-    else:
-        # For client-side embedding, use OpenAI model
-        return EmbeddingFunction(
-            "openai/text-embedding-3-small", timeout=20, use_server=False
-        )
-
-
-@pytest.mark.parametrize(
-    "text_embed", [False, True], indirect=True, ids=["client_side", "server_side"]
-)
 def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction):
-    embed_mode = "server_side" if text_embed.use_server else "client_side"
+    # Notice: Text embedding will be computed in the database (server-side) by default.
+    text_embed = EmbeddingFunction("openai/text-embedding-3-small")
 
     class ChunkForAutoEmbedding(TableModel):
-        __tablename__ = f"test_auto_embedding_{embed_mode}"
+        __tablename__ = "test_auto_embedding"
         id: int = Field(primary_key=True)
         text: Optional[str] = Field()
         text_vec: Optional[list[float]] = text_embed.VectorField(
@@ -100,26 +80,16 @@ def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction
     assert save_empty.text_vec is None
 
     # Test saving with a pre-existing vector field.
+    # When auto embedding is enabled, manual updates to the vector field should be disallowed.
     existing_vector = [0.1] * text_embed.dimensions
-    if not text_embed.use_server:
-        # If server-side auto embedding is enabled, manual updates to the vector field should be disallowed.
-        save_with_vector = tbl.save(
+    with pytest.raises(Exception):
+        tbl.save(
             Chunk(id=9, text="save_with_vector", text_vec=existing_vector, user_id=4)
         )
-        assert len(save_with_vector.text_vec) == text_embed.dimensions
-    else:
-        # If client-side auto embedding is enabled, saving with a provided vector should skip auto embedding.
-        with pytest.raises(Exception):
-            save_with_vector = tbl.save(
-                Chunk(
-                    id=9, text="save_with_vector", text_vec=existing_vector, user_id=4
-                )
-            )
 
     # Test save update from empty to text - should trigger auto embedding
-    if not text_embed.use_server:
-        # FIXME: The server-side auto embedding does not support empty string.
-        saved_chunk = tbl.get(6)
-        saved_chunk.text = "another qux"
-        tbl.save(saved_chunk)
-        assert len(saved_chunk.text_vec) == text_embed.dimensions
+    # FIXME: The server-side auto embedding does not support empty string.
+    saved_chunk = tbl.get(6)
+    saved_chunk.text = "another qux"
+    saved_chunk = tbl.save(saved_chunk)
+    assert len(saved_chunk.text_vec) == text_embed.dimensions

@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Any, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
-from pydantic import BaseModel, Field
-from pytidb.embeddings.types import EmbeddingSourceType
+from pydantic import Field
+from pytidb.embeddings.base import BaseEmbeddingFunction, EmbeddingSourceType
 from pytidb.embeddings.utils import (
     encode_local_file_to_base64,
     encode_pil_image_to_base64,
@@ -13,54 +13,6 @@ import urllib.request
 
 if TYPE_CHECKING:
     from PIL.Image import Image
-
-
-SourceInputType = Union[str, Path, "Image"]
-QueryInputType = Union[str, Path, "Image"]
-
-
-def get_embeddings(
-    model_name: str,
-    input: List[str],
-    api_key: Optional[str] = None,
-    api_base: Optional[str] = None,
-    timeout: Optional[int] = 60,
-    caching: bool = True,
-    **kwargs: Any,
-) -> List[List[float]]:
-    """
-    Retrieve embeddings for a given list of input strings using the specified model.
-
-    Args:
-        api_key (str): The API key for authentication.
-        api_base (str): The base URL of the LiteLLM proxy server.
-        model_name (str): The name of the model to use for generating embeddings.
-        input (List[str]): A list of input strings for which embeddings are to be generated.
-        timeout (float): The timeout value for the API call, default 60 secs.
-        caching (bool): Whether to cache the embeddings, default True.
-        **kwargs (Any): Additional keyword arguments to be passed to the embedding function.
-
-    Returns:
-        List[List[float]]: A list of embeddings, where each embedding corresponds to an input string.
-    """
-    try:
-        from litellm import embedding
-    except ImportError:
-        raise ImportError(
-            "To use the built-in embedding function, you need to install pytidb[models] with: "
-            "pip install pytidb[models]"
-        )
-
-    response = embedding(
-        api_key=api_key,
-        api_base=api_base,
-        model=model_name,
-        input=input,
-        timeout=timeout,
-        caching=caching,
-        **kwargs,
-    )
-    return [result["embedding"] for result in response.data]
 
 
 # Map of model name -> maximum allowed base64 length (characters)
@@ -81,7 +33,10 @@ MODEL_DEFAULT_DIMENSIONS = {
 }
 
 
-class EmbeddingFunction(BaseModel):
+EmbeddingInput = Union[str, Path, "Image"]
+
+
+class EmbeddingFunction(BaseEmbeddingFunction):
     model_name: str = Field(
         None, description="The name of embedding model used for embedding"
     )
@@ -98,12 +53,13 @@ class EmbeddingFunction(BaseModel):
     caching: bool = Field(
         True, description="Whether to cache the embeddings, default True."
     )
-    use_server: bool = Field(
+    multimodal: bool = Field(
         False,
         description=(
-            "Whether to enable server-side embedding (auto embedding in the database). "
-            "If True, the embedding for the source data will be computed in the database. "
-            "Default is False."
+            "Indicates whether the embedding function supports multi-modal input (e.g., both text and image). "
+            "Currently, multi-modal embedding is only supported for client-side embedding. "
+            "- For multimodal=True, enable client-side embedding by default."
+            "- For multimodal=False, disable server-side embedding by default."
         ),
     )
 
@@ -115,44 +71,52 @@ class EmbeddingFunction(BaseModel):
         api_base: Optional[str] = None,
         timeout: Optional[int] = None,
         caching: bool = True,
-        use_server: bool = False,
+        use_server: Optional[bool] = None,
+        multimodal: bool = False,
         **kwargs,
     ):
+        if use_server is None:
+            use_server = not multimodal
+
+        if dimensions is None:
+            dimensions = MODEL_DEFAULT_DIMENSIONS.get(model_name)
+
         super().__init__(
             model_name=model_name,
-            dimensions=dimensions or MODEL_DEFAULT_DIMENSIONS.get(model_name),
+            dimensions=dimensions,
             api_key=api_key,
             api_base=api_base,
             timeout=timeout,
             caching=caching,
             use_server=use_server,
+            multimodal=multimodal,
             **kwargs,
         )
         if self.dimensions is None:
             if use_server:
                 raise ValueError(
-                    f"No default dimensions found for model {self.model_name}, please specify dimensions manually."
+                    f"Missing dimensions for model {self.model_name}. Please specify dimensions."
                 )
             else:
-                # Try to infer dimensions from a test embedding
+                # For client-side embedding, try to infer dimensions from a test embedding.
                 embedding = self.get_query_embedding("test", "text")
                 if embedding is None:
                     raise ValueError(
-                        f"Unable to infer dimensions for model {self.model_name}, please specify dimensions manually."
+                        f"Cannot infer dimensions for model {self.model_name}. Please specify dimensions."
                     )
                 self.dimensions = len(embedding)
 
-    def _process_query(
-        self, query: QueryInputType, source_type: Optional[EmbeddingSourceType] = "text"
+    def _process_input(
+        self, input: EmbeddingInput, source_type: Optional[EmbeddingSourceType] = "text"
     ) -> Union[str, dict]:
         if source_type == "text":
-            return query
+            return input
         elif source_type == "image":
-            return self._process_image_query(query)
+            return self._process_image_input(input)
         else:
-            raise ValueError(f"invalid source type: {source_type}")
+            raise ValueError(f"Invalid source type: {source_type}")
 
-    def _process_image_query(self, query: QueryInputType) -> Union[str, dict]:
+    def _process_image_input(self, input: EmbeddingInput) -> Union[str, dict]:
         try:
             from PIL.Image import Image
         except ImportError:
@@ -160,11 +124,11 @@ class EmbeddingFunction(BaseModel):
                 "PIL (Pillow) is required for image processing. Install it with: pip install Pillow"
             )
 
-        if isinstance(query, Path):
-            query = query.resolve().as_uri()
+        if isinstance(input, Path):
+            input = input.resolve().as_uri()
 
-        if isinstance(query, str):
-            is_valid, image_url = parse_url_safely(query)
+        if isinstance(input, str):
+            is_valid, image_url = parse_url_safely(input)
             if is_valid:
                 if image_url.scheme == "file":
                     file_path = urllib.request.url2pathname(image_url.path)
@@ -186,11 +150,10 @@ class EmbeddingFunction(BaseModel):
                         f"invalid url schema for image source: {image_url.scheme}"
                     )
             else:
-                # For image search, the query can be string contains some keywords.
-                return query
-        elif isinstance(query, Image):
+                return input
+        elif isinstance(input, Image):
             max_len = _MAX_B64_LENGTH_PER_MODEL.get(self.model_name)
-            base64_str = encode_pil_image_to_base64(query, max_base64_length=max_len)
+            base64_str = encode_pil_image_to_base64(input, max_base64_length=max_len)
             if self.model_name.startswith("bedrock/"):
                 return f"data:image/jpeg;base64,{base64_str}"
             return {"image": base64_str}
@@ -202,7 +165,7 @@ class EmbeddingFunction(BaseModel):
 
     def get_query_embedding(
         self,
-        query: QueryInputType,
+        query: EmbeddingInput,
         source_type: Optional[EmbeddingSourceType] = "text",
         **kwargs,
     ) -> list[float]:
@@ -216,80 +179,13 @@ class EmbeddingFunction(BaseModel):
         Returns:
             List of float values representing the embedding
         """
-        embedding_input = self._process_query(query, source_type)
-        embeddings = get_embeddings(
-            api_key=self.api_key,
-            api_base=self.api_base,
-            model_name=self.model_name,
-            dimensions=self.dimensions,
-            timeout=self.timeout,
-            caching=self.caching,
-            input=[embedding_input],
-            **kwargs,
-        )
+        embedding_input = self._process_input(query, source_type)
+        embeddings = self._call_embeddings_api([embedding_input], **kwargs)
         return embeddings[0]
-
-    def _process_source(
-        self,
-        source: SourceInputType,
-        source_type: Optional[EmbeddingSourceType] = "text",
-    ) -> Union[str, dict]:
-        if source_type == "image":
-            return self._process_image_source(source)
-        elif source_type == "text":
-            return source
-        else:
-            raise ValueError(f"Invalid source type: {source_type}")
-
-    def _process_image_source(self, source: SourceInputType) -> Union[str, dict]:
-        try:
-            from PIL.Image import Image
-        except ImportError:
-            raise ImportError(
-                "PIL (Pillow) is required for image processing. Install it with: pip install Pillow"
-            )
-
-        if isinstance(source, Path):
-            source = source.resolve().as_uri()
-
-        if isinstance(source, str):
-            is_valid, image_url = parse_url_safely(source)
-            if is_valid:
-                if image_url.scheme == "file":
-                    file_path = urllib.request.url2pathname(image_url.path)
-                    max_len = _MAX_B64_LENGTH_PER_MODEL.get(self.model_name)
-                    base64_str = encode_local_file_to_base64(
-                        file_path, max_base64_length=max_len
-                    )
-                    if self.model_name.startswith("bedrock/"):
-                        return f"data:image/jpeg;base64,{base64_str}"
-                    return {"image": base64_str}
-                elif image_url.scheme == "http" or image_url.scheme == "https":
-                    # For bedrock models, Bedrock API expects base64 not URL; fall back to query string.
-                    if self.model_name.startswith("bedrock/"):
-                        return image_url.geturl()
-                    return {"image": image_url.geturl()}
-                else:
-                    raise ValueError(
-                        f"invalid url schema for image source: {image_url.scheme}"
-                    )
-            else:
-                raise ValueError(f"invalid url format for image source: {source}")
-        elif isinstance(source, Image):
-            max_len = _MAX_B64_LENGTH_PER_MODEL.get(self.model_name)
-            base64_str = encode_pil_image_to_base64(source, max_base64_length=max_len)
-            if self.model_name.startswith("bedrock/"):
-                return f"data:image/jpeg;base64,{base64_str}"
-            return {"image": base64_str}
-        else:
-            raise ValueError(
-                "invalid input for source, current supported input types: "
-                "url string, Path object, PIL.Image object"
-            )
 
     def get_source_embedding(
         self,
-        source: SourceInputType,
+        source: EmbeddingInput,
         source_type: Optional[EmbeddingSourceType] = "text",
         **kwargs,
     ) -> list[float]:
@@ -303,22 +199,13 @@ class EmbeddingFunction(BaseModel):
         Returns:
             List of float values representing the embedding
         """
-        embedding_input = self._process_source(source, source_type)
-        embeddings = get_embeddings(
-            api_key=self.api_key,
-            api_base=self.api_base,
-            model_name=self.model_name,
-            dimensions=self.dimensions,
-            timeout=self.timeout,
-            caching=self.caching,
-            input=[embedding_input],
-            **kwargs,
-        )
+        embedding_input = self._process_input(source, source_type)
+        embeddings = self._call_embeddings_api([embedding_input], **kwargs)
         return embeddings[0]
 
     def get_source_embeddings(
         self,
-        sources: List[SourceInputType],
+        sources: List[EmbeddingInput],
         source_type: Optional[EmbeddingSourceType] = "text",
         **kwargs,
     ) -> list[list[float]]:
@@ -333,44 +220,52 @@ class EmbeddingFunction(BaseModel):
             List of embeddings, where each embedding is a list of float values
         """
         embedding_inputs = [
-            self._process_source(source, source_type) for source in sources
+            self._process_input(source, source_type) for source in sources
         ]
-        embeddings = get_embeddings(
-            api_key=self.api_key,
-            api_base=self.api_base,
-            model_name=self.model_name,
-            dimensions=self.dimensions,
-            timeout=self.timeout,
-            caching=self.caching,
-            input=embedding_inputs,
-            **kwargs,
-        )
+        embeddings = self._call_embeddings_api(embedding_inputs, **kwargs)
         return embeddings
 
-    def VectorField(
+    def __call__(
         self,
-        source_field: Optional[str] = None,
+        input: EmbeddingInput,
         source_type: Optional[EmbeddingSourceType] = "text",
         **kwargs,
-    ):
+    ) -> list[float]:
+        return self._call_embeddings_api([input], source_type, **kwargs)
+
+    def _call_embeddings_api(
+        self, input: List[EmbeddingInput], **kwargs
+    ) -> List[List[float]]:
         """
-        Create a VectorField with auto embedding configuration.
+        Retrieve embeddings for a given list of input strings using the specified model.
 
         Args:
-            source_field: The name of the source field to embed
-            source_type: The type of source data ("text" or "image")
-            **kwargs: Additional keyword arguments for VectorField
+            api_key (str): The API key for authentication.
+            api_base (str): The base URL of the LiteLLM proxy server.
+            model_name (str): The name of the model to use for generating embeddings.
+            input (List[str]): A list of input strings for which embeddings are to be generated.
+            timeout (float): The timeout value for the API call, default 60 secs.
+            caching (bool): Whether to cache the embeddings, default True.
+            **kwargs (Any): Additional keyword arguments to be passed to the embedding function.
 
         Returns:
-            VectorField configured with this embedding function
+            List[List[float]]: A list of embeddings, where each embedding corresponds to an input string.
         """
-        # Import here to avoid circular import
-        from pytidb.schema import VectorField
+        try:
+            from litellm import embedding
+        except ImportError:
+            raise ImportError(
+                "To use the built-in embedding function, you need to install pytidb[models] with: "
+                "pip install pytidb[models]"
+            )
 
-        return VectorField(
-            embed_fn=self,
-            dimensions=self.dimensions,
-            source_field=source_field,
-            source_type=source_type,
+        response = embedding(
+            input=input,
+            api_key=self.api_key,
+            api_base=self.api_base,
+            model=self.model_name,
+            timeout=self.timeout,
+            caching=self.caching,
             **kwargs,
         )
+        return [result["embedding"] for result in response.data]

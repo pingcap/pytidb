@@ -26,6 +26,7 @@
         "litellm",
         "MEDIUMINT",
         "MEDIUMTEXT",
+        "multimodal",
         "mypy",
         "mysqlconnector",
         "mysqldb",
