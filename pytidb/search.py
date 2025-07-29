@@ -270,7 +270,7 @@ class SearchQuery:
         # Auto embedding for query.
         if self._query_vector is not None:
             # Already have query vector, no need for auto embedding
-            embed_in_sql = False
+            use_server = False
         else:
             # Need to generate query vector through auto embedding
             auto_embedding_configs = self._table.auto_embedding_configs
@@ -281,15 +281,15 @@ class SearchQuery:
                 )
 
             config = auto_embedding_configs[vector_column.name]
-            embed_in_sql = config.get("embed_in_sql", False)
-            if not embed_in_sql:
+            use_server = config.get("use_server", False)
+            if not use_server:
                 source_type = config["source_type"]
                 self._query_vector = config["embed_fn"].get_query_embedding(
                     self._query, source_type
                 )
 
         # Distance metric mapping.
-        if embed_in_sql:
+        if use_server:
             vector_op_name = embed_distance_function_map.get(self._distance_metric)
         else:
             vector_op_name = distance_function_map.get(self._distance_metric)
@@ -298,7 +298,7 @@ class SearchQuery:
             raise ValueError(f"Invalid distance metric: {self._distance_metric}")
 
         # Pass the appropriate query value based on embedding mode.
-        query_value = self._query if embed_in_sql else self._query_vector
+        query_value = self._query if use_server else self._query_vector
         distance_column = getattr(vector_column, vector_op_name)(query_value).label(
             DISTANCE_LABEL
         )

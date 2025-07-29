@@ -44,6 +44,7 @@ def shared_client(env) -> Generator[TiDBClient, None, None]:
     """
     db_name = generate_db_name()
     tidb_client = create_tidb_client(db_name)
+    print(f"Shared client created for database {db_name}")
 
     yield tidb_client
 

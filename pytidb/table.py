@@ -161,7 +161,7 @@ class Table(Generic[T]):
                 continue
 
             source_type = field_attrs.get("source_type", "text")
-            embed_in_sql = field_attrs.get("embed_in_sql", False)
+            use_server = field_attrs.get("use_server", False)
 
             self._auto_embedding_configs[vector_field_name] = {
                 "embed_fn": embed_fn,
@@ -169,7 +169,7 @@ class Table(Generic[T]):
                 "vector_field_name": vector_field_name,
                 "source_field_name": source_field_name,
                 "source_type": source_type,
-                "embed_in_sql": embed_in_sql,
+                "use_server": use_server,
             }
 
     def _auto_create_vector_index(self, vector_fields):
@@ -249,8 +249,8 @@ class Table(Generic[T]):
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
-            embed_in_sql = config.get("embed_in_sql", False)
-            if embed_in_sql:
+            use_server = config.get("use_server", False)
+            if use_server:
                 continue
 
             # Skip if vector embeddings is provided.
@@ -293,8 +293,8 @@ class Table(Generic[T]):
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
-            embed_in_sql = config.get("embed_in_sql", False)
-            if embed_in_sql:
+            use_server = config.get("use_server", False)
+            if use_server:
                 continue
 
             # Skip if vector embeddings is provided.
@@ -342,8 +342,8 @@ class Table(Generic[T]):
             sources_to_embedding = []
 
             # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
-            embed_in_sql = config.get("embed_in_sql", False)
-            if embed_in_sql:
+            use_server = config.get("use_server", False)
+            if use_server:
                 continue
 
             # Skip if no embedding function is provided.
@@ -388,8 +388,8 @@ class Table(Generic[T]):
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
-            embed_in_sql = config.get("embed_in_sql", False)
-            if embed_in_sql:
+            use_server = config.get("use_server", False)
+            if use_server:
                 continue
 
             # Skip if vector embeddings is provided.

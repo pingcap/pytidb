@@ -62,8 +62,8 @@ def VectorField(
         else:
             index = False
 
-    embed_in_sql = embed_fn.embed_in_sql if embed_fn else False
-    if embed_in_sql:
+    use_server = embed_fn.use_server if embed_fn else False
+    if use_server:
         embed_extra = kwargs.get("embed_extra", {})
         if not embed_extra:
             model_name = embed_fn.model_name
@@ -95,7 +95,7 @@ def VectorField(
             "embed_fn": embed_fn,
             "source_field": source_field,
             "source_type": source_type,
-            "embed_in_sql": embed_in_sql,
+            "use_server": use_server,
             # Vector index related.
             "skip_index": not index,
             "distance_metric": distance_metric,

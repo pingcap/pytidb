@@ -98,12 +98,12 @@ class EmbeddingFunction(BaseModel):
     caching: bool = Field(
         True, description="Whether to cache the embeddings, default True."
     )
-    embed_in_sql: bool = Field(
+    use_server: bool = Field(
         False,
         description=(
-            "Whether to enable auto embedding in SQL, it will compute "
-            "the embedding for the source data in the database. "
-            "Default False. "
+            "Whether to enable server-side embedding (auto embedding in the database). "
+            "If True, the embedding for the source data will be computed in the database. "
+            "Default is False."
         ),
     )
 
@@ -115,7 +115,7 @@ class EmbeddingFunction(BaseModel):
         api_base: Optional[str] = None,
         timeout: Optional[int] = None,
         caching: bool = True,
-        embed_in_sql: bool = False,
+        use_server: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -125,11 +125,11 @@ class EmbeddingFunction(BaseModel):
             api_base=api_base,
             timeout=timeout,
             caching=caching,
-            embed_in_sql=embed_in_sql,
+            use_server=use_server,
             **kwargs,
         )
         if self.dimensions is None:
-            if embed_in_sql:
+            if use_server:
                 raise ValueError(
                     f"No default dimensions found for model {self.model_name}, please specify dimensions manually."
                 )

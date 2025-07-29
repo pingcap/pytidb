@@ -8,18 +8,18 @@ from pytidb.schema import TableModel, Field
 @pytest.fixture(scope="function")
 def text_embed(request):
     """Parametrized EmbeddingFunction fixture for both client-side and server-side embedding"""
-    embed_in_sql = request.param
-    if embed_in_sql:
+    use_server = request.param
+    if use_server:
         # For server-side embedding, use TiDB Cloud free model
         return EmbeddingFunction(
             "openai/text-embedding-3-small",
             timeout=20,
-            embed_in_sql=True,
+            use_server=True,
         )
     else:
         # For client-side embedding, use OpenAI model
         return EmbeddingFunction(
-            "openai/text-embedding-3-small", timeout=20, embed_in_sql=False
+            "openai/text-embedding-3-small", timeout=20, use_server=False
         )
 
 
@@ -27,7 +27,7 @@ def text_embed(request):
     "text_embed", [False, True], indirect=True, ids=["client_side", "server_side"]
 )
 def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction):
-    embed_mode = "server_side" if text_embed.embed_in_sql else "client_side"
+    embed_mode = "server_side" if text_embed.use_server else "client_side"
 
     class ChunkForAutoEmbedding(TableModel):
         __tablename__ = f"test_auto_embedding_{embed_mode}"
@@ -101,7 +101,7 @@ def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction
 
     # Test saving with a pre-existing vector field.
     existing_vector = [0.1] * text_embed.dimensions
-    if not text_embed.embed_in_sql:
+    if not text_embed.use_server:
         # If server-side auto embedding is enabled, manual updates to the vector field should be disallowed.
         save_with_vector = tbl.save(
             Chunk(id=9, text="save_with_vector", text_vec=existing_vector, user_id=4)
@@ -117,7 +117,7 @@ def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction
             )
 
     # Test save update from empty to text - should trigger auto embedding
-    if not text_embed.embed_in_sql:
+    if not text_embed.use_server:
         # FIXME: The server-side auto embedding does not support empty string.
         saved_chunk = tbl.get(6)
         saved_chunk.text = "another qux"
