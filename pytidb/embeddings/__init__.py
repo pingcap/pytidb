@@ -1,3 +1,6 @@
-from .function import EmbeddingFunction
+from .base import BaseEmbeddingFunction
+from .builtin import BuiltInEmbeddingFunction
 
-__all__ = ["EmbeddingFunction"]
+EmbeddingFunction = BuiltInEmbeddingFunction
+
+__all__ = ["BaseEmbeddingFunction", "EmbeddingFunction"]

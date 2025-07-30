@@ -36,7 +36,7 @@ MODEL_DEFAULT_DIMENSIONS = {
 EmbeddingInput = Union[str, Path, "Image"]
 
 
-class EmbeddingFunction(BaseEmbeddingFunction):
+class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
     model_name: str = Field(
         None, description="The name of embedding model used for embedding"
     )
