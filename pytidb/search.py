@@ -159,7 +159,7 @@ class SearchQuery:
         self._text_column = check_text_column(self._columns, column_name)
         return self
 
-    def distance_metric(self, metric) -> "SearchQuery":
+    def distance_metric(self, metric: Union[DistanceMetric, str]) -> "SearchQuery":
         self._distance_metric = validate_distance_metric(metric)
         return self
 

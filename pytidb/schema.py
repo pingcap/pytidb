@@ -1,4 +1,4 @@
-from typing import Any, Literal, Optional, TYPE_CHECKING, List, TypedDict
+from typing import Any, Literal, Optional, TYPE_CHECKING, List, TypedDict, Union
 import json
 
 from pydantic import BaseModel
@@ -8,7 +8,7 @@ from sqlmodel.main import FieldInfo, RelationshipInfo, SQLModelMetaclass
 
 from pytidb.orm.types import TEXT, VECTOR
 from pytidb.orm.indexes import VectorIndexAlgorithm
-from pytidb.orm.distance_metric import DistanceMetric
+from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
 
 
 if TYPE_CHECKING:
@@ -50,11 +50,12 @@ def VectorField(
     embed_fn: Optional["BaseEmbeddingFunction"] = None,
     source_type: "EmbeddingSourceType" = "text",
     index: Optional[bool] = None,
-    distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
+    distance_metric: Optional[Union[DistanceMetric, str]] = DistanceMetric.COSINE,
     algorithm: Optional[VectorIndexAlgorithm] = "HNSW",
     **kwargs,
 ):
     # Notice: Currently, only L2 and COSINE distance metrics support indexing.
+    distance_metric = validate_distance_metric(distance_metric)
     if index is None:
         if distance_metric in [DistanceMetric.L2, DistanceMetric.COSINE]:
             index = True
