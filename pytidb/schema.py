@@ -6,6 +6,7 @@ from sqlalchemy import Column, Computed, Index
 from sqlmodel import SQLModel, Field, Relationship
 from sqlmodel.main import FieldInfo, RelationshipInfo, SQLModelMetaclass
 
+from pytidb.sql import func
 from pytidb.orm.types import TEXT, VECTOR
 from pytidb.orm.indexes import VectorIndexAlgorithm
 from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
@@ -64,22 +65,23 @@ def VectorField(
 
     use_server = embed_fn.use_server if embed_fn else False
     if use_server:
-        embed_extra = kwargs.get("embed_extra", {})
-        if not embed_extra:
-            model_name = embed_fn.model_name
-            provider_name = model_name.split("/")[0]
-            if provider_name == "jina_ai":
-                embed_extra = {
-                    "task": "retrieval.passage",
-                    "task@search": "retrieval.query",
-                }
-        query_str = json.dumps(embed_extra)
+        model_name = embed_fn.model_name
+        embed_params = {
+            **(embed_fn.server_embed_params or {}),
+            **kwargs.get("server_embed_params", {}),
+        }
+
+        if embed_params:
+            embed_params_str = json.dumps(embed_params)
+            embed_sql_function = func.EMBED_TEXT(
+                model_name, source_field, embed_params_str
+            )
+        else:
+            embed_sql_function = func.EMBED_TEXT(model_name, source_field)
+
         default_sa_column = Column(
             VECTOR(dimensions),
-            Computed(
-                f"EMBED_TEXT('{model_name}', `{source_field}`, '{query_str}')",
-                persisted=True,
-            ),
+            Computed(embed_sql_function, persisted=True),
         )
     else:
         default_sa_column = Column(VECTOR(dimensions))

@@ -9,6 +9,7 @@ EmbeddingSourceType = Literal["text", "image"]
 
 
 class BaseEmbeddingFunction(BaseModel, ABC):
+    provider: str = Field("openai", description="The name of the embedding provider")
     model_name: str = Field(
         None, description="The name of embedding model used for embedding"
     )
@@ -22,6 +23,9 @@ class BaseEmbeddingFunction(BaseModel, ABC):
             "If True, the embedding for the source data will be computed in the database. "
             "Default is False."
         ),
+    )
+    server_embed_params: Optional[dict[str, Any]] = Field(
+        None, description="The parameters for server-side embedding. "
     )
 
     def __init__(self, /, **data: Any):

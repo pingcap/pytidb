@@ -14,7 +14,7 @@ pet_images_dir = Path("./tests/fixtures/pet_images")
 EMBEDDING_MODELS = [
     {
         "id": "jinaai",
-        "model_name": "jina_ai/jina-embeddings-v4",
+        "model_name": "jina_ai/jina-clip-v2",
     },
     {
         "id": "bedrock",
