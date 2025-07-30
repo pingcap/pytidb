@@ -1,4 +1,4 @@
-<h1 align="center">TiDB Python SDK</h1>
+<h1 align="center">TiDB Python AI SDK</h1>
 
 <div align="center">
   <a href="https://pypi.org/project/pytidb">
