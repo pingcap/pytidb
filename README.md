@@ -27,13 +27,11 @@
 
 **Python SDK for TiDB AI**: A unified data platform empowering developers to build next-generation AI applications.
 
-- 🔍 Multiple search modes: vector, full-text, and hybrid search
-- 🎭 Multi-modal storage and processing: text, images, and more
-- 🔄 Automatic embedding generation for text and images
-- 🖼️ Image search: text-to-image and image-to-image capabilities
-- 🎯 Advanced filtering capabilities
-- 🥇 Reranker for search result tuning
-- 💱 Transaction support
+- 🔍 **Unified Search Modes**: Vector · Full‑Text · Hybrid
+- 🎭 **Auto‑Embedding & Multi‑Modal Storage**: Support for text, images, and more 
+- 🖼️ **Image Search Support**: Text‑to‑image and image‑to‑image retrieval capabilities 
+- 🎯 **Advanced Filtering & Reranking**: Flexible filters with optional reranker models to fine-tune result relevance 
+- 💱 **Transaction Support**: Full transaction management including commit/rollback to ensure consistency 
 - 🔌 [Built-in MCP support](https://pingcap.github.io/ai/integrations/mcp)
 
 > [!TIP]
