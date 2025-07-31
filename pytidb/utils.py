@@ -104,7 +104,7 @@ def filter_vector_columns(columns: Dict) -> List[Column]:
     return vector_columns
 
 
-def check_vector_column(columns: Dict, column_name: str) -> Optional[str]:
+def check_vector_column(columns: Dict, column_name: str) -> Optional[Column]:
     if not isinstance(column_name, str):
         raise ValueError(f"Invalid vector column name: {column_name}")
 

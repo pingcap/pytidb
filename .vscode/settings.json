@@ -24,12 +24,18 @@
         "JINAAI",
         "levelname",
         "litellm",
+        "MEDIUMINT",
+        "MEDIUMTEXT",
+        "multimodal",
         "mypy",
         "mysqlconnector",
         "mysqldb",
+        "ndarray",
         "OLAP",
         "Ollama",
         "OLTP",
+        "ondelete",
+        "onupdate",
         "outerjoin",
         "prefilter",
         "primaryjoin",
@@ -45,9 +51,12 @@
         "sqlmodel",
         "sqls",
         "Streamlit",
+        "tabledef",
         "tablename",
         "tidbcloud",
-        "tiflash"
+        "tiflash",
+        "TINYINT",
+        "TINYTEXT"
     ],
     "yaml.schemas": {
         "https://squidfunk.github.io/mkdocs-material/schema.json": "mkdocs.yml"

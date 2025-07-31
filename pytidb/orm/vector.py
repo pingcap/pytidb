@@ -89,6 +89,26 @@ class VECTOR(sqlalchemy.types.UserDefinedType):
                 self, formatted_other
             ).label("negative_inner_product")
 
+        def embed_l1_distance(self, query: str):
+            return sqlalchemy.func.VEC_EMBED_L1_DISTANCE(self, query).label(
+                "embed_l1_distance"
+            )
+
+        def embed_l2_distance(self, query: str):
+            return sqlalchemy.func.VEC_EMBED_L2_DISTANCE(self, query).label(
+                "embed_l2_distance"
+            )
+
+        def embed_cosine_distance(self, query: str):
+            return sqlalchemy.func.VEC_EMBED_COSINE_DISTANCE(self, query).label(
+                "embed_cosine_distance"
+            )
+
+        def embed_negative_inner_product(self, query: str):
+            return sqlalchemy.func.VEC_EMBED_NEGATIVE_INNER_PRODUCT(self, query).label(
+                "embed_negative_inner_product"
+            )
+
 
 # For reflection, make mysql dialect aware of VECTOR type.
 ischema_names["vector"] = VECTOR

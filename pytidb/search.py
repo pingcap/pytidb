@@ -78,6 +78,20 @@ class SearchResult(BaseModel, Generic[T]):
             return None
 
 
+distance_function_map = {
+    DistanceMetric.L2: "l2_distance",
+    DistanceMetric.COSINE: "cosine_distance",
+    DistanceMetric.L1: "l1_distance",
+    DistanceMetric.NEGATIVE_INNER_PRODUCT: "negative_inner_product",
+}
+embed_distance_function_map = {
+    DistanceMetric.L2: "embed_l2_distance",
+    DistanceMetric.COSINE: "embed_cosine_distance",
+    DistanceMetric.L1: "embed_l1_distance",
+    DistanceMetric.NEGATIVE_INNER_PRODUCT: "embed_negative_inner_product",
+}
+
+
 class SearchQuery:
     def __init__(
         self,
@@ -145,7 +159,7 @@ class SearchQuery:
         self._text_column = check_text_column(self._columns, column_name)
         return self
 
-    def distance_metric(self, metric) -> "SearchQuery":
+    def distance_metric(self, metric: Union[DistanceMetric, str]) -> "SearchQuery":
         self._distance_metric = validate_distance_metric(metric)
         return self
 
@@ -254,28 +268,40 @@ class SearchQuery:
             vector_column = self._vector_column
 
         # Auto embedding for query.
-        if self._query_vector is None:
-            if vector_column.name not in self._table.auto_embedding_configs:
+        if self._query_vector is not None:
+            # Already have query vector, no need for auto embedding
+            use_server = False
+        else:
+            # Need to generate query vector through auto embedding
+            auto_embedding_configs = self._table.auto_embedding_configs
+            if vector_column.name not in auto_embedding_configs:
                 raise ValueError(
                     "query should be a vector, because the vector column didn't "
                     "configure the embed_fn parameter"
                 )
 
-            config = self._table.auto_embedding_configs[vector_column.name]
-            source_type = config["source_type"]
-            self._query_vector = config["embed_fn"].get_query_embedding(
-                self._query, source_type
-            )
+            config = auto_embedding_configs[vector_column.name]
+            use_server = config.get("use_server", False)
+            if not use_server:
+                source_type = config["source_type"]
+                self._query_vector = config["embed_fn"].get_query_embedding(
+                    self._query, source_type
+                )
 
-        # Distance metric.
-        if self._distance_metric == DistanceMetric.L2:
-            distance_column = vector_column.l2_distance(self._query_vector).label(
-                DISTANCE_LABEL
-            )
+        # Distance metric mapping.
+        if use_server:
+            vector_op_name = embed_distance_function_map.get(self._distance_metric)
         else:
-            distance_column = vector_column.cosine_distance(self._query_vector).label(
-                DISTANCE_LABEL
-            )
+            vector_op_name = distance_function_map.get(self._distance_metric)
+
+        if vector_op_name is None:
+            raise ValueError(f"Invalid distance metric: {self._distance_metric}")
+
+        # Pass the appropriate query value based on embedding mode.
+        query_value = self._query if use_server else self._query_vector
+        distance_column = getattr(vector_column, vector_op_name)(query_value).label(
+            DISTANCE_LABEL
+        )
 
         if self._prefilter:
             stmt = self._build_vector_query_with_pre_filter(

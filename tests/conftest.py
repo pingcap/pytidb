@@ -26,7 +26,7 @@ def create_tidb_client(database: str) -> TiDBClient:
         password=os.getenv("TIDB_PASSWORD", ""),
         database=database,
         ensure_db=True,  # This will create the database if it doesn't exist
-        # debug=True,
+        debug=os.getenv("TIDB_CLIENT_DEBUG", "false").lower() in ("true", "1", "yes"),
     )
 
 
@@ -44,6 +44,7 @@ def shared_client(env) -> Generator[TiDBClient, None, None]:
     """
     db_name = generate_db_name()
     tidb_client = create_tidb_client(db_name)
+    print(f"Shared client created for database {db_name}")
 
     yield tidb_client
 
