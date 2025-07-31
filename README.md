@@ -32,14 +32,11 @@
 - 🖼️ **Image Search Support**: Text‑to‑image and image‑to‑image retrieval capabilities 
 - 🎯 **Advanced Filtering & Reranking**: Flexible filters with optional reranker models to fine-tune result relevance 
 - 💱 **Transaction Support**: Full transaction management including commit/rollback to ensure consistency 
-- 🔌 [Built-in MCP support](https://pingcap.github.io/ai/integrations/mcp)
-
-> [!TIP]
-> Click the button below to install **TiDB MCP Server** in Cursor. Then, confirm by clicking **Install** when prompted.
->
-> [![Install TiDB MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=TiDB&config=eyJjb21tYW5kIjoidXZ4IC0tZnJvbSBweXRpZGJbbWNwXSB0aWRiLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiVElEQl9IT1NUIjoibG9jYWxob3N0IiwiVElEQl9QT1JUIjoiNDAwMCIsIlRJREJfVVNFUk5BTUUiOiJyb290IiwiVElEQl9QQVNTV09SRCI6IiIsIlRJREJfREFUQUJBU0UiOiJ0ZXN0In19)
 
 ## Installation
+
+> [!NOTE]
+> This Python package is under rapid development and its API may change. It is recommended to use a fixed version when installing, e.g., `pytidb==0.0.8.post2`.
 
 ```bash
 pip install pytidb
@@ -51,8 +48,6 @@ pip install "pytidb[models]"
 pip install pandas
 ```
 
-> [!NOTE]
-> This Python package is under active development and its API may change. It is recommended to use a fixed version when installing, e.g., `pytidb==0.0.8.post2`.
 
 ## Connect to TiDB Cloud
 
@@ -248,3 +243,14 @@ with db.session() as session:
     final_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
     assert final_total_balance == initial_total_balance
 ```
+
+
+## Extensions
+
+
+- 🔌 [Built-in MCP support](https://pingcap.github.io/ai/integrations/mcp)
+
+> [!TIP]
+> Click the button below to install **TiDB MCP Server** in Cursor. Then, confirm by clicking **Install** when prompted.
+>
+> [![Install TiDB MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=TiDB&config=eyJjb21tYW5kIjoidXZ4IC0tZnJvbSBweXRpZGJbbWNwXSB0aWRiLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiVElEQl9IT1NUIjoibG9jYWxob3N0IiwiVElEQl9QT1JUIjoiNDAwMCIsIlRJREJfVVNFUk5BTUUiOiJyb290IiwiVElEQl9QQVNTV09SRCI6IiIsIlRJREJfREFUQUJBU0UiOiJ0ZXN0In19)
