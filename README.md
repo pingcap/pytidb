@@ -14,7 +14,7 @@
   •
   <a href="https://pingcap.github.io/ai/">Documentation</a>
   •
-  <a href="https://pingcap.github.io/ai/examples/">Demos</a>
+  <a href="https://pingcap.github.io/ai/examples/">Examples</a>
   •
   <a href="https://github.com/orgs/pingcap/projects/69/views/4">Roadmap</a>
   •
@@ -36,7 +36,7 @@
 ## Installation
 
 > [!NOTE]
-> This Python package is under rapid development and its API may change. It is recommended to use a fixed version when installing, e.g., `pytidb==0.0.8.post2`.
+> This Python package is under rapid development and its API may change. It is recommended to use a fixed version when installing, e.g., `pytidb==0.0.9`.
 
 ```bash
 pip install pytidb
