@@ -1,4 +1,4 @@
-<h1 align="center">TiDB Python SDK</h1>
+<h1 align="center">TiDB Python AI SDK</h1>
 
 <div align="center">
   <a href="https://pypi.org/project/pytidb">
@@ -14,7 +14,7 @@
   •
   <a href="https://pingcap.github.io/ai/">Documentation</a>
   •
-  <a href="https://pingcap.github.io/ai/examples/">Demos</a>
+  <a href="https://pingcap.github.io/ai/examples/">Examples</a>
   •
   <a href="https://github.com/orgs/pingcap/projects/69/views/4">Roadmap</a>
   •
@@ -27,21 +27,16 @@
 
 **Python SDK for TiDB AI**: A unified data platform empowering developers to build next-generation AI applications.
 
-- 🔍 Multiple search modes: vector, full-text, and hybrid search
-- 🎭 Multi-modal storage and processing: text, images, and more
-- 🔄 Automatic embedding generation for text and images
-- 🖼️ Image search: text-to-image and image-to-image capabilities
-- 🎯 Advanced filtering capabilities
-- 🥇 Reranker for search result tuning
-- 💱 Transaction support
-- 🔌 [Built-in MCP support](https://pingcap.github.io/ai/integrations/mcp)
-
-> [!TIP]
-> Click the button below to install **TiDB MCP Server** in Cursor. Then, confirm by clicking **Install** when prompted.
->
-> [![Install TiDB MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=TiDB&config=eyJjb21tYW5kIjoidXZ4IC0tZnJvbSBweXRpZGJbbWNwXSB0aWRiLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiVElEQl9IT1NUIjoibG9jYWxob3N0IiwiVElEQl9QT1JUIjoiNDAwMCIsIlRJREJfVVNFUk5BTUUiOiJyb290IiwiVElEQl9QQVNTV09SRCI6IiIsIlRJREJfREFUQUJBU0UiOiJ0ZXN0In19)
+- 🔍 **Unified Search Modes**: Vector · Full‑Text · Hybrid
+- 🎭 **Auto‑Embedding & Multi‑Modal Storage**: Support for text, images, and more 
+- 🖼️ **Image Search Support**: Text‑to‑image and image‑to‑image retrieval capabilities 
+- 🎯 **Advanced Filtering & Reranking**: Flexible filters with optional reranker models to fine-tune result relevance 
+- 💱 **Transaction Support**: Full transaction management including commit/rollback to ensure consistency 
 
 ## Installation
+
+> [!NOTE]
+> This Python package is under rapid development and its API may change. It is recommended to use a fixed version when installing, e.g., `pytidb==0.0.9`.
 
 ```bash
 pip install pytidb
@@ -53,8 +48,6 @@ pip install "pytidb[models]"
 pip install pandas
 ```
 
-> [!NOTE]
-> This Python package is under active development and its API may change. It is recommended to use a fixed version when installing, e.g., `pytidb==0.0.8.post2`.
 
 ## Connect to TiDB Cloud
 
@@ -250,3 +243,14 @@ with db.session() as session:
     final_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
     assert final_total_balance == initial_total_balance
 ```
+
+
+## Extensions
+
+
+- 🔌 [Built-in MCP support](https://pingcap.github.io/ai/integrations/mcp)
+
+> [!TIP]
+> Click the button below to install **TiDB MCP Server** in Cursor. Then, confirm by clicking **Install** when prompted.
+>
+> [![Install TiDB MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=TiDB&config=eyJjb21tYW5kIjoidXZ4IC0tZnJvbSBweXRpZGJbbWNwXSB0aWRiLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiVElEQl9IT1NUIjoibG9jYWxob3N0IiwiVElEQl9QT1JUIjoiNDAwMCIsIlRJREJfVVNFUk5BTUUiOiJyb290IiwiVElEQl9QQVNTV09SRCI6IiIsIlRJREJfREFUQUJBU0UiOiJ0ZXN0In19)
