@@ -38,7 +38,8 @@ db = TiDBClient.connect(
     port=int(os.getenv("TIDB_PORT", "4000")),
     username=os.getenv("TIDB_USERNAME", "root"),
     password=os.getenv("TIDB_PASSWORD", ""),
-    database=os.getenv("TIDB_DATABASE", "test"),
+    database=os.getenv("TIDB_DATABASE", "pytidb_rag"),
+    ensure_db=True,
 )
 
 
@@ -47,7 +48,7 @@ text_embed = EmbeddingFunction(EMBEDDING_MODEL)
 
 
 class Chunk(TableModel):
-    __tablename__ = "chunks_for_ollama_rag"
+    __tablename__ = "chunks"
     # Notice: Avoid table already defined error when streamlit rerun the script.
     __table_args__ = {"extend_existing": True}
 
@@ -58,7 +59,7 @@ class Chunk(TableModel):
     )
 
 
-table = db.create_table(schema=Chunk, mode="exist_ok")
+table = db.create_table(schema=Chunk, if_exists="skip")
 
 
 # Insert sample chunks

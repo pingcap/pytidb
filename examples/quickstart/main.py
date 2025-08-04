@@ -14,7 +14,8 @@ db = TiDBClient.connect(
     port=int(os.getenv("TIDB_PORT", 4000)),
     username=os.getenv("TIDB_USERNAME"),
     password=os.getenv("TIDB_PASSWORD"),
-    database=os.getenv("TIDB_DATABASE"),
+    database=os.getenv("TIDB_DATABASE", "pytidb_quickstart"),
+    ensure_db=True,
 )
 print("Connected to TiDB")
 
@@ -31,13 +32,14 @@ print("\n=== Create table ===")
 
 
 class Chunk(TableModel, table=True):
+    __tablename__ = "chunks"
     id: int = Field(primary_key=True)
     text: str = Field()
     text_vec: list[float] = text_embed.VectorField(source_field="text")
     user_id: int = Field()
 
 
-table = db.create_table(schema=Chunk)
+table = db.create_table(schema=Chunk, if_exists="overwrite")
 print("Table created")
 
 
@@ -66,7 +68,7 @@ print("Inserted 3 chunks")
 
 
 print("\n=== Query data ===")
-results = table.query()
+results = table.query(limit=3).to_pydantic()
 for result in results:
     print(f"ID: {result.id}, Text: {result.text}, User ID: {result.user_id}")
 
@@ -75,7 +77,6 @@ print("\n=== Semantic search ===")
 results = (
     table.search("A library for my artificial intelligence software").limit(3).to_list()
 )
-print(results)
 for result in results:
     print(
         f"ID: {result['id']}, Text: {result['text']}, User ID: {result['user_id']}, Distance: {result['_distance']}"
