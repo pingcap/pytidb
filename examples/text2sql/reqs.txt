@@ -1,6 +1,5 @@
 openai
-pytidb
-pymysql
+pytidb==0.0.10.post1
+pytidb[models]==0.0.10.post1
 streamlit
-httpx[socks]
 python-dotenv

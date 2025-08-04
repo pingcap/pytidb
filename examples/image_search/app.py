@@ -87,7 +87,7 @@ def setup_table(db: TiDBClient, embed_fn: EmbeddingFunction) -> Table:
                 source_type="image",
             )
 
-        table = db.create_table(schema=Pet, mode="exist_ok")
+        table = db.create_table(schema=Pet, if_exists="skip")
         return table
     except Exception as e:
         st.error(f"Failed to create table: {str(e)}")

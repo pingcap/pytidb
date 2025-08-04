@@ -3,7 +3,7 @@ import dotenv
 
 from pytidb import TiDBClient
 from pytidb.schema import TableModel, Field, VectorField
-from pytidb.datatype import JSON, Text
+from pytidb.datatype import JSON, TEXT
 
 
 # Load environment variables
@@ -15,7 +15,8 @@ db = TiDBClient.connect(
     port=int(os.getenv("TIDB_PORT", "4000")),
     username=os.getenv("TIDB_USERNAME", "root"),
     password=os.getenv("TIDB_PASSWORD", ""),
-    database=os.getenv("TIDB_DATABASE", "test"),
+    database=os.getenv("TIDB_DATABASE", "pytidb_basic"),
+    ensure_db=True,
 )
 
 # Connect to database with connection string
@@ -30,12 +31,12 @@ print("=== CREATE TABLE ===")
 class Item(TableModel):
     __tablename__ = "items_in_basic_example"
     id: int = Field(primary_key=True)
-    content: str = Field(sa_type=Text)
+    content: str = Field(sa_type=TEXT)
     embedding: list[float] = VectorField(dimensions=3)
     meta: dict = Field(sa_type=JSON, default_factory=dict)
 
 
-table = db.create_table(schema=Item, mode="overwrite")
+table = db.create_table(schema=Item, if_exists="overwrite")
 print("Table created")
 
 # Truncate table

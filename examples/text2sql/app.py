@@ -24,7 +24,7 @@ with st.sidebar:
         "## How to use\n"
         "1. Enter your [OpenAI API key](https://platform.openai.com/account/api-keys) below 🔑\n"  # noqa: E501
         "2. Enter your [TiDB Cloud](https://tidbcloud.com) database connection URL below 🔗\n"
-        "3. Ask a question in the right chat boxgh 🤖\n"
+        "3. Ask a question in the right chat box 🤖\n"
     )
     st.warning(
         "Please double check the generated SQL before running it on your database."

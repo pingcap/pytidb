@@ -57,7 +57,7 @@ TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USERNAME={prefix}.root
 TIDB_PASSWORD={password}
-TIDB_DATABASE=pytidb_vector_demo
+TIDB_DATABASE=pytidb_vector_search
 EOF
 ```
 
