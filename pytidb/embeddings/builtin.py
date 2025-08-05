@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from pydantic import Field
 from pytidb.embeddings.base import BaseEmbeddingFunction, EmbeddingSourceType
+from pytidb.embeddings.dimensions import get_model_dimensions
 from pytidb.embeddings.utils import (
     encode_local_file_to_base64,
     encode_pil_image_to_base64,
@@ -24,20 +25,13 @@ _MAX_B64_LENGTH_PER_MODEL = {
 }
 
 
-MODEL_DEFAULT_DIMENSIONS = {
-    "tidbcloud-free/amazon/titan-embed-text-v2": 1024,
-    "tidbcloud-free/cohere/embed-english-v3": 1024,
-    "tidbcloud-free/cohere/embed-multilingual-v3": 1024,
-    "jina/jina-embeddings-v4": 2048,
-    "openai/text-embedding-3-small": 1536,
-}
-
 PROVIDER_DEFAULT_EMBED_PARAMS = {
     "jina_ai": {
         "task": "retrieval.passage",
         "task@search": "retrieval.query",
     },
 }
+
 
 EmbeddingInput = Union[str, Path, "Image"]
 
@@ -77,10 +71,11 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
         **kwargs,
     ):
         if use_server is None:
+            # If multimodal is True, use server-side embedding by default.
             use_server = not multimodal
 
         if dimensions is None:
-            dimensions = MODEL_DEFAULT_DIMENSIONS.get(model_name)
+            dimensions = get_model_dimensions(model_name)
 
         provider = model_name.split("/")[0] if "/" in model_name else "openai"
         server_embed_params = PROVIDER_DEFAULT_EMBED_PARAMS.get(provider)
@@ -104,7 +99,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
                     f"Missing dimensions for model {self.model_name}. Please specify dimensions."
                 )
             else:
-                # For client-side embedding, try to infer dimensions from a test embedding.
+                # For client-side embedding, try to infer dimensions with a test embedding.
                 embedding = self.get_query_embedding("test", "text")
                 if embedding is None:
                     raise ValueError(
@@ -237,7 +232,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
         source_type: Optional[EmbeddingSourceType] = "text",
         **kwargs,
     ) -> list[float]:
-        return self._call_embeddings_api([input], source_type, **kwargs)
+        return self._call_embeddings_api([input], **kwargs)
 
     def _call_embeddings_api(
         self, input: List[EmbeddingInput], **kwargs
