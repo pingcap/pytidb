@@ -16,7 +16,7 @@ db = TiDBClient.connect(
     port=int(os.getenv("TIDB_PORT", "4000")),
     username=os.getenv("TIDB_USERNAME", "root"),
     password=os.getenv("TIDB_PASSWORD", ""),
-    database=os.getenv("TIDB_DATABASE", "pytidb_hybrid_example"),
+    database=os.getenv("TIDB_DATABASE", "pytidb_hybrid_demo"),
     ensure_db=True,
 )
 print("Connected to TiDB.\n")
@@ -34,19 +34,18 @@ print("=== CREATE TABLE ===")
 
 
 class Chunk(TableModel, table=True):
-    __tablename__ = "chunks_for_hybrid_search"
+    __tablename__ = "chunks"
     id: int = Field(primary_key=True)
     text: str = FullTextField()
     text_vec: list[float] = embed_fn.VectorField(source_field="text")
 
 
-table = db.create_table(schema=Chunk, mode="overwrite")
+table = db.create_table(schema=Chunk, if_exists="overwrite")
 print("Table created.\n")
 
 
 # Insert some sample data.
 print("=== INSERT SAMPLE DATA ===")
-table.truncate()
 table.bulk_insert(
     [
         Chunk(

@@ -1,5 +1,5 @@
-pytidb==0.0.9
-pytidb[models]==0.0.9
+pytidb==0.0.10.post1
+pytidb[models]==0.0.10.post1
 openai
 python-dotenv
 streamlit
