@@ -27,14 +27,16 @@ print(f"BGE-M3 model loaded with {embed_func.dimensions} dimensions")
 # Define table schema with auto-embedding
 print("\n=== Defining Table Schema ===")
 
+
 class Document(TableModel):
     __tablename__ = "bge_m3_documents"
-    
+
     id: int = Field(primary_key=True)
     title: str = Field(sa_type=Text)
     content: str = Field(sa_type=Text)
     # Auto-embedding field using our custom BGE-M3 function
     content_vec: list[float] = embed_func.VectorField(source_field="content")
+
 
 # Create table
 table = db.create_table(schema=Document, mode="overwrite")
@@ -45,23 +47,23 @@ print("\n=== Inserting Sample Documents ===")
 sample_docs = [
     Document(
         title="TiDB Introduction",
-        content="TiDB is a distributed SQL database that supports both OLTP and OLAP workloads. It provides MySQL compatibility and horizontal scalability."
+        content="TiDB is a distributed SQL database that supports both OLTP and OLAP workloads. It provides MySQL compatibility and horizontal scalability.",
     ),
     Document(
         title="BGE-M3 Model",
-        content="BGE-M3 is a versatile embedding model that supports dense retrieval, sparse retrieval, and multi-vector retrieval for information retrieval tasks."
+        content="BGE-M3 is a versatile embedding model that supports dense retrieval, sparse retrieval, and multi-vector retrieval for information retrieval tasks.",
     ),
     Document(
         title="Vector Databases",
-        content="Vector databases are specialized databases designed to store and query high-dimensional vectors efficiently, enabling semantic search and AI applications."
+        content="Vector databases are specialized databases designed to store and query high-dimensional vectors efficiently, enabling semantic search and AI applications.",
     ),
     Document(
         title="Machine Learning",
-        content="Machine learning is a subset of artificial intelligence that enables computers to learn and improve from experience without being explicitly programmed."
+        content="Machine learning is a subset of artificial intelligence that enables computers to learn and improve from experience without being explicitly programmed.",
     ),
     Document(
         title="Neural Networks",
-        content="Neural networks are computing systems inspired by biological neural networks. They consist of layers of interconnected nodes that process information."
+        content="Neural networks are computing systems inspired by biological neural networks. They consist of layers of interconnected nodes that process information.",
     ),
 ]
 
@@ -72,23 +74,14 @@ print(f"Inserted {len(sample_docs)} documents with auto-generated embeddings")
 # Demonstrate vector search
 print("\n=== Performing Vector Search ===")
 
-# Search queries
-search_queries = [
-    "What is a distributed database?",
-    "How do embedding models work?",
-    "Tell me about artificial intelligence",
-]
 
-for i, query in enumerate(search_queries, 1):
-    print(f"\nQuery {i}: '{query}'")
-    
-    # Perform vector search (query will be embedded automatically)
-    results = table.search(query).limit(3).to_list()
-    
-    print("Results:")
-    for j, result in enumerate(results, 1):
-        print(f"  {j}. [{result['title']}] (distance: {result['_distance']:.4f})")
-        print(f"     Content: {result['content'][:80]}...")
+# Perform vector search (query will be embedded automatically)
+results = table.search("Is TiDB a distributed database?").limit(3).to_list()
+
+print("Results:")
+for result in results:
+    print(f"  [{result['title']}] (distance: {result['_distance']:.4f})")
+    print(f"     Content: {result['content'][:80]}...")
 
 # Demonstrate manual embedding usage
 print("\n=== Manual Embedding Usage ===")
@@ -105,13 +98,13 @@ print(f"First 5 embedding values: {query_embedding[:5]}")
 batch_texts = [
     "Artificial intelligence and machine learning",
     "Database systems and data storage",
-    "Information retrieval and search engines"
+    "Information retrieval and search engines",
 ]
 
 batch_embeddings = embed_func.get_source_embeddings(batch_texts)
 print(f"\nBatch processed {len(batch_texts)} texts:")
 for i, text in enumerate(batch_texts):
-    print(f"  Text {i+1}: {len(batch_embeddings[i])} dimensions")
+    print(f"  Text {i + 1}: {len(batch_embeddings[i])} dimensions")
     print(f"    Content: '{text}'")
 
 print("\n=== Demo Completed Successfully ===")

@@ -1,5 +1,5 @@
-pytidb==0.0.9
-pytidb[models]==0.0.9
+pytidb==0.0.11
+pytidb[models]==0.0.11
 FlagEmbedding
 torch
 python-dotenv
