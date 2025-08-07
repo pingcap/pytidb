@@ -11,9 +11,9 @@ from typing import Optional, List
 # Dictionary mapping model names to their embedding dimensions
 KNOWN_MODEL_DIMENSIONS = {
     # TiDB Cloud Free models
-    "tidbcloud-free/amazon/titan-embed-text-v2": 1024,
-    "tidbcloud-free/cohere/embed-english-v3": 1024,
-    "tidbcloud-free/cohere/embed-multilingual-v3": 1024,
+    "tidbcloud_free/amazon/titan-embed-text-v2": 1024,
+    "tidbcloud_free/cohere/embed-english-v3": 1024,
+    "tidbcloud_free/cohere/embed-multilingual-v3": 1024,
     # OpenAI models
     "openai/text-embedding-3-small": 1536,
     "openai/text-embedding-3-large": 3072,
@@ -25,6 +25,10 @@ KNOWN_MODEL_DIMENSIONS = {
     "jina_ai/jina-embeddings-v4": 2048,
     "jina_ai/jina-embeddings-v3": 1024,
     "jina_ai/jina-clip-v2": 1024,
+    # TODO: remove these after jina_ai is released on prod.
+    "jina/jina-embeddings-v4": 2048,
+    "jina/jina-embeddings-v3": 1024,
+    "jina/jina-clip-v2": 1024,
 }
 
 # Mapping of model aliases to their full names for backward compatibility

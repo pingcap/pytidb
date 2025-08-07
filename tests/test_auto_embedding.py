@@ -5,15 +5,50 @@ from pytidb import TiDBClient
 from pytidb.embeddings import EmbeddingFunction
 from pytidb.schema import TableModel, Field
 
+EMBEDDING_MODELS = [
+    {
+        "id": "openai",
+        "model_name": "openai/text-embedding-3-small",
+    },
+    # TODO: uncomment this after tidbcloud_free is released on prod.
+    # {
+    #     "id": "tidbcloud_free",
+    #     "model_name": "tidbcloud_free/amazon/titan-embed-text-v2",
+    # },
+]
+
+
+@pytest.fixture(
+    scope="module",
+    params=EMBEDDING_MODELS,
+    ids=[model["id"] for model in EMBEDDING_MODELS],
+)
+def text_embed(request):
+    """Create EmbeddingFunction instances for each model in EMBEDDING_MODELS."""
+    model_config = request.param
+    embed_fn = EmbeddingFunction(
+        model_name=model_config["model_name"],
+        timeout=30,
+    )
+    # Add model config for table naming
+    embed_fn._model_config = model_config
+    return embed_fn
+
 
 def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction):
-    shared_client.configure_embedding_provider("openai", os.getenv("OPENAI_API_KEY"))
+    model_id = text_embed._model_config["id"]
 
-    # Notice: Text embedding will be computed in the database (server-side) by default.
-    text_embed = EmbeddingFunction("openai/text-embedding-3-small")
+    # Configure embedding provider based on model
+    if model_id == "openai":
+        shared_client.configure_embedding_provider(
+            "openai", os.getenv("OPENAI_API_KEY")
+        )
+    elif model_id == "tidbcloud_free":
+        # tidbcloud_free doesn't need additional API key configuration
+        pass
 
-    class ChunkForAutoEmbedding(TableModel):
-        __tablename__ = "test_auto_embedding"
+    class ChunkBase(TableModel, table=False):
+        __tablename__ = f"chunks_auto_embedding_with_{model_id}"
         id: int = Field(primary_key=True)
         text: Optional[str] = Field()
         text_vec: Optional[list[float]] = text_embed.VectorField(
@@ -22,7 +57,9 @@ def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction
         )
         user_id: int = Field()
 
-    Chunk = ChunkForAutoEmbedding
+    Chunk = type(
+        f"ChunkAutoEmbeddingWith{model_id.capitalize()}", (ChunkBase,), {}, table=True
+    )
     tbl = shared_client.create_table(schema=Chunk, if_exists="overwrite")
 
     # Test insert with auto embedding
