@@ -71,13 +71,14 @@ def VectorField(
             **kwargs.get("server_embed_params", {}),
         }
 
+        source_column = Column(source_field)
         if embed_params:
             embed_params_str = json.dumps(embed_params)
             embed_sql_function = func.EMBED_TEXT(
-                model_name, source_field, embed_params_str
+                model_name, source_column, embed_params_str
             )
         else:
-            embed_sql_function = func.EMBED_TEXT(model_name, source_field)
+            embed_sql_function = func.EMBED_TEXT(model_name, source_column)
 
         default_sa_column = Column(
             VECTOR(dimensions),

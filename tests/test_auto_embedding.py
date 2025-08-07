@@ -1,4 +1,5 @@
 from typing import Optional
+import os
 import pytest
 from pytidb import TiDBClient
 from pytidb.embeddings import EmbeddingFunction
@@ -6,6 +7,8 @@ from pytidb.schema import TableModel, Field
 
 
 def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction):
+    shared_client.configure_embedding_provider("openai", os.getenv("OPENAI_API_KEY"))
+
     # Notice: Text embedding will be computed in the database (server-side) by default.
     text_embed = EmbeddingFunction("openai/text-embedding-3-small")
 
