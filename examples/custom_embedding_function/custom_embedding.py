@@ -22,7 +22,6 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
     def __init__(
         self,
         model_name: str = "BAAI/bge-m3",
-        dimensions: int = 1024,
         use_fp16: bool = True,
         device: Optional[str] = None,
         **kwargs,
@@ -32,14 +31,14 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
 
         Args:
             model_name: The BGE-M3 model name (default: "BAAI/bge-m3")
-            dimensions: Output dimensions (BGE-M3 default: 1024)
             use_fp16: Whether to use FP16 precision for faster inference
             device: Device to run the model on (auto-detected if None)
             **kwargs: Additional arguments
         """
+        # BGE-M3 has fixed dimensions of 1024
         super().__init__(
             model_name=model_name,
-            dimensions=dimensions,
+            dimensions=1024,  # BGE-M3 fixed dimensions
             use_fp16=use_fp16,
             device=device,
             **kwargs,
@@ -59,14 +58,17 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
         Returns:
             Dense embedding vector as list of floats
         """
-        self._init_model()
-
         # Use BGE-M3 to encode text
         output = self._model.encode(text, return_dense=True)
 
         # Extract dense vector and convert to list
-        dense_vector = output["dense_vecs"][0]
-        return dense_vector.tolist()
+        dense_vector = output["dense_vecs"]
+
+        # Handle both single text (1D array) and batch (2D array) cases
+        if len(dense_vector.shape) == 1:
+            return dense_vector.tolist()
+        else:
+            return dense_vector[0].tolist()
 
     def _process_image_input(self, image_input: Any) -> str:
         """
@@ -153,8 +155,6 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
             text_inputs = [self._process_image_input(source) for source in sources]
         else:
             raise ValueError(f"Unsupported source_type: {source_type}")
-
-        self._init_model()
 
         # Batch encode all texts
         output = self._model.encode(text_inputs, return_dense=True)

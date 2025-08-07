@@ -22,7 +22,7 @@ print("Connected to TiDB successfully")
 # Define custom BGE-M3 embedding function
 print("\n=== Initializing BGE-M3 Embedding Function ===")
 embed_func = BGEM3EmbeddingFunction()
-print(f"BGE-M3 model loaded with {embed_func.dimensions} dimensions")
+print("BGE-M3 model loaded (1024 dimensions)")
 
 # Define table schema with auto-embedding
 print("\n=== Defining Table Schema ===")

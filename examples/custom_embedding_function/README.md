@@ -72,8 +72,7 @@ python main.py
 Connected to TiDB successfully
 
 === Initializing BGE-M3 Embedding Function ===
-Loading BGE-M3 model: BAAI/bge-m3
-BGE-M3 model loaded with 1024 dimensions
+BGE-M3 model loaded (1024 dimensions)
 
 === Defining Table Schema ===
 Table created with BGE-M3 vector field
