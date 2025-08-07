@@ -140,7 +140,6 @@ def test_custom_embedding_function():
     image_embedding = embed_fn.get_query_embedding(image_path, "image")
     assert len(image_embedding) == 128
     
-    print("All tests passed!")
 
 
 # Usage example demonstrating CustomEmbeddingFunction
