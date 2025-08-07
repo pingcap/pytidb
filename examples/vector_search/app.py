@@ -19,7 +19,7 @@ db = TiDBClient.connect(
     port=int(os.getenv("TIDB_PORT", "4000")),
     username=os.getenv("TIDB_USERNAME", "root"),
     password=os.getenv("TIDB_PASSWORD", ""),
-    database=os.getenv("TIDB_DATABASE", "pytidb_vector_demo"),
+    database=os.getenv("TIDB_DATABASE", "pytidb_vector_search"),
     ensure_db=True,
 )
 
@@ -41,7 +41,7 @@ class Chunk(TableModel):
     meta: dict = Field(sa_type=JSON)
 
 
-table = db.create_table(schema=Chunk, mode="exist_ok")
+table = db.create_table(schema=Chunk, if_exists="skip")
 
 # Insert sample data.
 sample_chunks = [

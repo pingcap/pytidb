@@ -35,20 +35,7 @@ TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USERNAME={prefix}.root
 TIDB_PASSWORD={password}
-TIDB_DATABASE=test
-OPENAI_API_KEY={your-openai-api-key}
-EOF
-```
-
-If you are using a local TiDB server, you can set up the environment variable like this:
-
-```bash
-cat > .env <<EOF
-TIDB_HOST=localhost
-TIDB_PORT=4000
-TIDB_USERNAME=root
-TIDB_PASSWORD=
-TIDB_DATABASE=test
+TIDB_DATABASE=pytidb_quickstart
 OPENAI_API_KEY={your-openai-api-key}
 EOF
 ```

@@ -44,7 +44,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       TIDB_HOST: ${{ secrets.TIDB_HOST }}
       TIDB_PORT: 4000
