@@ -3,7 +3,7 @@ from typing import Any, Optional, List, Union
 from pathlib import Path
 
 from pytidb.embeddings.base import BaseEmbeddingFunction, EmbeddingSourceType
-from sqlmodel import Field
+from pytidb.schema import Field
 
 
 class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
