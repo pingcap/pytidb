@@ -2,18 +2,13 @@
 
 This example demonstrates how to create and use a custom embedding function with PyTiDB using the BGE-M3 model.
 
-* Create a custom embedding function by inheriting from `BaseEmbeddingFunction`
-* Integrate BGE-M3 model for high-quality text embeddings
-* Use the custom embedding function for automatic vector generation
-* Perform semantic search with the embedded vectors
+## What This Example Does
 
-## Features
-
-- **BGE-M3 Integration**: Uses the powerful BGE-M3 model for text embeddings
-- **Custom Implementation**: Shows how to build your own embedding function
-- **Automatic Embedding**: Vectors are generated automatically when inserting data
-- **Batch Processing**: Efficient batch embedding for multiple documents
-- **Semantic Search**: Demonstrates vector search capabilities
+- Implements a custom embedding function by inheriting from BaseEmbeddingFunction
+- Integrates the **BGE-M3** model to produce text embeddings in the custom BGEM3EmbeddingFunction (You can use any embedding model you prefer)
+- Shows how to enable auto embedding feature using a custom embedding function
+- Supports batch processing to embed multiple documents efficiently
+- Demonstrates how to run semantic search queries on the stored vectors
 
 ## Prerequisites
 
