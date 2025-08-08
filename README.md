@@ -4,8 +4,8 @@
   <a href="https://pypi.org/project/pytidb">
     <img src="https://img.shields.io/pypi/v/pytidb.svg" alt="Python Package Index"/>
   </a>
-  <a href="https://pypistats.org/packages/pytidb">
-    <img src="https://img.shields.io/pypi/dm/pytidb.svg" alt="Downloads"/>
+  <a href="https://pepy.tech/projects/pytidb">
+    <img src="https://static.pepy.tech/badge/pytidb/month" alt="Monthly PyPI Downloads"/>
   </a>
 </div>
 
