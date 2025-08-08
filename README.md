@@ -35,7 +35,7 @@
 ## Installation
 
 > [!NOTE]
-> This Python package is under rapid development and its API may change. It is recommended to use a fixed version when installing, e.g., `pytidb==0.0.9`.
+> This Python package is under rapid development and its API may change. It is recommended to use a **fixed version** when installing, e.g., `pytidb==0.0.12`.
 
 ```bash
 pip install pytidb
@@ -56,7 +56,7 @@ Create a free TiDB cluster at [tidbcloud.com](https://tidbcloud.com/?utm_source=
 import os
 from pytidb import TiDBClient
 
-db = TiDBClient.connect(
+tidb_client = TiDBClient.connect(
     host=os.getenv("TIDB_HOST"),
     port=int(os.getenv("TIDB_PORT")),
     username=os.getenv("TIDB_USERNAME"),
@@ -78,19 +78,20 @@ PyTiDB automatically embeds text fields (e.g., `text`) and stores the vector emb
 from pytidb.schema import TableModel, Field, FullTextField
 from pytidb.embeddings import EmbeddingFunction
 
-text_embed = EmbeddingFunction("openai/text-embedding-3-small")
+# Set API key for embedding provider.
+tidb_client.configure_embedding_provider("openai", api_key=os.getenv("OPENAI_API_KEY"))
 
 class Chunk(TableModel):
     __tablename__ = "chunks"
 
     id: int = Field(primary_key=True)
     text: str = FullTextField()
-    text_vec: list[float] = text_embed.VectorField(
-        source_field="text"
-    )  # 👈 Defines the vector field.
+    text_vec: list[float] = EmbeddingFunction(
+        "openai/text-embedding-3-small"
+    ).VectorField(source_field="text")  # 👈 Defines the vector field.
     user_id: int = Field()
 
-table = db.create_table(schema=Chunk, if_exists="skip")
+table = tidb_client.create_table(schema=Chunk, if_exists="skip")
 ```
 
 **Bulk insert data:**
@@ -172,7 +173,7 @@ class Pet(TableModel):
         source_type="image"
     )
 
-table = db.create_table(schema=Pet, if_exists="skip")
+table = tidb_client.create_table(schema=Pet, if_exists="skip")
 
 # Insert sample images ...
 table.insert(Pet(image_uri="path/to/shiba_inu_14.jpg"))
@@ -229,17 +230,17 @@ with Session(engine) as session:
 PyTiDB supports transaction management, helping you avoid race conditions and ensure data consistency.
 
 ```python
-with db.session() as session:
-    initial_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
+with tidb_client.session() as session:
+    initial_total_balance = tidb_client.query("SELECT SUM(balance) FROM players").scalar()
 
     # Transfer 10 coins from player 1 to player 2
-    db.execute("UPDATE players SET balance = balance - 10 WHERE id = 1")
-    db.execute("UPDATE players SET balance = balance + 10 WHERE id = 2")
+    tidb_client.execute("UPDATE players SET balance = balance - 10 WHERE id = 1")
+    tidb_client.execute("UPDATE players SET balance = balance + 10 WHERE id = 2")
 
     session.commit()
     # or session.rollback()
 
-    final_total_balance = db.query("SELECT SUM(balance) FROM players").scalar()
+    final_total_balance = tidb_client.query("SELECT SUM(balance) FROM players").scalar()
     assert final_total_balance == initial_total_balance
 ```
 
