@@ -10,7 +10,11 @@ EMBEDDING_MODELS = [
         "id": "openai",
         "model_name": "openai/text-embedding-3-small",
     },
-    # TODO: uncomment this after tidbcloud_free is released on prod.
+    # TODO: uncomment these after jina_ai and tidbcloud_free are released on prod.
+    # {
+    #     "id": "jina_ai",
+    #     "model_name": "jina_ai/jina-embeddings-v4",
+    # },
     # {
     #     "id": "tidbcloud_free",
     #     "model_name": "tidbcloud_free/amazon/titan-embed-text-v2",
@@ -28,6 +32,7 @@ def text_embed(request):
     model_config = request.param
     embed_fn = EmbeddingFunction(
         model_name=model_config["model_name"],
+        server_embed_params={},
         timeout=30,
     )
     # Add model config for table naming
@@ -42,6 +47,10 @@ def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction
     if model_id == "openai":
         shared_client.configure_embedding_provider(
             "openai", os.getenv("OPENAI_API_KEY")
+        )
+    elif model_id == "jina_ai":
+        shared_client.configure_embedding_provider(
+            "jina_ai", os.getenv("JINA_AI_API_KEY")
         )
     elif model_id == "tidbcloud_free":
         # tidbcloud_free doesn't need additional API key configuration

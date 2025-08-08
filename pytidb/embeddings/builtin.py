@@ -78,7 +78,11 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             dimensions = get_model_dimensions(model_name)
 
         provider = model_name.split("/")[0] if "/" in model_name else "openai"
-        server_embed_params = PROVIDER_DEFAULT_EMBED_PARAMS.get(provider)
+        server_embed_params = (
+            server_embed_params
+            if server_embed_params is not None
+            else PROVIDER_DEFAULT_EMBED_PARAMS.get(provider)
+        )
 
         super().__init__(
             model_name=model_name,
