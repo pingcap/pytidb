@@ -1,12 +1,11 @@
 <h1 align="center">TiDB Python AI SDK</h1>
 
 <div align="center">
-  <a href="https://pypi.org/project/pytidb">
-    <img src="https://img.shields.io/pypi/v/pytidb.svg" alt="Python Package Index"/>
-  </a>
-  <a href="https://pepy.tech/projects/pytidb">
-    <img src="https://static.pepy.tech/badge/pytidb/month" alt="Monthly PyPI Downloads"/>
-  </a>
+
+[![Python Package Index](https://img.shields.io/pypi/v/pytidb.svg)](https://pypi.org/project/pytidb)
+[![Monthly PyPI Downloads](https://static.pepy.tech/badge/pytidb/month)](https://pepy.tech/projects/pytidb)
+[![Total PyPI Downloads](https://static.pepy.tech/badge/pytidb)](https://pepy.tech/projects/pytidb)
+
 </div>
 
 <h4 align="center">
