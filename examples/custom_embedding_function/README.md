@@ -63,6 +63,7 @@ EOF
 Connected to TiDB successfully
 
 === Initializing BGE-M3 Embedding Function ===
+Fetching 30 files: 100%|███████████████████████████████████████████████████████████████████████| 30/30 [00:00<00:00, 70611.18it/s]
 BGE-M3 model loaded (1024 dimensions)
 
 === Defining Table Schema ===
@@ -72,29 +73,18 @@ Table created with BGE-M3 vector field
 Inserted 5 documents with auto-generated embeddings
 
 === Performing Vector Search ===
-
-Query 1: 'What is a distributed database?'
 Results:
-  1. [TiDB Introduction] (distance: 0.3243)
-     Content: TiDB is a distributed SQL database that supports both OLTP and OLAP work...
-  2. [Vector Databases] (distance: 0.4567)
-     Content: Vector databases are specialized databases designed to store and query hi...
-  3. [Machine Learning] (distance: 0.6234)
-     Content: Machine learning is a subset of artificial intelligence that enables com...
-
-Query 2: 'How do embedding models work?'
-Results:
-  1. [BGE-M3 Model] (distance: 0.2891)
-     Content: BGE-M3 is a versatile embedding model that supports dense retrieval, spa...
-  2. [Neural Networks] (distance: 0.4123)
-     Content: Neural networks are computing systems inspired by biological neural netw...
-  3. [Machine Learning] (distance: 0.4567)
-     Content: Machine learning is a subset of artificial intelligence that enables com...
+  [TiDB Introduction] (distance: 0.2263)
+     Content: TiDB is a distributed SQL database that supports both OLTP and OLAP workloads. I...
+  [Vector Databases] (distance: 0.5181)
+     Content: Vector databases are specialized databases designed to store and query high-dime...
+  [BGE-M3 Model] (distance: 0.6145)
+     Content: BGE-M3 is a versatile embedding model that supports dense retrieval, sparse retr...
 
 === Manual Embedding Usage ===
 Query: 'How can I use TiDB for AI applications?'
 Embedding dimensions: 1024
-First 5 embedding values: [0.123, -0.456, 0.789, -0.234, 0.567]
+First 5 embedding values: [-0.03271484375, -0.05279541015625, -0.031707763671875, 0.038299560546875, -0.0033550262451171875]
 
 Batch processed 3 texts:
   Text 1: 1024 dimensions
@@ -127,21 +117,25 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
         # Batch process multiple sources
 ```
 
-### Key Features
+Then, instantiate the **BGEM3EmbeddingFunction**:
 
-1. **Lazy Loading**: The BGE-M3 model is loaded only when first needed
-2. **FP16 Support**: Uses half-precision for faster inference
-3. **Batch Processing**: Efficiently handles multiple texts at once
-4. **Error Handling**: Proper error messages for missing dependencies
+```python
+from custom_embedding import BGEM3EmbeddingFunction
 
-### Table Schema
+bge_m3 = BGEM3EmbeddingFunction(
+    model_name='BAAI/bge-m3',  # The model will be download and load from HuggingFace Hub with the name.
+    device='cpu', # Specify the device to use, e.g., 'cpu' or 'cuda:0'
+    use_fp16=False # Specify whether to use half-precision for faster inference
+)
+```
+
+To enable auto embedding for the custom **BGEM3EmbeddingFunction**, define the `VectorField` with it and specify the `source_field` parameter:
 
 ```python
 class Document(TableModel):
     id: int = Field(primary_key=True)
-    content: str = Field(sa_type=Text)
-    # Automatic embedding field
-    content_vec: list[float] = embed_func.VectorField(source_field="content")
+    content: str = Field(sa_type=TEXT)
+    content_vec: list[float] = bge_m3.VectorField(source_field="content")
 ```
 
 ## Troubleshooting

@@ -1,5 +1,4 @@
 from typing import Any, Optional, List
-from pathlib import Path
 
 from pytidb.embeddings.base import BaseEmbeddingFunction, EmbeddingSourceType
 from pytidb.schema import Field
@@ -30,7 +29,8 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
         Initialize BGE-M3 embedding function.
 
         Args:
-            model_name: The BGE-M3 model name (default: "BAAI/bge-m3")
+            model_name: The BGE-M3 model name, you can fine-tune a model on your own data then upload it to Hugging Face.
+                Then use the new model name to initialize the embedding function. Default is the base model "BAAI/bge-m3".
             use_fp16: Whether to use FP16 precision for faster inference
             device: Device to run the model on (auto-detected if None)
             **kwargs: Additional arguments
@@ -87,7 +87,9 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
         if source_type == "text":
             text_input = str(query)
         else:
-            raise ValueError(f"BGE-M3 can only process text input, unsupported source_type: {source_type}")
+            raise ValueError(
+                f"BGE-M3 can only process text input, unsupported source_type: {source_type}"
+            )
 
         return self._encode_text(text_input)
 
@@ -108,7 +110,9 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
         if source_type == "text":
             text_input = str(source)
         else:
-            raise ValueError(f"BGE-M3 can only process text input, unsupported source_type: {source_type}")
+            raise ValueError(
+                f"BGE-M3 can only process text input, unsupported source_type: {source_type}"
+            )
 
         return self._encode_text(text_input)
 
@@ -133,7 +137,9 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
         if source_type == "text":
             text_inputs = [str(source) for source in sources]
         else:
-                        raise ValueError(f"BGE-M3 can only process text input, unsupported source_type: {source_type}")
+            raise ValueError(
+                f"BGE-M3 can only process text input, unsupported source_type: {source_type}"
+            )
 
         # Batch encode all texts
         output = self._model.encode(text_inputs, return_dense=True)
