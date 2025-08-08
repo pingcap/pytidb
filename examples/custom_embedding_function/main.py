@@ -2,7 +2,7 @@ import os
 import dotenv
 from custom_embedding import BGEM3EmbeddingFunction
 from pytidb.schema import TableModel, Field
-from pytidb.datatype import Text
+from pytidb.datatype import TEXT
 from pytidb import TiDBClient
 
 # Load environment variables
@@ -33,14 +33,14 @@ class Document(TableModel):
     __tablename__ = "bge_m3_documents"
 
     id: int = Field(primary_key=True)
-    title: str = Field(sa_type=Text)
-    content: str = Field(sa_type=Text)
+    title: str = Field(sa_type=TEXT)
+    content: str = Field(sa_type=TEXT)
     # Auto-embedding field using our custom BGE-M3 function
     content_vec: list[float] = embed_func.VectorField(source_field="content")
 
 
 # Create table
-table = db.create_table(schema=Document, mode="overwrite")
+table = db.create_table(schema=Document, if_exists="overwrite")
 print("Table created with BGE-M3 vector field")
 
 # Insert sample documents
