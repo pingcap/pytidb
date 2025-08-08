@@ -1,13 +1,15 @@
-from typing import Any, Literal, Optional, TYPE_CHECKING, List, TypedDict
+from typing import Any, Literal, Optional, TYPE_CHECKING, List, TypedDict, Union
+import json
 
 from pydantic import BaseModel
-from sqlalchemy import Column, Index
+from sqlalchemy import Column, Computed, Index
 from sqlmodel import SQLModel, Field, Relationship
 from sqlmodel.main import FieldInfo, RelationshipInfo, SQLModelMetaclass
 
+from pytidb.sql import func
 from pytidb.orm.types import TEXT, VECTOR
 from pytidb.orm.indexes import VectorIndexAlgorithm
-from pytidb.orm.distance_metric import DistanceMetric
+from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
 
 
 if TYPE_CHECKING:
@@ -49,18 +51,43 @@ def VectorField(
     embed_fn: Optional["BaseEmbeddingFunction"] = None,
     source_type: "EmbeddingSourceType" = "text",
     index: Optional[bool] = None,
-    distance_metric: Optional[DistanceMetric] = DistanceMetric.COSINE,
+    distance_metric: Optional[Union[DistanceMetric, str]] = DistanceMetric.COSINE,
     algorithm: Optional[VectorIndexAlgorithm] = "HNSW",
     **kwargs,
 ):
     # Notice: Currently, only L2 and COSINE distance metrics support indexing.
+    distance_metric = validate_distance_metric(distance_metric)
     if index is None:
         if distance_metric in [DistanceMetric.L2, DistanceMetric.COSINE]:
             index = True
         else:
             index = False
 
-    sa_column = kwargs.pop("sa_column", Column(VECTOR(dimensions)))
+    use_server = embed_fn.use_server if embed_fn else False
+    if use_server:
+        model_name = embed_fn.model_name
+        embed_params = {
+            **(embed_fn.server_embed_params or {}),
+            **kwargs.get("server_embed_params", {}),
+        }
+
+        source_column = Column(source_field)
+        if embed_params:
+            embed_params_str = json.dumps(embed_params)
+            embed_sql_function = func.EMBED_TEXT(
+                model_name, source_column, embed_params_str
+            )
+        else:
+            embed_sql_function = func.EMBED_TEXT(model_name, source_column)
+
+        default_sa_column = Column(
+            VECTOR(dimensions),
+            Computed(embed_sql_function, persisted=True),
+        )
+    else:
+        default_sa_column = Column(VECTOR(dimensions))
+
+    sa_column = kwargs.pop("sa_column", default_sa_column)
 
     return Field(
         sa_column=sa_column,
@@ -71,6 +98,7 @@ def VectorField(
             "embed_fn": embed_fn,
             "source_field": source_field,
             "source_type": source_type,
+            "use_server": use_server,
             # Vector index related.
             "skip_index": not index,
             "distance_metric": distance_metric,
