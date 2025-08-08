@@ -51,9 +51,10 @@ EOF
 
 **Step 4**: Run the demo
 
-```bash
-python main.py
 ```
+
+> [!NOTE]
+> The model may take a few minutes to download and load the first time you run it.
 
 **Expected output:**
 
