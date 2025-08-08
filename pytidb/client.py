@@ -14,6 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import Session, DeclarativeMeta
 
+from pytidb.orm.variables import EMBED_PROVIDER_API_KEY_VARS
 from pytidb.base import Base, default_registry
 from pytidb.databases import create_database, database_exists
 from pytidb.schema import TableModel
@@ -268,6 +269,18 @@ class TiDBClient:
                 stmt = sql
             result = session.execute(stmt, params)
             return SQLQueryResult(result)
+
+    def configure_embedding_provider(
+        self, provider: str, api_key: str
+    ) -> SQLExecuteResult:
+        if provider not in EMBED_PROVIDER_API_KEY_VARS.keys():
+            raise ValueError(
+                f"Unsupported configure api key for embedding provider: {provider}"
+            )
+
+        var_name = EMBED_PROVIDER_API_KEY_VARS[provider]
+        escape_var_name = self._identifier_preparer.quote(var_name)
+        return self.execute(text(f"SET @@GLOBAL.{escape_var_name} = '{api_key}';"))
 
     # Session API
 
