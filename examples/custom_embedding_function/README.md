@@ -17,16 +17,11 @@ This example demonstrates how to create and use a custom embedding function with
 
 ## Prerequisites
 
-- **Python 3.10+**
-- **A TiDB Cloud Serverless cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)
-- **Sufficient GPU memory** (recommended): BGE-M3 benefits from GPU acceleration
-
-### Performance Notes
-
-- **First Run**: Model download and loading may take a few minutes
-- **GPU Acceleration**: BGE-M3 will automatically use GPU if available
-- **Memory Usage**: BGE-M3 requires ~2GB GPU memory or ~4GB RAM
-- **Batch Size**: Larger batches improve throughput but require more memory
+- **Python 3.10+**  
+- **A TiDB Cloud Serverless cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)  
+- **Hardware requirements**:  
+  - If GPU is available, BGE-M3 will use it automatically, requiring about **2GB GPU memory**  
+  - To run on CPU (without GPU), you need to specify parameters manually; CPU mode requires about **4GB RAM**  
 
 ## How to run
 
@@ -153,9 +148,11 @@ class Document(TableModel):
     content_vec: list[float] = embed_func.VectorField(source_field="content")
 ```
 
-## GPU Memory Issues
+## Troubleshooting
 
-If you run out of GPU memory, disable FP16 or force CPU usage:
+### GPU Memory Issues
+
+If you run out of GPU memory, force CPU usage and disable FP16:
 
 ```python
 embed_func = BGEM3EmbeddingFunction(
@@ -167,5 +164,5 @@ embed_func = BGEM3EmbeddingFunction(
 ## Next Steps
 
 - Trying to use [Retrieval-Augmented Generation (RAG)](/examples/rag/README.md) to give you a better context window for generating the answer.
-- Trying to use [Full-text Search (FTS)](/examples/image_search/README.md) feature for boosting your callback rate of RAG.
+- Trying to use [Full-text Search (FTS)](/examples/image_search/README.md) feature for boosting the recall rate of RAG.
 - Trying to use [Text to SQL](/examples/text2sql/README.md) to achieve a natural language to SQL application.

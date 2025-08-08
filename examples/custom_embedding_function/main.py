@@ -15,7 +15,8 @@ db = TiDBClient.connect(
     port=int(os.getenv("TIDB_PORT", "4000")),
     username=os.getenv("TIDB_USERNAME", "root"),
     password=os.getenv("TIDB_PASSWORD", ""),
-    database=os.getenv("TIDB_DATABASE", "test"),
+    database=os.getenv("TIDB_DATABASE", "pytidb_custom_embedding"),
+    ensure_db=True
 )
 print("Connected to TiDB successfully")
 
@@ -73,9 +74,6 @@ print(f"Inserted {len(sample_docs)} documents with auto-generated embeddings")
 
 # Demonstrate vector search
 print("\n=== Performing Vector Search ===")
-
-
-# Perform vector search (query will be embedded automatically)
 results = table.search("Is TiDB a distributed database?").limit(3).to_list()
 
 print("Results:")

@@ -70,20 +70,6 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
         else:
             return dense_vector[0].tolist()
 
-    def _process_image_input(self, image_input: Any) -> str:
-        """
-        Process image input. BGE-M3 is primarily a text model,
-        so we convert image inputs to descriptive text.
-        """
-        if hasattr(image_input, "filename"):
-            return f"image file: {image_input.filename}"
-        elif isinstance(image_input, Path):
-            return f"image file: {image_input.name}"
-        elif isinstance(image_input, str):
-            return f"image path: {image_input}"
-        else:
-            return f"image: {str(image_input)}"
-
     def get_query_embedding(
         self, query: Any, source_type: Optional[EmbeddingSourceType] = "text", **kwargs
     ) -> List[float]:
@@ -91,8 +77,8 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
         Get embedding for a query.
 
         Args:
-            query: Query text string or image input
-            source_type: The type of source data ("text" or "image")
+            query: Query text string input
+            source_type: The type of source data ("text")
             **kwargs: Additional keyword arguments
 
         Returns:
@@ -100,11 +86,8 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
         """
         if source_type == "text":
             text_input = str(query)
-        elif source_type == "image":
-            # Convert image to descriptive text since BGE-M3 is text-only
-            text_input = self._process_image_input(query)
         else:
-            raise ValueError(f"Unsupported source_type: {source_type}")
+            raise ValueError(f"BGE-M3 can only process text input, unsupported source_type: {source_type}")
 
         return self._encode_text(text_input)
 
@@ -116,7 +99,7 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
 
         Args:
             source: Source field value
-            source_type: The type of source data ("text" or "image")
+            source_type: The type of source data ("text")
             **kwargs: Additional keyword arguments
 
         Returns:
@@ -124,10 +107,8 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
         """
         if source_type == "text":
             text_input = str(source)
-        elif source_type == "image":
-            text_input = self._process_image_input(source)
         else:
-            raise ValueError(f"Unsupported source_type: {source_type}")
+            raise ValueError(f"BGE-M3 can only process text input, unsupported source_type: {source_type}")
 
         return self._encode_text(text_input)
 
@@ -142,7 +123,7 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
 
         Args:
             sources: List of source field values
-            source_type: The type of source data ("text" or "image")
+            source_type: The type of source data ("text")
             **kwargs: Additional keyword arguments
 
         Returns:
@@ -151,10 +132,8 @@ class BGEM3EmbeddingFunction(BaseEmbeddingFunction):
         # Batch processing for efficiency
         if source_type == "text":
             text_inputs = [str(source) for source in sources]
-        elif source_type == "image":
-            text_inputs = [self._process_image_input(source) for source in sources]
         else:
-            raise ValueError(f"Unsupported source_type: {source_type}")
+                        raise ValueError(f"BGE-M3 can only process text input, unsupported source_type: {source_type}")
 
         # Batch encode all texts
         output = self._model.encode(text_inputs, return_dense=True)
