@@ -6,7 +6,6 @@ from pydantic import PrivateAttr
 import sqlalchemy
 from sqlalchemy import (
     Executable,
-    Inspector,
     SelectBase,
     text,
     Result,
@@ -33,14 +32,12 @@ SESSION = ContextVar[Session | None]("session", default=None)
 
 class TiDBClient:
     _db_engine: Engine = PrivateAttr()
-    _inspector: Inspector = PrivateAttr()
 
     # Necessary connection parameters for use_database functionality
     _reconnect_params: dict = PrivateAttr()
 
     def __init__(self, db_engine: Engine, reconnect_params: dict):
         self._db_engine = db_engine
-        self._inspector = sqlalchemy.inspect(self._db_engine)
         self._identifier_preparer = self._db_engine.dialect.identifier_preparer
         self._reconnect_params = reconnect_params
 
@@ -175,7 +172,6 @@ class TiDBClient:
         # Now that new_client is successfully created, dispose the old engine and update all attributes
         self._db_engine.dispose()
         self._db_engine = new_client._db_engine
-        self._inspector = new_client._inspector
         self._identifier_preparer = new_client._db_engine.dialect.identifier_preparer
         self._reconnect_params = new_client._reconnect_params
 
@@ -188,12 +184,15 @@ class TiDBClient:
         if_exists: Optional[Literal["raise", "overwrite", "skip"]] = "raise",
     ) -> Table:
         if if_exists == "raise":
-            table = Table(schema=schema, client=self, if_exists="raise")
+            table = Table(schema=schema, client=self)
+            table.create(if_exists="raise")
         elif if_exists == "overwrite":
             self.drop_table(schema.__tablename__, if_not_exists="skip")
             table = Table(schema=schema, client=self)
+            table.create(if_exists="raise")
         elif if_exists == "skip":
-            table = Table(schema=schema, client=self, if_exists="skip")
+            table = Table(schema=schema, client=self)
+            table.create(if_exists="skip")
         else:
             raise ValueError(f"Invalid if_exists value: {if_exists}")
         return table
@@ -208,7 +207,7 @@ class TiDBClient:
         # If the table in the mapper registry.
         table_model = self._get_table_model(table_name)
         if table_model is not None:
-            table = Table(schema=table_model, client=self, if_exists="skip")
+            table = Table(schema=table_model, client=self)
             return table
 
         return None
@@ -220,7 +219,7 @@ class TiDBClient:
             return [row[0] for row in result]
 
     def has_table(self, table_name: str) -> bool:
-        return self._inspector.has_table(table_name)
+        return sqlalchemy.inspect(self._db_engine).has_table(table_name)
 
     def drop_table(
         self,
@@ -230,10 +229,11 @@ class TiDBClient:
         if if_not_exists not in ["raise", "skip"]:
             raise ValueError(f"Invalid if_not_exists value: {if_not_exists}")
 
+        checkfirst = if_not_exists == "skip"
         table = sqlalchemy.Table(
             table_name, Base.metadata, autoload_with=self._db_engine
         )
-        return table.drop(self._db_engine, checkfirst=(if_not_exists == "skip"))
+        Base.metadata.drop_all(self._db_engine, [table], checkfirst=checkfirst)
 
     # Raw SQL API
 

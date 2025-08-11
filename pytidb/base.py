@@ -1,3 +1,4 @@
+from sqlalchemy.orm import DeclarativeBase
 from sqlmodel.main import default_registry
 
-Base = default_registry.generate_base()
+Base: DeclarativeBase = default_registry.generate_base()
