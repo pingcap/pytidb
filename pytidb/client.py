@@ -14,7 +14,7 @@ from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import Session, DeclarativeMeta
 
 from pytidb.orm.variables import EMBED_PROVIDER_API_KEY_VARS
-from pytidb.base import Base, default_registry
+from pytidb.base import default_registry
 from pytidb.databases import create_database, database_exists
 from pytidb.schema import TableModel
 from pytidb.table import Table
@@ -184,15 +184,12 @@ class TiDBClient:
         if_exists: Optional[Literal["raise", "overwrite", "skip"]] = "raise",
     ) -> Table:
         if if_exists == "raise":
-            table = Table(schema=schema, client=self)
-            table.create(if_exists="raise")
+            table = Table(schema=schema, client=self).create(if_exists="raise")
         elif if_exists == "overwrite":
             self.drop_table(schema.__tablename__, if_not_exists="skip")
-            table = Table(schema=schema, client=self)
-            table.create(if_exists="raise")
+            table = Table(schema=schema, client=self).create(if_exists="raise")
         elif if_exists == "skip":
-            table = Table(schema=schema, client=self)
-            table.create(if_exists="skip")
+            table = Table(schema=schema, client=self).create(if_exists="skip")
         else:
             raise ValueError(f"Invalid if_exists value: {if_exists}")
         return table
@@ -229,11 +226,7 @@ class TiDBClient:
         if if_not_exists not in ["raise", "skip"]:
             raise ValueError(f"Invalid if_not_exists value: {if_not_exists}")
 
-        checkfirst = if_not_exists == "skip"
-        table = sqlalchemy.Table(
-            table_name, Base.metadata, autoload_with=self._db_engine
-        )
-        Base.metadata.drop_all(self._db_engine, [table], checkfirst=checkfirst)
+        self.open_table(table_name).drop(if_not_exists=if_not_exists)
 
     # Raw SQL API
 

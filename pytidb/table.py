@@ -18,7 +18,6 @@ from sqlmodel import Session
 from sqlmodel.main import SQLModelMetaclass
 from typing_extensions import Generic
 
-from pytidb.base import Base
 from pytidb.filters import Filters, build_filter_clauses
 from pytidb.orm.indexes import FullTextIndex, VectorIndex, format_distance_expression
 from pytidb.sql import select, update, delete
@@ -61,6 +60,7 @@ class Table(Generic[T]):
             or type(schema) is DeclarativeMeta
         ):
             self._table_model = schema
+            self._sa_metadata = schema.metadata
         else:
             raise TypeError(f"Invalid schema type: {type(schema)}")
 
@@ -218,9 +218,15 @@ class Table(Generic[T]):
                 )
             )
 
-    def create(self, if_exists: Literal["raise", "skip"] = "raise"):
+    def create(self, if_exists: Literal["raise", "skip"] = "raise") -> "Table":
         checkfirst = if_exists == "skip"
-        Base.metadata.create_all(self.db_engine, [self._sa_table], checkfirst)
+        self._sa_metadata.create_all(self.db_engine, [self._sa_table], checkfirst)
+        return self
+
+    def drop(self, if_not_exists: Literal["raise", "skip"] = "raise") -> "Table":
+        checkfirst = if_not_exists == "skip"
+        self._sa_metadata.drop_all(self.db_engine, [self._sa_table], checkfirst)
+        return self
 
     def get(self, id: Any) -> T:
         with self._client.session() as db_session:
