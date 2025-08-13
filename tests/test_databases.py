@@ -2,8 +2,10 @@ import os
 import pytest
 import uuid
 
+from pytidb.client import TiDBClient
 
-def test_manage_database(shared_client):
+
+def test_manage_database(shared_client: TiDBClient):
     """Test database management."""
 
     current_db = shared_client.current_database()
@@ -31,7 +33,7 @@ def test_manage_database(shared_client):
     assert not shared_client.has_database(test_db)
 
 
-def test_create_database_with_ensure(shared_client):
+def test_create_database_with_ensure(shared_client: TiDBClient):
     test_db = f"test_create_with_ensure_{uuid.uuid4().hex[:8]}"
     assert not shared_client.has_database(test_db)
 
@@ -40,22 +42,20 @@ def test_create_database_with_ensure(shared_client):
         "port": int(os.getenv("TIDB_PORT", "4000")),
         "username": os.getenv("TIDB_USERNAME", "root"),
         "password": os.getenv("TIDB_PASSWORD", ""),
+        "database": test_db,
     }
 
     # Without ensure_db, raise an error because the database does not exist.
     with pytest.raises(Exception):
-        shared_client.connect(**common_kwargs, database=test_db)
+        client = TiDBClient.connect(**common_kwargs)
+        client.query("SELECT 1")
 
     # With ensure_db, create the database if it does not exist.
-    temp_client = shared_client.connect(
-        **common_kwargs,
-        database=test_db,
-        ensure_db=True,
-    )
+    temp_client = TiDBClient.connect(**common_kwargs, ensure_db=True)
     assert temp_client is not None
 
 
-def test_use_database(isolated_client):
+def test_use_database(isolated_client: TiDBClient):
     """Test switching to an existing database."""
     # Get the initial database
     initial_db = isolated_client.current_database()

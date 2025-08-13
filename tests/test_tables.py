@@ -1,22 +1,10 @@
 import pytest
+from pytidb.client import TiDBClient
 from pytidb.schema import TableModel
 from pytidb.schema import Field
 
 
-def test_open_table(isolated_client):
-    class TestOpenTable(TableModel):
-        __tablename__ = "test_open_table"
-        id: int = Field(primary_key=True)
-        name: str
-
-    table = isolated_client.create_table(schema=TestOpenTable, if_exists="overwrite")
-    table.truncate()
-    table.insert(TestOpenTable(id=1, name="foo"))
-    table = isolated_client.open_table("test_open_table")
-    assert table.rows() == 1
-
-
-def test_create_table_if_exists(isolated_client):
+def test_create_table(isolated_client: TiDBClient):
     test_table_name = "test_create_table"
 
     class TestCreateTable(TableModel):
@@ -47,21 +35,26 @@ def test_create_table_if_exists(isolated_client):
         isolated_client.create_table(schema=TestCreateTable, if_exists="invalid")
 
 
-def test_list_tables_empty(isolated_client):
-    """Test list_tables on a fresh database with no tables."""
+def test_open_table(isolated_client: TiDBClient):
+    class TestOpenTable(TableModel):
+        __tablename__ = "test_open_table"
+        id: int = Field(primary_key=True)
+        name: str
 
-    # Should have no tables initially
-    tables = isolated_client.list_tables()
-    assert tables == []
-    assert len(tables) == 0
+    table = isolated_client.create_table(schema=TestOpenTable, if_exists="overwrite")
+    table.truncate()
+    table.insert(TestOpenTable(id=1, name="foo"))
+    table = isolated_client.open_table("test_open_table")
+    assert table.rows() == 1
 
 
-def test_list_tables_with_tables(isolated_client):
+def test_list_tables(isolated_client: TiDBClient):
     """Test list_tables after creating tables."""
 
     # Initially should have no tables
     tables = isolated_client.list_tables()
     assert tables == []
+    assert len(tables) == 0
 
     # Create first table
     class TestTable1(TableModel):
@@ -99,3 +92,33 @@ def test_list_tables_with_tables(isolated_client):
     isolated_client.drop_table("test_table_2")
     tables = isolated_client.list_tables()
     assert tables == []
+
+
+def test_drop_table(isolated_client: TiDBClient):
+    """Test drop_table functionality with different if_not_exists options."""
+    test_table_name = "test_drop_table"
+
+    class TestDropTable(TableModel):
+        __tablename__ = test_table_name
+        id: int = Field(primary_key=True)
+        name: str
+
+    # Create a table first
+    isolated_client.create_table(schema=TestDropTable)
+    assert isolated_client.has_table(test_table_name)
+
+    # Test drop_table with if_not_exists="raise" (default)
+    isolated_client.drop_table(test_table_name)
+    assert not isolated_client.has_table(test_table_name)
+
+    # Test drop_table on non-existent table with if_not_exists="raise" should raise exception
+    with pytest.raises(Exception):
+        isolated_client.drop_table(test_table_name, if_not_exists="raise")
+
+    # Test drop_table on non-existent table with if_not_exists="skip" should not raise exception
+    isolated_client.drop_table(test_table_name, if_not_exists="skip")
+    assert not isolated_client.has_table(test_table_name)
+
+    # Test invalid if_not_exists value
+    with pytest.raises(ValueError):
+        isolated_client.drop_table(test_table_name, if_not_exists="invalid")

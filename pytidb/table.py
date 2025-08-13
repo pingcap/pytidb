@@ -18,7 +18,6 @@ from sqlmodel import Session
 from sqlmodel.main import SQLModelMetaclass
 from typing_extensions import Generic
 
-from pytidb.base import Base
 from pytidb.filters import Filters, build_filter_clauses
 from pytidb.orm.indexes import FullTextIndex, VectorIndex, format_distance_expression
 from pytidb.sql import select, update, delete
@@ -49,16 +48,7 @@ T = TypeVar("T", bound=TableModel)
 
 
 class Table(Generic[T]):
-    def __init__(
-        self,
-        *,
-        client: "TiDBClient",
-        schema: Optional[Type[T]] = None,
-        if_exists: Optional[Literal["raise", "skip"]] = "raise",
-    ):
-        if if_exists not in ["raise", "skip"]:
-            raise ValueError(f"Invalid if_exists value: {if_exists}")
-
+    def __init__(self, *, client: "TiDBClient", schema: Optional[Type[T]] = None):
         self._client = client
         self._db_engine = client.db_engine
         self._identifier_preparer = self._db_engine.dialect.identifier_preparer
@@ -70,6 +60,7 @@ class Table(Generic[T]):
             or type(schema) is DeclarativeMeta
         ):
             self._table_model = schema
+            self._sa_metadata = schema.metadata
         else:
             raise TypeError(f"Invalid schema type: {type(schema)}")
 
@@ -113,11 +104,6 @@ class Table(Generic[T]):
             self._setup_auto_embedding(vector_fields)
             self._auto_create_vector_index(vector_fields)
             self._auto_create_fulltext_index(text_fields)
-
-        # Create table.
-        Base.metadata.create_all(
-            self._db_engine, tables=[self._sa_table], checkfirst=(if_exists == "skip")
-        )
 
     @property
     def table_model(self) -> T:
@@ -231,6 +217,16 @@ class Table(Generic[T]):
                     fts_parser=fts_parser,
                 )
             )
+
+    def create(self, if_exists: Literal["raise", "skip"] = "raise") -> "Table":
+        checkfirst = if_exists == "skip"
+        self._sa_metadata.create_all(self.db_engine, [self._sa_table], checkfirst)
+        return self
+
+    def drop(self, if_not_exists: Literal["raise", "skip"] = "raise") -> "Table":
+        checkfirst = if_not_exists == "skip"
+        self._sa_metadata.drop_all(self.db_engine, [self._sa_table], checkfirst)
+        return self
 
     def get(self, id: Any) -> T:
         with self._client.session() as db_session:
