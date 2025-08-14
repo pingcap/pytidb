@@ -8,7 +8,8 @@ from sqlmodel.main import FieldInfo, RelationshipInfo, SQLModelMetaclass
 
 from pytidb.sql import func
 from pytidb.orm.types import TEXT, VECTOR
-from pytidb.orm.indexes import VectorIndexAlgorithm
+from pytidb.orm.indexes import VectorIndex, FullTextIndex, VectorIndexAlgorithm
+from pytidb.orm.tiflash_replica import TiFlashReplica
 from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
 
 
@@ -16,14 +17,33 @@ if TYPE_CHECKING:
     from pytidb.embeddings.base import BaseEmbeddingFunction, EmbeddingSourceType
 
 
-VectorDataType = List[float]
+# Common objects.
 
+DistanceMetric = DistanceMetric
+validate_distance_metric = validate_distance_metric
+VectorDataType = List[float]
 IndexType = Literal["vector", "fulltext", "scalar"]
 
 
 class QueryBundle(TypedDict):
     query: Optional[Any]
     query_vector: Optional[VectorDataType]
+
+
+class ColumnInfo(BaseModel):
+    column_name: str
+    column_type: str
+
+
+# SQLAlchemy objects.
+Column = Column
+Index = Index
+VectorIndex = VectorIndex
+FullTextIndex = FullTextIndex
+TiFlashReplica = TiFlashReplica
+
+
+# SQL Model objects.
 
 
 class TableModelMeta(SQLModelMetaclass):
@@ -39,8 +59,6 @@ class TableModel(SQLModel, metaclass=TableModelMeta):
 
 Field = Field
 Relationship = Relationship
-Column = Column
-Index = Index
 FieldInfo = FieldInfo
 RelationshipInfo = RelationshipInfo
 
@@ -124,8 +142,3 @@ def FullTextField(
         },
         **kwargs,
     )
-
-
-class ColumnInfo(BaseModel):
-    column_name: str
-    column_type: str

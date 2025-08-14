@@ -1,8 +1,8 @@
 from typing import Optional, Any, TYPE_CHECKING, Union
 from sqlalchemy.sql.schema import SchemaItem
 from sqlalchemy.sql.base import DialectKWArgs
+from sqlalchemy.sql.ddl import _CreateBase
 from sqlalchemy import text
-from pytidb.orm.sql.ddl import TiDBSchemaGenerator
 
 if TYPE_CHECKING:
     from sqlalchemy import Table, Engine, Connection
@@ -10,10 +10,10 @@ if TYPE_CHECKING:
 _CreateDropBind = Union["Engine", "Connection"]
 
 
-class SetTiFlashReplica:
+class CreateTiFlashReplica(_CreateBase):
     """DDL element for SET TIFLASH REPLICA operation."""
 
-    __visit_name__ = "set_tiflash_replica"
+    __visit_name__ = "create_tiflash_replica"
 
     def __init__(self, table: "Table", replica_count: int):
         self.table = table
@@ -75,8 +75,12 @@ class TiFlashReplica(DialectKWArgs, SchemaItem):
         :param bind: Connection or Engine for connectivity
         :param checkfirst: If True, check if operation is needed before executing
         """
-        set_replica = SetTiFlashReplica(self.table, self.replica_count)
-        bind._run_ddl_visitor(TiDBSchemaGenerator, set_replica, checkfirst=checkfirst)
+        from pytidb.orm.sql.ddl import TiDBSchemaGenerator
+
+        create_replica = CreateTiFlashReplica(self.table, self.replica_count)
+        bind._run_ddl_visitor(
+            TiDBSchemaGenerator, create_replica, checkfirst=checkfirst
+        )
 
     def drop(self, bind: _CreateDropBind, checkfirst: bool = False) -> None:
         """Remove TiFlash replicas by setting replica count to 0.
@@ -84,8 +88,12 @@ class TiFlashReplica(DialectKWArgs, SchemaItem):
         :param bind: Connection or Engine for connectivity
         :param checkfirst: If True, check if operation is needed before executing
         """
-        set_replica = SetTiFlashReplica(self.table, 0)
-        bind._run_ddl_visitor(TiDBSchemaGenerator, set_replica, checkfirst=checkfirst)
+        from pytidb.orm.sql.ddl import TiDBSchemaGenerator
+
+        create_replica = CreateTiFlashReplica(self.table, 0)
+        bind._run_ddl_visitor(
+            TiDBSchemaGenerator, create_replica, checkfirst=checkfirst
+        )
 
     def get_replication_progress(self, bind: _CreateDropBind) -> dict:
         """Check TiFlash replication progress for the table.

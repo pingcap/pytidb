@@ -1,7 +1,7 @@
 from typing import Literal, Union
 from sqlalchemy import text
 from sqlalchemy.sql.schema import Index
-from pytidb.orm.sql.ddl import TiDBSchemaGenerator
+from sqlalchemy.sql.ddl import CreateIndex
 from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
 from pytidb.orm.tiflash_replica import TiFlashReplica
 from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN
@@ -73,6 +73,8 @@ class VectorIndex(Index):
     def create(self, bind, checkfirst: bool = False) -> None:
         # Notice: Self-managed TiDB does not support the ADD_COLUMNAR_REPLICA_ON_DEMAND parameter
         # in CREATE VECTOR INDEX statements, so TiFlash replicas need to be created manually.
+        from pytidb.orm.sql.ddl import TiDBSchemaGenerator
+
         if self.ensure_columnar_replica and not TIDB_SERVERLESS_HOST_PATTERN.match(
             bind.url.host
         ):
@@ -108,3 +110,12 @@ class FullTextIndex(Index):
         kw["mysql_prefix"] = "FULLTEXT"
         kw["mysql_with_parser"] = fts_parser
         super().__init__(name, *column_names, **kw)
+
+
+class CreateIndexInline(CreateIndex):
+    """DDL element for inline index creation within CREATE TABLE."""
+
+    __visit_name__ = "create_index_inline"
+
+    def __init__(self, element, if_not_exists=False):
+        super().__init__(element, if_not_exists=if_not_exists)

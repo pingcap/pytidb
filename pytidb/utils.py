@@ -25,15 +25,15 @@ def create_engine_without_db(url, echo=False, **kwargs):
 class TiDBConnectionURL(AnyUrl):
     """A URL that enforces specific constraints for TiDB connections.
 
-    * User info required
-    * TLD not required
-    * Host not required
+    Format:
+        mysql+pymysql://[username:password@]host[:port][/database]
+        mysql+pymysql://[username:password@]host[:port][/database]?ssl_verify_cert=true&ssl_verify_identity=true
     """
 
     _constraints = UrlConstraints(
         allowed_schemes=[
-            "tidb",
-            "tidb+pymysql",
+            "mysql",
+            "mysql+pymysql",
         ],
         default_port=4000,
         host_required=True,
@@ -41,7 +41,7 @@ class TiDBConnectionURL(AnyUrl):
 
 
 def build_tidb_connection_url(
-    schema: str = "tidb+pymysql",
+    schema: str = "mysql+pymysql",
     host: str = "localhost",
     port: int = 4000,
     username: str = "root",
@@ -53,7 +53,7 @@ def build_tidb_connection_url(
     Build a TiDB Connection URL string for database connection.
 
     Args:
-        schema (str, optional): The connection protocol. Defaults to "tidb+pymysql".
+        schema (str, optional): The connection protocol. Defaults to "mysql+pymysql".
         host (str, optional): The host address of TiDB server. Defaults to "localhost".
         port (int, optional): The port number of TiDB server. Defaults to 4000.
         username (str, optional): The username for authentication. Defaults to "root".
