@@ -3,6 +3,8 @@ from sqlalchemy import text
 from sqlalchemy.sql.schema import Index
 from pytidb.orm.sql.ddl import TiDBSchemaGenerator
 from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
+from pytidb.orm.tiflash_repilica import TiFlashReplica
+from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN
 
 
 """
@@ -69,6 +71,13 @@ class VectorIndex(Index):
         super().__init__(name, *expressions, _table=table, **kw)
 
     def create(self, bind, checkfirst: bool = False) -> None:
+        # Notice: Self-managed TiDB does not support the ADD_COLUMNAR_REPLICA_ON_DEMAND parameter
+        # in CREATE VECTOR INDEX statements, so TiFlash replicas need to be created manually.
+        if self.ensure_columnar_replica and not TIDB_SERVERLESS_HOST_PATTERN.match(
+            bind.url.host
+        ):
+            TiFlashReplica(self.table, replica_count=1).create(bind, checkfirst=True)
+            self.ensure_columnar_replica = False
         bind._run_ddl_visitor(TiDBSchemaGenerator, self, checkfirst=checkfirst)
 
 

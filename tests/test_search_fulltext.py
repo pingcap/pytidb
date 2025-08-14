@@ -9,6 +9,10 @@ from pytidb.schema import TableModel, Field, FullTextField
 
 @pytest.fixture(scope="module")
 def text_table(shared_client: TiDBClient):
+    # Skip fulltext search tests if not connected to TiDB Serverless
+    if not shared_client.is_serverless:
+        pytest.skip("Currently, Only TiDB Serverless supports full text indexes")
+
     class ChunkWithFullTextField(TableModel):
         __tablename__ = "test_fulltext_search"
         id: int = Field(primary_key=True)
@@ -105,6 +109,10 @@ def test_rerank(text_table: Table, reranker: BaseReranker):
 
 
 def test_with_multiple_text_fields(shared_client: TiDBClient):
+    # Skip test if not connected to TiDB Serverless
+    if not shared_client.is_serverless:
+        pytest.skip("Currently, Only TiDB Serverless supports full text indexes")
+
     class Article(TableModel):
         __tablename__ = "test_fts_with_multi_text_fields"
         id: int = Field(primary_key=True)

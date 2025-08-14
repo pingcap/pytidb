@@ -32,14 +32,8 @@ class TiDBConnectionURL(AnyUrl):
 
     _constraints = UrlConstraints(
         allowed_schemes=[
-            "mysql",
-            "mysql+mysqlconnector",
-            "mysql+aiomysql",
-            "mysql+asyncmy",
-            "mysql+mysqldb",
-            "mysql+pymysql",
-            "mysql+cymysql",
-            "mysql+pyodbc",
+            "tidb",
+            "tidb+pymysql",
         ],
         default_port=4000,
         host_required=True,
@@ -47,7 +41,7 @@ class TiDBConnectionURL(AnyUrl):
 
 
 def build_tidb_connection_url(
-    schema: str = "mysql+pymysql",
+    schema: str = "tidb+pymysql",
     host: str = "localhost",
     port: int = 4000,
     username: str = "root",
@@ -59,7 +53,7 @@ def build_tidb_connection_url(
     Build a TiDB Connection URL string for database connection.
 
     Args:
-        schema (str, optional): The connection protocol. Defaults to "mysql+pymysql".
+        schema (str, optional): The connection protocol. Defaults to "tidb+pymysql".
         host (str, optional): The host address of TiDB server. Defaults to "localhost".
         port (int, optional): The port number of TiDB server. Defaults to 4000.
         username (str, optional): The username for authentication. Defaults to "root".
