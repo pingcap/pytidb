@@ -3,7 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.sql.schema import Index
 from pytidb.orm.sql.ddl import TiDBSchemaGenerator
 from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
-from pytidb.orm.tiflash_repilica import TiFlashReplica
+from pytidb.orm.tiflash_replica import TiFlashReplica
 from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN
 
 

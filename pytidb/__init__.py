@@ -8,7 +8,7 @@ from .client import TiDBClient
 from .table import Table
 from .utils import build_tidb_connection_url
 from .orm.dialects.tidb import TiDBDialect
-from .orm.tiflash_repilica import TiFlashReplica
+from .orm.tiflash_replica import TiFlashReplica
 
 # Register the TiDB dialect with SQLAlchemy
 registry.register("tidb", "pytidb.orm.dialects.tidb", "TiDBDialect")
