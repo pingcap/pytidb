@@ -107,6 +107,7 @@ class FullTextIndex(Index):
         if fts_parser not in ["STANDARD", "MULTILINGUAL"]:
             raise ValueError(f"Invalid full text parser: {fts_parser}")
         self.ensure_columnar_replica = ensure_columnar_replica
+        self.is_tidb_serverless = None
         kw["mysql_prefix"] = "FULLTEXT"
         kw["mysql_with_parser"] = fts_parser
         super().__init__(name, *column_names, **kw)
