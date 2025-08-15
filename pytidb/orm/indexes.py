@@ -1,6 +1,6 @@
 from typing import Literal, Union
 from sqlalchemy import text
-from sqlalchemy.sql.schema import Index
+from sqlalchemy.sql.schema import Index, _CreateDropBind
 from sqlalchemy.sql.ddl import CreateIndex
 from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
 from pytidb.orm.tiflash_replica import TiFlashReplica
@@ -66,20 +66,21 @@ class VectorIndex(Index):
 
         self.distance_metric = distance_metric
         self.ensure_columnar_replica = ensure_columnar_replica
+        self.is_tidb_serverless = None
         kw["mysql_prefix"] = "VECTOR"
         kw["mysql_using"] = algorithm
         super().__init__(name, *expressions, _table=table, **kw)
 
-    def create(self, bind, checkfirst: bool = False) -> None:
-        # Notice: Self-managed TiDB does not support the ADD_COLUMNAR_REPLICA_ON_DEMAND parameter
-        # in CREATE VECTOR INDEX statements, so TiFlash replicas need to be created manually.
+    def create(self, bind: _CreateDropBind, checkfirst: bool = False) -> None:
         from pytidb.orm.sql.ddl import TiDBSchemaGenerator
 
-        if self.ensure_columnar_replica and not TIDB_SERVERLESS_HOST_PATTERN.match(
-            bind.url.host
-        ):
-            TiFlashReplica(self.table, replica_count=1).create(bind, checkfirst=True)
+        # Notice: Self-managed TiDB does not support the ADD_COLUMNAR_REPLICA_ON_DEMAND parameter
+        # in CREATE VECTOR INDEX statements, so TiFlash replicas need to be created manually.
+        self.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(bind.url.host)
+        if self.ensure_columnar_replica and not self.is_tidb_serverless:
+            TiFlashReplica(self.table, replica_count=1).create(bind)
             self.ensure_columnar_replica = False
+
         bind._run_ddl_visitor(TiDBSchemaGenerator, self, checkfirst=checkfirst)
 
 
@@ -110,6 +111,18 @@ class FullTextIndex(Index):
         kw["mysql_prefix"] = "FULLTEXT"
         kw["mysql_with_parser"] = fts_parser
         super().__init__(name, *column_names, **kw)
+
+    def create(self, bind: _CreateDropBind, checkfirst: bool = False) -> None:
+        from pytidb.orm.sql.ddl import TiDBSchemaGenerator
+
+        # Notice: Self-managed TiDB does not support the ADD_COLUMNAR_REPLICA_ON_DEMAND parameter
+        # in CREATE VECTOR INDEX statements, so TiFlash replicas need to be created manually.
+        self.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(bind.url.host)
+        if self.ensure_columnar_replica and not self.is_tidb_serverless:
+            TiFlashReplica(self.table, replica_count=1).create(bind)
+            self.ensure_columnar_replica = False
+
+        bind._run_ddl_visitor(TiDBSchemaGenerator, self, checkfirst=checkfirst)
 
 
 class CreateIndexInline(CreateIndex):

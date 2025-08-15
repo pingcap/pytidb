@@ -1,27 +1,31 @@
-from typing import Optional, Any, TYPE_CHECKING, Union
-from sqlalchemy.sql.schema import SchemaItem
+from typing import Optional, Any, TypedDict
+from sqlalchemy.sql.schema import SchemaItem, _CreateDropBind
 from sqlalchemy.sql.base import DialectKWArgs
 from sqlalchemy.sql.ddl import _CreateBase
-from sqlalchemy import text
-
-if TYPE_CHECKING:
-    from sqlalchemy import Table, Engine, Connection
-
-_CreateDropBind = Union["Engine", "Connection"]
+from sqlalchemy import select, Table
+from .information_schema import tiflash_replica
 
 
-class CreateTiFlashReplica(_CreateBase):
+class TiFlashReplicaProgress(TypedDict):
+    table_schema: str
+    table_name: str
+    replica_count: int
+    location_labels: str
+    available: bool
+    progress: float
+
+
+class SetTiFlashReplica(_CreateBase):
     """DDL element for SET TIFLASH REPLICA operation."""
 
-    __visit_name__ = "create_tiflash_replica"
+    __visit_name__ = "set_tiflash_replica"
 
-    def __init__(self, table: "Table", replica_count: int):
-        self.table = table
-        self.replica_count = replica_count
+    def __init__(self, element):
+        super().__init__(element)
 
 
 class TiFlashReplica(DialectKWArgs, SchemaItem):
-    """A table-level TiFlash replica configuration.
+    """A table-level TiFlash replica.
 
     TiFlash is the columnar storage engine for TiDB. This class provides
     DDL operations to manage TiFlash replicas for tables.
@@ -69,70 +73,65 @@ class TiFlashReplica(DialectKWArgs, SchemaItem):
 
         self._validate_dialect_kwargs(dialect_kw)
 
-    def create(self, bind: _CreateDropBind, checkfirst: bool = False) -> None:
-        """Issue an ``ALTER TABLE ... SET TIFLASH REPLICA`` statement.
+    def create(self, bind: _CreateDropBind) -> None:
+        """Issue an ``ALTER TABLE ... SET TIFLASH REPLICA`` statement for this
+        :class:`.TiFlashReplica`, using the given
+        :class:`.Connection` or :class:`.Engine`` for connectivity.
 
-        :param bind: Connection or Engine for connectivity
-        :param checkfirst: If True, check if operation is needed before executing
+        .. seealso::
+
+            :meth:`_schema.MetaData.create_all`.
         """
         from pytidb.orm.sql.ddl import TiDBSchemaGenerator
 
-        create_replica = CreateTiFlashReplica(self.table, self.replica_count)
-        bind._run_ddl_visitor(
-            TiDBSchemaGenerator, create_replica, checkfirst=checkfirst
-        )
+        bind._run_ddl_visitor(TiDBSchemaGenerator, self)
 
-    def drop(self, bind: _CreateDropBind, checkfirst: bool = False) -> None:
-        """Remove TiFlash replicas by setting replica count to 0.
+    def drop(self, bind: _CreateDropBind) -> None:
+        """Issue an ``ALTER TABLE ... SET TIFLASH REPLICA 0`` statement for this
+        :class:`.TiFlashReplica`, using the given
+        :class:`.Connection` or :class:`.Engine`` for connectivity.
 
-        :param bind: Connection or Engine for connectivity
-        :param checkfirst: If True, check if operation is needed before executing
+        .. seealso::
+
+            :meth:`_schema.MetaData.drop_all`.
         """
-        from pytidb.orm.sql.ddl import TiDBSchemaGenerator
+        from pytidb.orm.sql.ddl import TiDBSchemaDropper
 
-        create_replica = CreateTiFlashReplica(self.table, 0)
-        bind._run_ddl_visitor(
-            TiDBSchemaGenerator, create_replica, checkfirst=checkfirst
-        )
+        bind._run_ddl_visitor(TiDBSchemaDropper, self)
 
-    def get_replication_progress(self, bind: _CreateDropBind) -> dict:
+    def get_replication_progress(self, bind: _CreateDropBind) -> TiFlashReplicaProgress:
         """Check TiFlash replication progress for the table.
 
         :param bind: Connection or Engine for connectivity
         :return: Dictionary with replication status information
         """
+
         if hasattr(bind, "execute"):
             connection = bind
         else:
             connection = bind.connect()
 
         try:
-            schema_name = (
-                self.table.schema
-                or connection.execute(text("SELECT DATABASE()")).scalar()
-            )
+            schema_name = bind.url.database
             table_name = self.table.name
 
-            query = text("""
-            SELECT TABLE_SCHEMA, TABLE_NAME, REPLICA_COUNT, LOCATION_LABELS, 
-                   AVAILABLE, PROGRESS
-            FROM information_schema.tiflash_replica 
-            WHERE TABLE_SCHEMA = :schema_name AND TABLE_NAME = :table_name
-            """)
-
-            result = connection.execute(
-                query, {"schema_name": schema_name, "table_name": table_name}
+            query = select(tiflash_replica).where(
+                tiflash_replica.c.TABLE_SCHEMA == schema_name,
+                tiflash_replica.c.TABLE_NAME == table_name,
             )
+            result = connection.execute(query)
             row = result.fetchone()
 
             if row:
                 return {
-                    "table_schema": row[0],
-                    "table_name": row[1],
-                    "replica_count": row[2],
-                    "location_labels": row[3],
-                    "available": bool(row[4]),
-                    "progress": float(row[5]) if row[5] is not None else 0.0,
+                    "table_schema": row.TABLE_SCHEMA,
+                    "table_name": row.TABLE_NAME,
+                    "replica_count": row.REPLICA_COUNT,
+                    "location_labels": row.LOCATION_LABELS,
+                    "available": bool(row.AVAILABLE),
+                    "progress": float(row.PROGRESS)
+                    if row.PROGRESS is not None
+                    else 0.0,
                 }
             else:
                 return {

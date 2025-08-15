@@ -1,51 +1,42 @@
 import sqlalchemy
-from sqlalchemy.sql.ddl import SchemaGenerator, CreateTable, CreateColumn, CreateIndex
+from sqlalchemy.sql.ddl import SchemaGenerator, SchemaDropper, CreateColumn, CreateIndex
 from sqlalchemy.sql import sqltypes, elements, functions, operators
 from sqlalchemy.ext.compiler import compiles
+
+from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN
 from ..indexes import CreateIndexInline
-from ..tiflash_replica import CreateTiFlashReplica
+from ..tiflash_replica import SetTiFlashReplica, TiFlashReplica
 
 
 class TiDBSchemaGenerator(SchemaGenerator):
-    def visit_table(
-        self,
-        table,
-        create_ok=False,
-        include_foreign_key_constraints=None,
-        _is_metadata_operation=False,
-    ):
-        if not create_ok and not self._can_create_table(table):
+    def visit_index(self, index, create_ok=False):
+        if not create_ok and not self._can_create_index(index):
             return
+        with self.with_ddl_events(index):
+            self.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(
+                self.connection.engine.url.host
+            )
 
-        with self.with_ddl_events(
-            table,
-            checkfirst=self.checkfirst,
-            _is_metadata_operation=_is_metadata_operation,
-        ):
-            for column in table.columns:
-                if column.default is not None:
-                    self.traverse_single(column.default)
+            # Notice: Self-managed TiDB 8.5.0 does not support the ADD_COLUMNAR_REPLICA_ON_DEMAND parameter
+            # in CREATE VECTOR INDEX statements, so TiFlash replicas need to be created manually.
+            if index.ensure_columnar_replica and not index.is_tidb_serverless:
+                TiFlashReplica(index.table, replica_count=1).create(self.connection)
+                index.ensure_columnar_replica = False
+            CreateIndex(index)._invoke_with(self.connection)
 
-            if not self.dialect.supports_alter:
-                # e.g., don't omit any foreign key constraints
-                include_foreign_key_constraints = None
-
-            CreateTable(
-                table,
-                include_foreign_key_constraints=(include_foreign_key_constraints),
-            )._invoke_with(self.connection)
-
-    def visit_create_tiflash_replica(self, create_replica, checkfirst=False):
-        """Visit a CreateTiFlashReplica DDL element."""
-        if checkfirst:
-            # Could add logic to check current replica count here
-            pass
-
-        # Generate and execute the DDL statement using the compiler
-        create_replica._invoke_with(self.connection)
+    def visit_tiflash_replica(self, tiflash_replica: TiFlashReplica):
+        with self.with_ddl_events(tiflash_replica):
+            SetTiFlashReplica(tiflash_replica)._invoke_with(self.connection)
 
 
-@compiles(CreateTable, "mysql")
+class TiDBSchemaDropper(SchemaDropper):
+    def visit_tiflash_replica(self, tiflash_replica: TiFlashReplica):
+        with self.with_ddl_events(tiflash_replica):
+            tiflash_replica.replica_count = 0
+            SetTiFlashReplica(tiflash_replica)._invoke_with(self.connection)
+
+
+# @compiles(CreateTable, "mysql")
 def compile_create_table(create, compiler, **kw):
     """Enhanced CREATE TABLE compilation for TiDB with MySQL dialect."""
     table = create.element
@@ -249,17 +240,18 @@ def _compile_create_index(create, compiler, inline=False, **kw):
         not inline
         and hasattr(index, "ensure_columnar_replica")
         and index.ensure_columnar_replica
+        and index.is_tidb_serverless
     ):
         text += " ADD_COLUMNAR_REPLICA_ON_DEMAND"
 
     return text
 
 
-@compiles(CreateTiFlashReplica, "mysql")
-def compile_create_tiflash_replica(create, compiler, **kw):
+@compiles(SetTiFlashReplica, "mysql")
+def compile_set_tiflash_replica(set_tiflash_replica, compiler, **kw):
     """Generate ALTER TABLE ... SET TIFLASH REPLICA statement."""
-    table = create.table
-    replica_count = create.replica_count
+    table = set_tiflash_replica.element.table
+    replica_count = set_tiflash_replica.element.replica_count
 
     preparer = compiler.preparer
     table_name = preparer.format_table(table)

@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 
 
 # Common objects.
-
 DistanceMetric = DistanceMetric
 validate_distance_metric = validate_distance_metric
 VectorDataType = List[float]
