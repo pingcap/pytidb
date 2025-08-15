@@ -1,10 +1,8 @@
-import sqlalchemy
-from sqlalchemy.sql.ddl import SchemaGenerator, SchemaDropper, CreateColumn, CreateIndex
-from sqlalchemy.sql import sqltypes, elements, functions, operators
+from sqlalchemy.sql.ddl import SchemaGenerator, SchemaDropper, CreateIndex
+from sqlalchemy.sql import elements, functions, operators
 from sqlalchemy.ext.compiler import compiles
 
 from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN
-from ..indexes import CreateIndexInline
 from ..tiflash_replica import SetTiFlashReplica, TiFlashReplica
 
 
@@ -36,112 +34,10 @@ class TiDBSchemaDropper(SchemaDropper):
             SetTiFlashReplica(tiflash_replica)._invoke_with(self.connection)
 
 
-# @compiles(CreateTable, "mysql")
-def compile_create_table(create, compiler, **kw):
-    """Enhanced CREATE TABLE compilation for TiDB with MySQL dialect."""
-    table = create.element
-    preparer = compiler.preparer
-
-    text = "\nCREATE "
-    if table._prefixes:
-        text += " ".join(table._prefixes) + " "
-
-    text += "TABLE "
-    if create.if_not_exists:
-        text += "IF NOT EXISTS "
-
-    text += preparer.format_table(table) + " "
-
-    create_table_suffix = compiler.create_table_suffix(table)
-    if create_table_suffix:
-        text += create_table_suffix + " "
-
-    text += "("
-
-    separator = "\n"
-
-    # if only one primary key, specify it along with the column
-    first_pk = False
-    for create_column in create.columns:
-        column = create_column.element
-        try:
-            processed = compiler.process(
-                create_column, first_pk=column.primary_key and not first_pk
-            )
-            if processed is not None:
-                text += separator
-                separator = ", \n"
-                text += "\t" + processed
-            if column.primary_key:
-                first_pk = True
-        except sqlalchemy.exc.CompileError as ce:
-            raise sqlalchemy.exc.CompileError(
-                "(in table '%s', column '%s'): %s"
-                % (table.description, column.name, ce.args[0])
-            ) from ce
-
-    # Add table constraints
-    const = compiler.create_table_constraints(
-        table,
-        _include_foreign_key_constraints=create.include_foreign_key_constraints,  # noqa
-    )
-    if const:
-        text += separator + "\t" + const
-
-    # Add indexes inline
-    if hasattr(table, "indexes") and table.indexes:
-        # Import here to avoid circular imports
-        from pytidb.orm.indexes import CreateIndexInline
-
-        for index in table.indexes:
-            try:
-                # Create a CreateIndexInline object and process it using compiler.process
-                create_index_inline = CreateIndexInline(index)
-                index_def = compiler.process(create_index_inline)
-                if index_def:
-                    text += separator + "\t" + index_def
-                    if separator == "\n":
-                        separator = ", \n"
-            except Exception:
-                # If index compilation fails, skip it and let it be created separately
-                pass
-
-    text += "\n)%s\n\n" % compiler.post_create_table(table)
-    return text
-
-
-@compiles(CreateColumn, "mysql")
-def compile_create_column(create, compiler, first_pk=False, **kw):
-    """Override visit_create_column to support inline column comment."""
-    column = create.element
-
-    if column.system:
-        return None
-
-    text = compiler.get_column_specification(column, first_pk=first_pk)
-    const = " ".join(compiler.process(constraint) for constraint in column.constraints)
-    if const:
-        text += " " + const
-
-    if column.comment is not None:
-        comment = compiler.sql_compiler.render_literal_value(
-            column.comment, sqltypes.String()
-        )
-        text += f" COMMENT {comment}"
-
-    return text
-
-
 @compiles(CreateIndex, "mysql")
 def compile_create_index(create, compiler, **kw):
     """Enhanced CREATE INDEX compilation for TiDB with MySQL dialect."""
     return _compile_create_index(create, compiler, inline=False, **kw)
-
-
-@compiles(CreateIndexInline, "mysql")
-def compile_create_index_inline(create, compiler, **kw):
-    """Enhanced inline index compilation for TiDB with MySQL dialect."""
-    return _compile_create_index(create, compiler, inline=True, **kw)
 
 
 def _compile_create_index(create, compiler, inline=False, **kw):

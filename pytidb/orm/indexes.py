@@ -1,7 +1,6 @@
 from typing import Literal, Union
 from sqlalchemy import text
 from sqlalchemy.sql.schema import Index, _CreateDropBind
-from sqlalchemy.sql.ddl import CreateIndex
 from pytidb.orm.distance_metric import DistanceMetric, validate_distance_metric
 from pytidb.orm.tiflash_replica import TiFlashReplica
 from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN
@@ -123,12 +122,3 @@ class FullTextIndex(Index):
             self.ensure_columnar_replica = False
 
         bind._run_ddl_visitor(TiDBSchemaGenerator, self, checkfirst=checkfirst)
-
-
-class CreateIndexInline(CreateIndex):
-    """DDL element for inline index creation within CREATE TABLE."""
-
-    __visit_name__ = "create_index_inline"
-
-    def __init__(self, element, if_not_exists=False):
-        super().__init__(element, if_not_exists=if_not_exists)
