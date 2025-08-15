@@ -37,11 +37,6 @@ class TiDBSchemaDropper(SchemaDropper):
 @compiles(CreateIndex, "mysql")
 def compile_create_index(create, compiler, **kw):
     """Enhanced CREATE INDEX compilation for TiDB with MySQL dialect."""
-    return _compile_create_index(create, compiler, inline=False, **kw)
-
-
-def _compile_create_index(create, compiler, inline=False, **kw):
-    """Internal method to handle both inline and standalone CREATE INDEX."""
     # Copy from sqlalchemy.dialects.mysql.base.MySQLCompiler::visit_create_index
     index = create.element
     compiler._verify_index_table(index)
@@ -70,33 +65,20 @@ def _compile_create_index(create, compiler, inline=False, **kw):
 
     name = compiler._prepared_index_name(index)
 
-    # Generate different text based on inline parameter
-    if inline:
-        # For inline index in CREATE TABLE, don't include CREATE, IF NOT EXISTS, or ON table
-        text = ""
-    else:
-        # For standalone CREATE INDEX
-        text = "CREATE "
-
+    text = "CREATE "
     if index.unique:
         text += "UNIQUE "
 
-    index_prefix = index.kwargs.get("%s_prefix" % "mysql", None)
+    index_prefix = index.kwargs.get("%s_prefix" % compiler.dialect.name, None)
     if index_prefix:
         text += index_prefix + " "
 
     text += "INDEX "
+    if create.if_not_exists:
+        text += "IF NOT EXISTS "
+    text += "%s ON %s " % (name, table)
 
-    if not inline:
-        # Only add IF NOT EXISTS and table reference for standalone CREATE INDEX
-        if create.if_not_exists:
-            text += "IF NOT EXISTS "
-        text += "%s ON %s " % (name, table)
-    else:
-        # For inline index, just add the name
-        text += "%s " % name
-
-    length = index.dialect_options.get("mysql", {}).get("length")
+    length = index.dialect_options[compiler.dialect.name]["length"]
     if length is not None:
         if isinstance(length, dict):
             # length value can be a (column_name --> integer value)
@@ -123,18 +105,16 @@ def _compile_create_index(create, compiler, inline=False, **kw):
 
     text += "(%s)" % columns
 
-    parser = index.dialect_options.get("mysql", {}).get("with_parser")
+    parser = index.dialect_options[compiler.dialect.name]["with_parser"]
     if parser is not None:
         text += " WITH PARSER %s" % (parser,)
 
-    using = index.dialect_options.get("mysql", {}).get("using")
+    using = index.dialect_options[compiler.dialect.name]["using"]
     if using is not None:
         text += " USING %s" % (using)
 
-    # Only add ADD_COLUMNAR_REPLICA_ON_DEMAND for standalone CREATE INDEX, not inline
     if (
-        not inline
-        and hasattr(index, "ensure_columnar_replica")
+        hasattr(index, "ensure_columnar_replica")
         and index.ensure_columnar_replica
         and index.is_tidb_serverless
     ):
