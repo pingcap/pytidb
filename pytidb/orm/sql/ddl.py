@@ -22,7 +22,15 @@ class TiDBSchemaGenerator(SchemaGenerator):
                 index.ensure_columnar_replica = False
             CreateIndex(index)._invoke_with(self.connection)
 
+    def _has_tiflash_replica(self, tiflash_replica: TiFlashReplica) -> bool:
+        progress = tiflash_replica.get_replication_progress(self.connection)
+        return progress["replica_count"] > 0
+
     def visit_tiflash_replica(self, tiflash_replica: TiFlashReplica):
+        # If TiFlash replica already exists, skip creation.
+        if self._has_tiflash_replica(tiflash_replica):
+            return
+
         with self.with_ddl_events(tiflash_replica):
             SetTiFlashReplica(tiflash_replica)._invoke_with(self.connection)
 
