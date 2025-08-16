@@ -12,6 +12,7 @@
         "asyncio",
         "asyncmy",
         "autobegin",
+        "autouse",
         "bindparam",
         "checkfirst",
         "cymysql",

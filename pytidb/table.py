@@ -20,6 +20,7 @@ from typing_extensions import Generic
 
 from pytidb.filters import Filters, build_filter_clauses
 from pytidb.orm.indexes import FullTextIndex, VectorIndex, format_distance_expression
+from pytidb.orm.sql import ddl
 from pytidb.sql import select, update, delete
 from pytidb.schema import (
     QueryBundle,
@@ -220,13 +221,14 @@ class Table(Generic[T]):
 
     def create(self, if_exists: Literal["raise", "skip"] = "raise") -> "Table":
         checkfirst = if_exists == "skip"
-        self._sa_metadata.create_all(self.db_engine, [self._sa_table], checkfirst)
+        self.db_engine._run_ddl_visitor(
+            ddl.TiDBSchemaGenerator, self._sa_table, checkfirst=checkfirst
+        )
         return self
 
-    def drop(self, if_not_exists: Literal["raise", "skip"] = "raise") -> "Table":
+    def drop(self, if_not_exists: Literal["raise", "skip"] = "raise"):
         checkfirst = if_not_exists == "skip"
-        self._sa_metadata.drop_all(self.db_engine, [self._sa_table], checkfirst)
-        return self
+        self._sa_table.drop(self.db_engine, checkfirst=checkfirst)
 
     def get(self, id: Any) -> T:
         with self._client.session() as db_session:
@@ -535,19 +537,39 @@ class Table(Generic[T]):
             )
             return res.scalar()
 
+    def _has_tidb_index(
+        self, column_name: str, index_type: Optional[str] = None
+    ) -> bool:
+        table_name = self._identifier_preparer.quote(self.table_name)
+        stmt = f"SHOW INDEXES FROM {table_name} WHERE Column_name = :column_name"
+        params = {"column_name": column_name}
+
+        if index_type is not None:
+            stmt += " AND Index_type = :index_type"
+            params["index_type"] = index_type
+
+        with self._client.session():
+            res = self._client.query(stmt, params)
+            return len(res.to_list()) > 0
+
     def has_vector_index(self, column_name: str) -> bool:
-        return self._has_tiflash_index(column_name, "Vector")
+        if self._client._is_serverless:
+            return self._has_tiflash_index(column_name, "Vector")
+        else:
+            return self._has_tidb_index(column_name, "HNSW")
 
     def has_fts_index(self, column_name: str) -> bool:
         return self._has_tiflash_index(column_name, "FullText")
 
-    def create_vector_index(self, column_name: str, name: Optional[str] = None):
+    def create_vector_index(
+        self, column_name: str, name: Optional[str] = None, **kwargs
+    ):
         # TODO: Support if_exists.
         warnings.warn(
             "table.create_vector_index() is an experimental API, use VectorField instead."
         )
         index_name = name or f"vec_idx_{column_name}"
-        vec_idx = VectorIndex(index_name, self._columns[column_name])
+        vec_idx = VectorIndex(index_name, self._columns[column_name], **kwargs)
         vec_idx.create(self.client.db_engine)
 
     def create_fts_index(

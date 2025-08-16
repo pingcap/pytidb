@@ -11,6 +11,10 @@ from pytidb.datatype import TEXT
 
 @pytest.fixture(scope="module")
 def hybrid_table(shared_client: TiDBClient):
+    # Skip hybrid search tests if not connected to TiDB Serverless
+    if not shared_client.is_serverless:
+        pytest.skip("Currently, Only TiDB Serverless supports full text indexes")
+
     embed_fn = EmbeddingFunction("openai/text-embedding-3-small", timeout=20)
 
     class Item(TableModel, table=True):

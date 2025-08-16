@@ -25,21 +25,15 @@ def create_engine_without_db(url, echo=False, **kwargs):
 class TiDBConnectionURL(AnyUrl):
     """A URL that enforces specific constraints for TiDB connections.
 
-    * User info required
-    * TLD not required
-    * Host not required
+    Format:
+        mysql+pymysql://[username:password@]host[:port][/database]
+        mysql+pymysql://[username:password@]host[:port][/database]?ssl_verify_cert=true&ssl_verify_identity=true
     """
 
     _constraints = UrlConstraints(
         allowed_schemes=[
             "mysql",
-            "mysql+mysqlconnector",
-            "mysql+aiomysql",
-            "mysql+asyncmy",
-            "mysql+mysqldb",
             "mysql+pymysql",
-            "mysql+cymysql",
-            "mysql+pyodbc",
         ],
         default_port=4000,
         host_required=True,

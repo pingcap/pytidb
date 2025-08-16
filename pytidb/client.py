@@ -40,6 +40,9 @@ class TiDBClient:
         self._db_engine = db_engine
         self._identifier_preparer = self._db_engine.dialect.identifier_preparer
         self._reconnect_params = reconnect_params
+        self._is_serverless = bool(
+            TIDB_SERVERLESS_HOST_PATTERN.match(self._db_engine.url.host)
+        )
 
     # TODO: Better typing for kwargs, including what's supported by pymysql and SQLAlchemy.
     @classmethod
@@ -99,6 +102,15 @@ class TiDBClient:
     @property
     def db_engine(self) -> Engine:
         return self._db_engine
+
+    @property
+    def is_serverless(self) -> bool:
+        """Check if the client is connected to TiDB Serverless.
+
+        Returns:
+            True if connected to TiDB Serverless, False otherwise.
+        """
+        return self._is_serverless
 
     # Database Management API
 

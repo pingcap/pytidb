@@ -41,6 +41,10 @@ def text_embed(request):
 
 
 def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction):
+    # Skip auto embedding tests if not connected to TiDB Serverless
+    if not shared_client.is_serverless:
+        pytest.skip("Currently, Only TiDB Serverless supports auto embedding")
+
     model_id = text_embed._model_config["id"]
 
     # Configure embedding provider based on model

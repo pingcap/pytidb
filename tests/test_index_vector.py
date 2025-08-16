@@ -62,4 +62,5 @@ class TestCreateVectorIndex:
         )
         with pytest.warns(Warning):
             tbl.create_vector_index("text_vec")
+
         assert tbl.has_vector_index("text_vec")

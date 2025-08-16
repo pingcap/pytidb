@@ -23,7 +23,13 @@ def test_static_create_models(shared_client: TiDBClient):
             },
         )
 
-    SQLModel.metadata.create_all(shared_client.db_engine)
+    SQLModel.metadata.create_all(
+        shared_client.db_engine,
+        [
+            Entity.__table__,
+            Relation.__table__,
+        ],
+    )
 
 
 def test_dynamic_create_models(shared_client: TiDBClient):
@@ -49,7 +55,7 @@ def test_dynamic_create_models(shared_client: TiDBClient):
         desc: str = Field()
         source_entity_id: int = Field(foreign_key=f"{entity_table_name}.id")
 
-    type(
+    relation_model = type(
         relation_model_name,
         (Relation,),
         {
@@ -67,4 +73,10 @@ def test_dynamic_create_models(shared_client: TiDBClient):
         table=True,
     )
 
-    SQLModel.metadata.create_all(shared_client.db_engine)
+    SQLModel.metadata.create_all(
+        shared_client.db_engine,
+        [
+            entity_model.__table__,
+            relation_model.__table__,
+        ],
+    )
