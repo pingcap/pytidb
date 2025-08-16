@@ -2,7 +2,7 @@ from typing import Optional, Any, TypedDict
 from sqlalchemy.sql.schema import SchemaItem, _CreateDropBind
 from sqlalchemy.sql.base import DialectKWArgs
 from sqlalchemy.sql.ddl import _CreateBase
-from sqlalchemy import select, Table
+from sqlalchemy import Connection, Engine, select, Table
 from .information_schema import tiflash_replica
 
 
@@ -106,13 +106,14 @@ class TiFlashReplica(DialectKWArgs, SchemaItem):
         :return: Dictionary with replication status information
         """
 
-        if hasattr(bind, "execute"):
+        if isinstance(bind, Connection):
             connection = bind
-        else:
+            schema_name = bind.engine.url.database
+        elif isinstance(bind, Engine):
             connection = bind.connect()
+            schema_name = bind.url.database
 
         try:
-            schema_name = bind.url.database
             table_name = self.table.name
 
             query = select(tiflash_replica).where(
