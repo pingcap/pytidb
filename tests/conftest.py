@@ -30,7 +30,7 @@ def create_tidb_client(database: str) -> TiDBClient:
     )
 
 
-def generate_db_name(prefix: str = "test_pytidb") -> str:
+def generate_dynamic_name(prefix: str = "test_pytidb") -> str:
     return f"{prefix}_{uuid.uuid4().hex[:8]}"
 
 
@@ -42,7 +42,7 @@ def shared_client(env) -> Generator[TiDBClient, None, None]:
     A test database will be created before the tests start and dropped
     after all tests complete.
     """
-    db_name = generate_db_name()
+    db_name = generate_dynamic_name()
     tidb_client = create_tidb_client(db_name)
     print(f"Shared client created for database {db_name}")
 
@@ -63,7 +63,7 @@ def isolated_client(env) -> Generator[TiDBClient, None, None]:
     A test database will be created before the test function starts and dropped
     after the test function completes.
     """
-    db_name = generate_db_name()
+    db_name = generate_dynamic_name()
     client = create_tidb_client(db_name)
 
     yield client

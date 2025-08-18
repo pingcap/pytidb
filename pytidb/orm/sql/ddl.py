@@ -1,10 +1,52 @@
-from sqlalchemy.sql.ddl import SchemaGenerator, CreateIndex
+from sqlalchemy.sql.ddl import SchemaGenerator, SchemaDropper, CreateIndex
+from sqlalchemy.sql import elements, functions, operators
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.sql import elements, operators, functions
+
+from pytidb.orm.indexes import VectorIndex, FullTextIndex
+from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN
+from ..tiflash_replica import SetTiFlashReplica, TiFlashReplica
+
+
+class TiDBSchemaGenerator(SchemaGenerator):
+    def visit_index(self, index, create_ok=False):
+        if not create_ok and not self._can_create_index(index):
+            return
+        with self.with_ddl_events(index):
+            # Notice: Self-managed TiDB 8.5.0 does not support the ADD_COLUMNAR_REPLICA_ON_DEMAND parameter
+            # in CREATE VECTOR/FULLTEXT INDEX statements, so TiFlash replicas need to be created manually.
+            if isinstance(index, VectorIndex) or isinstance(index, FullTextIndex):
+                index.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(
+                    self.connection.engine.url.host
+                )
+
+                if index.ensure_columnar_replica and not index.is_tidb_serverless:
+                    TiFlashReplica(index.table, replica_count=1).create(self.connection)
+                    index.ensure_columnar_replica = False
+            CreateIndex(index)._invoke_with(self.connection)
+
+    def _has_tiflash_replica(self, tiflash_replica: TiFlashReplica) -> bool:
+        progress = tiflash_replica.get_replication_progress(self.connection)
+        return progress["replica_count"] > 0
+
+    def visit_tiflash_replica(self, tiflash_replica: TiFlashReplica):
+        # If TiFlash replica already exists, skip creation.
+        if self._has_tiflash_replica(tiflash_replica):
+            return
+
+        with self.with_ddl_events(tiflash_replica):
+            SetTiFlashReplica(tiflash_replica)._invoke_with(self.connection)
+
+
+class TiDBSchemaDropper(SchemaDropper):
+    def visit_tiflash_replica(self, tiflash_replica: TiFlashReplica):
+        with self.with_ddl_events(tiflash_replica):
+            tiflash_replica.replica_count = 0
+            SetTiFlashReplica(tiflash_replica)._invoke_with(self.connection)
 
 
 @compiles(CreateIndex, "mysql")
 def compile_create_index(create, compiler, **kw):
+    """Enhanced CREATE INDEX compilation for TiDB with MySQL dialect."""
     # Copy from sqlalchemy.dialects.mysql.base.MySQLCompiler::visit_create_index
     index = create.element
     compiler._verify_index_table(index)
@@ -81,35 +123,24 @@ def compile_create_index(create, compiler, **kw):
     if using is not None:
         text += " USING %s" % (using)
 
-    if hasattr(index, "ensure_columnar_replica") and index.ensure_columnar_replica:
+    if (
+        hasattr(index, "ensure_columnar_replica")
+        and index.ensure_columnar_replica
+        and hasattr(index, "is_tidb_serverless")
+        and index.is_tidb_serverless
+    ):
         text += " ADD_COLUMNAR_REPLICA_ON_DEMAND"
 
     return text
 
 
-class CreateVectorIndex(CreateIndex):
-    def __init__(self, element, if_not_exists=False):
-        super().__init__(element, if_not_exists=if_not_exists)
+@compiles(SetTiFlashReplica, "mysql")
+def compile_set_tiflash_replica(set_tiflash_replica, compiler, **kw):
+    """Generate ALTER TABLE ... SET TIFLASH REPLICA statement."""
+    table = set_tiflash_replica.element.table
+    replica_count = set_tiflash_replica.element.replica_count
 
+    preparer = compiler.preparer
+    table_name = preparer.format_table(table)
 
-class TiDBSchemaGenerator(SchemaGenerator):
-    def visit_vector_index(self, index, create_ok=False):
-        if not create_ok and not self._can_create_index(index):
-            return
-        with self.with_ddl_events(index):
-            CreateVectorIndex(index)._invoke_with(self.connection)
-
-
-@compiles(CreateVectorIndex)
-def compile_create_vector_index(element, compiler, **kw):
-    index = element.index
-    table_name = index.table.name
-    column_name = index.columns[0].name
-    distance_metric = index.distance_metric
-    algorithm = index.algorithm
-    distance_metric_str = f"({distance_metric.to_sql_func()}({column_name}))"
-
-    sql = f"CREATE VECTOR INDEX {index.name} ON {table_name} ({distance_metric_str}) USING {algorithm}"
-    if index.ensure_columnar_replica:
-        sql += " ADD_COLUMNAR_REPLICA_ON_DEMAND"
-    return sql
+    return f"ALTER TABLE {table_name} SET TIFLASH REPLICA {replica_count}"

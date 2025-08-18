@@ -14,6 +14,9 @@ class TestCreateFullTextIndex:
     def setup_and_teardown(self, shared_client: TiDBClient):
         """Setup and teardown for each test method."""
         self.client = shared_client
+        # Skip tests if not connected to TiDB Serverless
+        if not self.client.is_serverless:
+            pytest.skip("Currently, Only TiDB Serverless supports full text indexes")
         yield
         self.client = None
 
