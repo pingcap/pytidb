@@ -74,7 +74,7 @@ class VectorIndex(Index):
         from pytidb.orm.sql.ddl import TiDBSchemaGenerator
 
         # Notice: Self-managed TiDB does not support the ADD_COLUMNAR_REPLICA_ON_DEMAND parameter
-        # in CREATE VECTOR INDEX statements, so TiFlash replicas need to be created manually.
+        # in CREATE VECTOR INDEX statements, so TiFlash replicas need to be created in advanced.
         self.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(bind.url.host)
         if self.ensure_columnar_replica and not self.is_tidb_serverless:
             TiFlashReplica(self.table, replica_count=1).create(bind)
@@ -116,7 +116,7 @@ class FullTextIndex(Index):
         from pytidb.orm.sql.ddl import TiDBSchemaGenerator
 
         # Notice: Self-managed TiDB does not support the ADD_COLUMNAR_REPLICA_ON_DEMAND parameter
-        # in CREATE VECTOR INDEX statements, so TiFlash replicas need to be created manually.
+        # in CREATE FULLTEXT INDEX statements, so TiFlash replicas need to be created in advanced.
         self.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(bind.url.host)
         if self.ensure_columnar_replica and not self.is_tidb_serverless:
             TiFlashReplica(self.table, replica_count=1).create(bind)
