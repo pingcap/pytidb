@@ -2,6 +2,7 @@ from sqlalchemy.sql.ddl import SchemaGenerator, SchemaDropper, CreateIndex
 from sqlalchemy.sql import elements, functions, operators
 from sqlalchemy.ext.compiler import compiles
 
+from pytidb.orm.indexes import VectorIndex, FullTextIndex
 from pytidb.utils import TIDB_SERVERLESS_HOST_PATTERN
 from ..tiflash_replica import SetTiFlashReplica, TiFlashReplica
 
@@ -11,15 +12,16 @@ class TiDBSchemaGenerator(SchemaGenerator):
         if not create_ok and not self._can_create_index(index):
             return
         with self.with_ddl_events(index):
-            self.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(
-                self.connection.engine.url.host
-            )
-
             # Notice: Self-managed TiDB 8.5.0 does not support the ADD_COLUMNAR_REPLICA_ON_DEMAND parameter
-            # in CREATE VECTOR INDEX statements, so TiFlash replicas need to be created manually.
-            if index.ensure_columnar_replica and not index.is_tidb_serverless:
-                TiFlashReplica(index.table, replica_count=1).create(self.connection)
-                index.ensure_columnar_replica = False
+            # in CREATE VECTOR/FULLTEXT INDEX statements, so TiFlash replicas need to be created manually.
+            if isinstance(index, VectorIndex) or isinstance(index, FullTextIndex):
+                index.is_tidb_serverless = TIDB_SERVERLESS_HOST_PATTERN.match(
+                    self.connection.engine.url.host
+                )
+
+                if index.ensure_columnar_replica and not index.is_tidb_serverless:
+                    TiFlashReplica(index.table, replica_count=1).create(self.connection)
+                    index.ensure_columnar_replica = False
             CreateIndex(index)._invoke_with(self.connection)
 
     def _has_tiflash_replica(self, tiflash_replica: TiFlashReplica) -> bool:
@@ -124,6 +126,7 @@ def compile_create_index(create, compiler, **kw):
     if (
         hasattr(index, "ensure_columnar_replica")
         and index.ensure_columnar_replica
+        and hasattr(index, "is_tidb_serverless")
         and index.is_tidb_serverless
     ):
         text += " ADD_COLUMNAR_REPLICA_ON_DEMAND"
