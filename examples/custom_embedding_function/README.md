@@ -13,7 +13,7 @@ This example demonstrates how to create and use a custom embedding function with
 ## Prerequisites
 
 - **Python 3.10+**  
-- **A TiDB Cloud Serverless cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)  
+- **A TiDB Cloud Starter cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)  
 - **Hardware requirements**:  
   - If GPU is available, BGE-M3 will use it automatically, requiring about **2GB GPU memory**  
   - To run on CPU (without GPU), you need to specify parameters manually; CPU mode requires about **4GB RAM**  
