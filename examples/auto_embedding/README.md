@@ -10,7 +10,7 @@ This example showcases how to use the auto embedding feature with PyTiDB Client.
 ## Prerequisites
 
 - **Python 3.10+**
-- **A TiDB Cloud Serverless cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)
+- **A TiDB Cloud Starter cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)
 - **Jina AI API key**: Go to [Jina AI](https://jina.ai/embeddings/) to get your own API key
 
 ## How to run
