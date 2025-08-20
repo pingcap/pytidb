@@ -1,8 +1,10 @@
 from typing import Any, Dict, List
 
 import pytest
+from sqlalchemy import column, select
 from sqlmodel import and_, or_
 
+from pytidb.filters import build_python_filter_clauses
 from pytidb.schema import TableModel, Field, Column
 from pytidb.datatype import JSON
 from pytidb.table import Table
@@ -195,3 +197,22 @@ def test_python_filters(test_filters_table: Table, test_case: FilterTestCase):
     result = test_filters_table.query(test_case.filters).to_pydantic()
     actual = [r.text for r in result]
     assert actual == test_case.expected
+
+
+def test_build_python_post_filter():
+    mock_subquery = select(
+        column("document_id"), column("id"), column("text"), column("meta")
+    ).subquery("test_subquery")
+
+    original_filter = and_(ChunkWithMeta.document_id == 1, ChunkWithMeta.id == 1)
+    converted_filter = build_python_filter_clauses(
+        original_filter, mock_subquery, post_filter=True
+    )[0]
+
+    assert str(converted_filter).find("test_subquery.document_id") != -1
+    assert str(converted_filter).find("test_subquery.id") != -1
+
+    unchanged_filter = build_python_filter_clauses(
+        original_filter, mock_subquery, post_filter=False
+    )[0]
+    assert unchanged_filter is original_filter

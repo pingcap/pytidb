@@ -359,7 +359,7 @@ class SearchQuery:
             stmt = stmt.having(and_(*having))
 
         if self._filters is not None:
-            filter_clauses = build_filter_clauses(self._filters, columns)
+            filter_clauses = build_filter_clauses(self._filters, self._table._sa_table)
             stmt = stmt.filter(*filter_clauses)
 
         # TODO: Remove this workaround after TiDB return MAX_DISTANCE for NULL vector values.
@@ -415,7 +415,10 @@ class SearchQuery:
         )
 
         if self._filters is not None:
-            filter_clauses = build_filter_clauses(self._filters, subquery.c)
+            # In post-filter mode, apply filters to the subquery results
+            filter_clauses = build_filter_clauses(
+                self._filters, subquery, post_filter=True
+            )
             stmt = stmt.filter(*filter_clauses)
 
         stmt = (
@@ -467,7 +470,7 @@ class SearchQuery:
         ).filter(fts_match_word(self._query, text_column))
 
         if self._filters is not None:
-            filter_clauses = build_filter_clauses(self._filters, columns)
+            filter_clauses = build_filter_clauses(self._filters, self._table._sa_table)
             stmt = stmt.filter(*filter_clauses)
 
         stmt = stmt.order_by(desc(MATCH_SCORE_LABEL)).limit(self._limit)
