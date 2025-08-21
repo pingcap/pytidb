@@ -21,7 +21,6 @@ def vector_table(shared_client: TiDBClient):
         __tablename__ = "users_for_vector_search"
         id: int = Field(None, primary_key=True)
         name: str = Field(None)
-        chunks: list["Chunk"] = Relationship(back_populates="user")
 
     user_table = shared_client.create_table(schema=User, if_exists="overwrite")
 
@@ -31,7 +30,12 @@ def vector_table(shared_client: TiDBClient):
         text: str = Field(None)
         text_vec: Any = Field(sa_column=Column(VECTOR(3)))
         user_id: int = Field(foreign_key="users_for_vector_search.id")
-        user: User = Relationship(back_populates="chunks")
+        user: User = Relationship(
+            sa_relationship_kwargs={
+                "primaryjoin": "Chunk.user_id == User.id",
+                "lazy": "joined",
+            },
+        )
         meta: dict = Field(sa_type=JSON)
 
     chunk_table = shared_client.create_table(schema=Chunk, if_exists="overwrite")
