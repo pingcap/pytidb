@@ -1,11 +1,18 @@
 import re
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import sqlalchemy
-from sqlalchemy import BinaryExpression, ColumnElement, text, FromClause
+from sqlalchemy import (
+    BinaryExpression,
+    BooleanClauseList,
+    ColumnElement,
+    text,
+    FromClause,
+    Column,
+)
+from sqlalchemy.orm.util import AliasedClass
 
-if TYPE_CHECKING:
-    pass
+from pytidb.schema import TableModel
 
 
 Filters = Union[Dict[str, Any], str, ColumnElement[bool]]
@@ -15,7 +22,7 @@ Filters = Union[Dict[str, Any], str, ColumnElement[bool]]
 
 
 def build_filter_clauses(
-    filters: Filters, target_table: FromClause, post_filter: bool = False
+    filters: Filters, target_table: FromClause
 ) -> List[BinaryExpression]:
     """
     Build filter clauses for the given filters.
@@ -23,8 +30,6 @@ def build_filter_clauses(
     Args:
         filters: The filters to apply
         target_table: The table or subquery to apply filters to.
-        post_filter: If True, convert BinaryExpression filters to reference subquery columns.
-                    When True, target_table should be a subquery.
 
     Returns:
         List of SQLAlchemy filter expressions
@@ -34,7 +39,7 @@ def build_filter_clauses(
     elif isinstance(filters, str):
         return [text(filters)]
     elif isinstance(filters, ColumnElement):
-        return build_python_filter_clauses(filters, target_table, post_filter)
+        return [build_expression_filter_clauses(filters, target_table)]
     else:
         raise ValueError(f"Unsupported filters: {type(filters)}")
 
@@ -64,13 +69,18 @@ JSON_FIELD_PATTERN = re.compile(
 
 def build_dict_filter_clauses(
     filters: Dict[str, Any] | None,
-    target_table: FromClause,
+    target: FromClause | TableModel,
 ) -> List[BinaryExpression]:
     if filters is None:
         return []
 
     filter_clauses = []
-    columns = target_table.c
+    if isinstance(target, AliasedClass):
+        columns = target._aliased_insp.local_table.c
+    elif isinstance(target, FromClause):
+        columns = target.c
+    else:
+        raise ValueError(f"Unsupported target type for filters: {type(target)}")
 
     for key, value in filters.items():
         if key.lower() == AND:
@@ -80,7 +90,7 @@ def build_dict_filter_clauses(
                 )
             and_clauses = []
             for item in value:
-                and_clauses.extend(build_dict_filter_clauses(item, target_table))
+                and_clauses.extend(build_dict_filter_clauses(item, target))
             if len(and_clauses) == 0:
                 continue
             filter_clauses.append(sqlalchemy.and_(*and_clauses))
@@ -91,7 +101,7 @@ def build_dict_filter_clauses(
                 )
             or_clauses = []
             for item in value:
-                or_clauses.extend(build_dict_filter_clauses(item, target_table))
+                or_clauses.extend(build_dict_filter_clauses(item, target))
             if len(or_clauses) == 0:
                 continue
             filter_clauses.append(sqlalchemy.or_(*or_clauses))
@@ -165,169 +175,35 @@ def build_dict_column_filter(
         return sqlalchemy.and_(*column_filters)
 
 
-# Python-expression filter:
-
-
-def build_python_filter_clauses(
-    filters: ColumnElement[bool], target_table: FromClause, post_filter: bool = False
-) -> List[BinaryExpression]:
-    """
-    Build filter clauses for Python expression filters.
-
-    Args:
-        filters: The Python expression filter to apply
-        target_table: The table or subquery to apply filters to
-        post_filter: If True, convert filters to reference subquery columns
-
-    Returns:
-        List of SQLAlchemy filter expressions
-    """
-    if not post_filter:
-        return [filters]
-
-    # Handle BinaryExpression filters
-    if isinstance(filters, BinaryExpression):
-        return [make_filters_apply_to_subquery(filters, target_table)]
-    elif hasattr(filters, "clauses"):
-        # Handle complex expressions like AND/OR operations
-        return [make_complex_expression_apply_to_subquery(filters, target_table)]
-    else:
-        # For other types, return unchanged
-        return [filters]
-
-
-def make_filters_apply_to_subquery(
-    binary_expr: BinaryExpression, subquery: FromClause
+def handle_binary_expression_filter(
+    filter: BinaryExpression, columns
 ) -> BinaryExpression:
-    """
-    Convert a BinaryExpression that references table columns to reference subquery columns.
+    if isinstance(filter.left, Column):
+        filter.left = columns[filter.left.name]
+    if isinstance(filter.right, Column):
+        filter.right = columns[filter.right.name]
+    return filter
 
-    Args:
-        binary_expr: The BinaryExpression to convert
-        subquery: The subquery to reference columns from
 
-    Returns:
-        Converted BinaryExpression referencing subquery columns
-    """
-    from sqlalchemy import Column
-
-    def convert_column_ref(expr):
-        if isinstance(expr, Column):
-            # Get the column name from the original column
-            column_name = expr.name
-            # Reference the same column from the subquery
-            return getattr(subquery.c, column_name)
-        elif hasattr(expr, "left") and hasattr(expr, "right"):
-            # Handle nested expressions (like JSON operations)
-            left = convert_column_ref(expr.left)
-            right = convert_column_ref(expr.right)
-            # Recreate the expression with converted operands
-            if hasattr(expr, "op"):
-                # Call the operator function to get the actual expression
-                return expr.op(left, right)
-            else:
-                # For simple comparisons, try to recreate the expression
-                return type(expr)(left, right)
-        else:
-            # Return unchanged for non-column references (literals, etc.)
-            return expr
-
-    # Convert both left and right sides of the binary expression
-    left = convert_column_ref(binary_expr.left)
-    right = convert_column_ref(binary_expr.right)
-
-    # Recreate the binary expression with converted operands
-    # For SQLAlchemy binary expressions, we need to use the operator directly
-    if hasattr(binary_expr, "operator"):
-        # Use the operator attribute to recreate the expression
-        # The operator might be a function object, so we need to check differently
-        if (
-            binary_expr.operator.__name__ == "eq"
-            or str(binary_expr.operator) == "<built-in function eq>"
-        ):
-            return left == right
-        elif (
-            binary_expr.operator.__name__ == "ne"
-            or str(binary_expr.operator) == "<built-in function ne>"
-        ):
-            return left != right
-        elif (
-            binary_expr.operator.__name__ == "gt"
-            or str(binary_expr.operator) == "<built-in function gt>"
-        ):
-            return left > right
-        elif (
-            binary_expr.operator.__name__ == "ge"
-            or str(binary_expr.operator) == "<built-in function ge>"
-        ):
-            return left >= right
-        elif (
-            binary_expr.operator.__name__ == "lt"
-            or str(binary_expr.operator) == "<built-in function lt>"
-        ):
-            return left < right
-        elif (
-            binary_expr.operator.__name__ == "le"
-            or str(binary_expr.operator) == "<built-in function le>"
-        ):
-            return left <= right
-        elif (
-            binary_expr.operator.__name__ == "in"
-            or str(binary_expr.operator) == "<built-in function in>"
-            or "in_op" in str(binary_expr.operator)
-        ):
-            return left.in_(right)
-        elif (
-            binary_expr.operator.__name__ == "notin"
-            or str(binary_expr.operator) == "<built-in function notin>"
-            or "notin_op" in str(binary_expr.operator)
-        ):
-            return ~left.in_(right)
-        else:
-            # For other operators, we can't easily recreate them
-            # This should not happen with standard SQLAlchemy operators
-            raise ValueError(f"Unsupported operator: {binary_expr.operator}")
+def build_expression_filter_clauses(
+    filter: ColumnElement[bool], target_table: FromClause
+) -> List[BinaryExpression]:
+    if isinstance(target_table, AliasedClass):
+        columns = target_table._aliased_insp.local_table.c
+    elif isinstance(target_table, FromClause):
+        columns = target_table.c
     else:
-        # If no operator attribute, we can't recreate the expression
-        raise ValueError("BinaryExpression has no operator attribute, cannot convert")
+        raise ValueError(f"Unsupported target table type: {type(target_table)}")
 
-
-def make_complex_expression_apply_to_subquery(
-    complex_expr: Any, subquery: FromClause
-) -> Any:
-    """
-    Convert a complex expression (like AND/OR operations) to reference subquery columns.
-
-    Args:
-        complex_expr: The complex expression to convert
-        subquery: The subquery to reference columns from
-
-    Returns:
-        Converted complex expression referencing subquery columns
-    """
-    # These have a .clauses attribute that contains the individual expressions
-    converted_clauses = []
-    for clause in complex_expr.clauses:
-        if isinstance(clause, BinaryExpression):
-            converted_clauses.append(make_filters_apply_to_subquery(clause, subquery))
-        else:
-            # For other types, try to convert recursively
-            converted_clauses.extend(
-                build_python_filter_clauses(clause, subquery, post_filter=True)
-            )
-
-    # Recreate the complex expression with converted clauses
-    # Use the appropriate SQLAlchemy functions instead of trying to recreate the class
-    if len(converted_clauses) == 1:
-        return converted_clauses[0]
-    elif hasattr(complex_expr, "__class__"):
-        class_name = complex_expr.__class__.__name__
-        if "And" in class_name or "and" in str(complex_expr).lower():
-            return sqlalchemy.and_(*converted_clauses)
-        elif "Or" in class_name or "or" in str(complex_expr).lower():
-            return sqlalchemy.or_(*converted_clauses)
-        else:
-            # Fallback: return individual clauses
-            return converted_clauses
+    if isinstance(filter, BinaryExpression):
+        return handle_binary_expression_filter(filter, columns)
+    elif isinstance(filter, BooleanClauseList):
+        clauses = []
+        for clause in filter.clauses:
+            if isinstance(clause, BinaryExpression):
+                clause = handle_binary_expression_filter(clause, columns)
+            clauses.append(clause)
+        filter.clauses = clauses
+        return filter
     else:
-        return converted_clauses
+        raise ValueError(f"Unsupported filters: {type(filter)}")

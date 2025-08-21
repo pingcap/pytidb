@@ -38,6 +38,7 @@
         "ondelete",
         "onupdate",
         "outerjoin",
+        "postfilter",
         "prefilter",
         "primaryjoin",
         "Pydantic",

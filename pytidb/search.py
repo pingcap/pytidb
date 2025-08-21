@@ -15,7 +15,8 @@ from typing import (
     overload,
 )
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, Row, Select, asc, desc, select, and_, text
+from sqlalchemy import Column, Row, Select, asc, desc, and_, text
+from sqlmodel import select
 from pytidb.orm.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import QueryBundle, VectorDataType, TableModel
@@ -27,6 +28,8 @@ from pytidb.utils import (
     check_vector_column,
     get_row_id_from_row,
 )
+from sqlalchemy.orm import aliased
+from sqlalchemy.orm.util import AliasedClass
 from pytidb.fusion import fusion_result_rows_by_rrf, fusion_result_rows_by_weighted
 from pytidb.logger import logger
 
@@ -40,6 +43,8 @@ if TYPE_CHECKING:
 SearchType = Literal["vector", "fulltext", "hybrid"]
 FusionMethod = Literal["rrf", "weighted"]
 
+INNER_HIT_LABEL = "_inner_hit"
+HIT_LABEL = "_hit"
 DISTANCE_LABEL = "_distance"
 MATCH_SCORE_LABEL = "_match_score"
 SCORE_LABEL = "_score"
@@ -245,14 +250,7 @@ class SearchQuery:
         self._rerank_field_name = rerank_field
         return self
 
-    def _build_vector_query(self) -> Select:
-        # Validate parameters.
-        if self._query is None and self._query_vector is None:
-            raise ValueError(
-                "query is required for vector search, please specify it through "
-                ".search('<query>', search_type='vector')"
-            )
-
+    def _validate_vector_column(self) -> Column:
         if self._vector_column is None:
             if len(self._table.vector_columns) == 0:
                 raise ValueError(
@@ -263,10 +261,11 @@ class SearchQuery:
                     "more than two vector columns, please choice one through .vector_column()"
                 )
             else:
-                vector_column = self._table.vector_columns[0]
+                return self._table.vector_columns[0]
         else:
-            vector_column = self._vector_column
+            return self._vector_column
 
+    def _build_distance_column(self, vector_column: Column) -> Column:
         # Auto embedding for query.
         if self._query_vector is not None:
             # Already have query vector, no need for auto embedding
@@ -283,9 +282,8 @@ class SearchQuery:
             config = auto_embedding_configs[vector_column.name]
             use_server = config.get("use_server", False)
             if not use_server:
-                source_type = config["source_type"]
                 self._query_vector = config["embed_fn"].get_query_embedding(
-                    self._query, source_type
+                    self._query, config["source_type"]
                 )
 
         # Distance metric mapping.
@@ -302,15 +300,59 @@ class SearchQuery:
         distance_column = getattr(vector_column, vector_op_name)(query_value).label(
             DISTANCE_LABEL
         )
+        return distance_column
+
+    def _apply_distance_condition(
+        self, stmt: Select, distance_column: Column
+    ) -> Select:
+        having = []
+
+        # Null vector values.
+        #
+        # Notice: This is a workaround to avoid records without vector value
+        #         disappear in the front of the result set, which is caused by
+        #         MySQL's default behavior of sorting NULL values to the head.
+        #
+        # TODO: Remove this workaround after TiDB return MAX_DISTANCE for NULL vector values.
+        having.append(distance_column.isnot(None))
+
+        # Distance range.
+        if (
+            self._distance_lower_bound is not None
+            and self._distance_upper_bound is not None
+        ):
+            having.append(distance_column >= self._distance_lower_bound)
+            having.append(distance_column <= self._distance_upper_bound)
+
+        # Distance threshold.
+        if self._distance_threshold:
+            having.append(distance_column <= self._distance_threshold)
+
+        if len(having) > 0:
+            return stmt.having(and_(*having))
+        else:
+            return stmt
+
+    def _get_aliased_column(
+        self, aliased_class: AliasedClass, column: Column
+    ) -> Column:
+        columns = aliased_class._aliased_insp.local_table.c
+        return columns[column.name]
+
+    def _build_vector_query(self) -> Select:
+        # Validate parameters.
+        if self._query is None and self._query_vector is None:
+            raise ValueError(
+                "query is required for vector search, please specify it through "
+                ".search('<query>', search_type='vector')"
+            )
+
+        vector_column = self._validate_vector_column()
 
         if self._prefilter:
-            stmt = self._build_vector_query_with_pre_filter(
-                distance_column=distance_column
-            )
+            stmt = self._build_vector_query_with_pre_filter(vector_column)
         else:
-            stmt = self._build_vector_query_with_post_filter(
-                distance_column=distance_column
-            )
+            stmt = self._build_vector_query_with_post_filter(vector_column)
 
         # Debug.
         if self._debug:
@@ -325,111 +367,63 @@ class SearchQuery:
 
         return stmt
 
-    def _build_vector_query_with_pre_filter(self, distance_column: Column) -> Select:
+    def _build_vector_query_with_pre_filter(
+        self, table_vector_column: Column
+    ) -> Select:
         table_model = self._table.table_model
-        columns = table_model.__table__.c
-        selected_columns = list(columns)
-        if self._sa_table.primary_key is None:
-            selected_columns.insert(0, text("_tidb_rowid"))
 
-        stmt = (
-            select(
-                *selected_columns,
-                distance_column,
-                (1 - distance_column).label(SCORE_LABEL),
-            )
-            .order_by(asc(DISTANCE_LABEL))
-            .limit(self._limit)
+        hit = aliased(table_model, name=HIT_LABEL)
+        vector_column = self._get_aliased_column(hit, table_vector_column)
+        distance_column = self._build_distance_column(vector_column)
+
+        stmt = select(
+            hit,
+            distance_column,
+            (1 - distance_column).label(SCORE_LABEL),
         )
 
-        # Distance range.
-        having = []
-        if (
-            self._distance_lower_bound is not None
-            and self._distance_upper_bound is not None
-        ):
-            having.append(distance_column >= self._distance_lower_bound)
-            having.append(distance_column <= self._distance_upper_bound)
-
-        # Distance threshold.
-        if self._distance_threshold:
-            having.append(distance_column <= self._distance_threshold)
-
-        if len(having) > 0:
-            stmt = stmt.having(and_(*having))
-
         if self._filters is not None:
-            filter_clauses = build_filter_clauses(self._filters, self._table._sa_table)
+            filter_clauses = build_filter_clauses(self._filters, hit)
             stmt = stmt.filter(*filter_clauses)
 
-        # TODO: Remove this workaround after TiDB return MAX_DISTANCE for NULL vector values.
-        stmt = stmt.where(distance_column.isnot(None))
+        stmt = self._apply_distance_condition(stmt, distance_column)
+        stmt = stmt.order_by(asc(DISTANCE_LABEL)).limit(self._limit)
 
         return stmt
 
-    def _build_vector_query_with_post_filter(self, distance_column: Column) -> Select:
-        num_candidate = self._num_candidate if self._num_candidate else self._limit * 10
+    def _build_vector_query_with_post_filter(
+        self, table_vector_column: Column
+    ) -> Select:
+        table_model = self._table.table_model
 
         # Inner query for ANN search
-        table_model = self._table.table_model
-        columns = table_model.__table__.c
-        inner_select_columns = list(columns)
-        if self._sa_table.primary_key is None:
-            inner_select_columns.insert(0, text("_tidb_rowid"))
+        inner_hit = aliased(table_model, name=INNER_HIT_LABEL)
+        inner_vector_column = self._get_aliased_column(inner_hit, table_vector_column)
+        inner_distance_column = self._build_distance_column(inner_vector_column)
+        inner_limit = self._num_candidate if self._num_candidate else self._limit * 10
 
-        subquery_stmt = (
-            select(
-                *inner_select_columns,
-                distance_column,
-            )
-            .order_by(asc(DISTANCE_LABEL))
-            .limit(num_candidate)
-        )
+        inner_stmt = select(inner_hit, inner_distance_column)
+        inner_stmt = self._apply_distance_condition(inner_stmt, inner_distance_column)
+        inner_stmt = inner_stmt.order_by(asc(DISTANCE_LABEL)).limit(inner_limit)
+        inner_query = inner_stmt.subquery("candidates")
 
-        # Distance range.
-        having = []
-        if (
-            self._distance_lower_bound is not None
-            and self._distance_upper_bound is not None
-        ):
-            having.append(distance_column >= self._distance_lower_bound)
-            having.append(distance_column <= self._distance_upper_bound)
-
-        # Distance threshold.
-        if self._distance_threshold:
-            having.append(distance_column <= self._distance_threshold)
-
-        if len(having) > 0:
-            subquery_stmt = subquery_stmt.having(and_(*having))
-
-        subquery = subquery_stmt.subquery("candidates")
-
-        # Main query with metadata filters
-        outer_select_columns = list(subquery.c)
-        if self._sa_table.primary_key is None:
-            outer_select_columns.insert(0, text("_tidb_rowid"))
+        # Outer query for post-filter.
+        hit = aliased(table_model, inner_query, name=HIT_LABEL)
+        vector_column = self._get_aliased_column(hit, table_vector_column)
+        distance_column = self._build_distance_column(vector_column)
 
         stmt = select(
-            *outer_select_columns,
-            (1 - subquery.c[DISTANCE_LABEL]).label(SCORE_LABEL),
+            hit,
+            distance_column,
+            (1 - distance_column).label(SCORE_LABEL),
         )
 
         if self._filters is not None:
             # In post-filter mode, apply filters to the subquery results
-            filter_clauses = build_filter_clauses(
-                self._filters, subquery, post_filter=True
-            )
+            filter_clauses = build_filter_clauses(self._filters, hit)
             stmt = stmt.filter(*filter_clauses)
 
-        stmt = (
-            stmt.order_by(asc(DISTANCE_LABEL))
-            # Notice: This is a workaround to avoid records without vector value
-            #         disappear in the front of the result set, which is caused by
-            #         MySQL's default behavior of sorting NULL values to the head.
-            # TODO: Remove this workaround after TiDB return MAX_DISTANCE for NULL vector values.
-            .where(subquery.c[DISTANCE_LABEL].isnot(None))
-            .limit(self._limit)
-        )
+        stmt = stmt.order_by(asc(DISTANCE_LABEL)).limit(self._limit)
 
         return stmt
 
@@ -605,12 +599,14 @@ class SearchQuery:
                 ".text('<your query string>')"
             )
 
-        documents = [row._mapping[rerank_field_name] for row in rows]
+        documents = [
+            getattr(row._mapping[HIT_LABEL], rerank_field_name) for row in rows
+        ]
         reranked_results = self._reranker.rerank(self._query, documents, self._limit)
         reranked_rows = []
         for item in reranked_results:
             row = rows[item.index]
-            score_index = row._key_to_index["_score"]
+            score_index = row._key_to_index[SCORE_LABEL]
             _data = list(row._tuple())
             # Replace the score with the reranked score.
             _data[score_index] = item.relevance_score
@@ -648,23 +644,41 @@ class SearchQuery:
         return rows
 
     def to_list(self) -> List[dict]:
-        keys, rows = self._execute_query()
-        results = [dict(zip(keys, row)) for row in rows]
-        return results
-
-    def to_pydantic(self, with_score: Optional[bool] = True) -> List[BaseModel]:
-        table_model = self._table.table_model
-
         _, rows = self._execute_query()
         results = []
         for row in rows:
-            values: Dict[str, Any] = dict(row._mapping)
-            distance = values.pop(DISTANCE_LABEL) if DISTANCE_LABEL in values else None
-            match_score = (
-                values.pop(MATCH_SCORE_LABEL) if MATCH_SCORE_LABEL in values else None
+            row_dict = dict(row._mapping)
+            if HIT_LABEL in row_dict:
+                hit = row_dict.pop(HIT_LABEL)
+                if isinstance(hit, TableModel):
+                    results.append(
+                        {
+                            **hit.model_dump(),
+                            **row_dict,
+                        }
+                    )
+                else:
+                    raise ValueError(f"Unsupported search result type: {type(hit)}")
+            else:
+                results.append(row_dict)
+
+        return results
+
+    def to_pydantic(self, with_score: Optional[bool] = True) -> List[BaseModel]:
+        _, rows = self._execute_query()
+        results = []
+        for row in rows:
+            row_dict = dict(row._mapping)
+            hit = row_dict.pop(HIT_LABEL)
+            distance = (
+                row_dict.pop(DISTANCE_LABEL) if DISTANCE_LABEL in row_dict else None
             )
-            score = values.pop(SCORE_LABEL) if SCORE_LABEL in values else None
-            hit = table_model.model_validate(values)
+            match_score = (
+                row_dict.pop(MATCH_SCORE_LABEL)
+                if MATCH_SCORE_LABEL in row_dict
+                else None
+            )
+            score = row_dict.pop(SCORE_LABEL) if SCORE_LABEL in row_dict else None
 
             if not with_score:
                 results.append(hit)
@@ -689,4 +703,20 @@ class SearchQuery:
             )
 
         keys, rows = self._execute_query()
-        return pd.DataFrame(rows, columns=keys)
+        flatten_rows = []
+        for row in rows:
+            row_dict = dict(row._mapping)
+            if HIT_LABEL in row_dict:
+                hit = row_dict.pop(HIT_LABEL)
+                flatten_rows.append((*hit.model_dump().values(), *row_dict.values()))
+            else:
+                flatten_rows.append(row_dict.values())
+
+        if HIT_LABEL in keys:
+            flatten_keys = [
+                *self._table.table_model.model_fields.keys(),
+                *[key for key in keys if key != HIT_LABEL],
+            ]
+        else:
+            flatten_keys = keys
+        return pd.DataFrame(flatten_rows, columns=flatten_keys)
