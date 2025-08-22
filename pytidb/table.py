@@ -30,7 +30,7 @@ from pytidb.schema import (
     ColumnInfo,
     DistanceMetric,
 )
-from pytidb.search import SearchType, SearchQuery
+from pytidb.search import SearchType, Search
 from pytidb.result import QueryResult, SQLModelQueryResult
 from pytidb.utils import (
     check_text_column,
@@ -504,8 +504,8 @@ class Table(Generic[T]):
         self,
         query: Optional[Union[VectorDataType, str, QueryBundle, "Image", Path]] = None,
         search_type: SearchType = "vector",
-    ) -> SearchQuery:
-        return SearchQuery(
+    ) -> Search:
+        return Search(
             table=self,
             query=query,
             search_type=search_type,

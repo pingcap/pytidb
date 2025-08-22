@@ -15,7 +15,8 @@ from typing import (
     overload,
 )
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, Row, Select, asc, desc, and_, text
+from sqlalchemy import Column, Row, Select as SQLASelect, asc, desc, and_
+from sqlalchemy.sql.base import Generative, _generative
 from sqlmodel import select
 from pytidb.orm.functions import fts_match_word
 from pytidb.rerankers.base import BaseReranker
@@ -97,7 +98,16 @@ embed_distance_function_map = {
 }
 
 
-class SearchQuery:
+class Search(Generative):
+    """Represents a TiDB vector/fulltext/hybrid search statement.
+
+    The :class:`_search.Search` object is normally constructed using the
+    :func:`_search.search` function. See that function for details.
+
+    .. seealso::
+        :func:`_search.search`
+    """
+
     def __init__(
         self,
         table: "Table",
@@ -148,59 +158,160 @@ class SearchQuery:
             "k": 60,
         }
 
+    @_generative
     def vector(self, query_vector: VectorDataType):
+        """Set the query vector for vector search.
+
+        Args:
+            query_vector: The vector to search for.
+
+        Returns:
+            A new :class:`Search` instance.
+        """
         self._query_vector = query_vector
         return self
 
+    @_generative
     def text(self, query_text: str):
+        """Set the query text for fulltext or hybrid search.
+
+        Args:
+            query_text: The text to search for.
+
+        Returns:
+            A new :class:`Search` instance.
+        """
         self._query = query_text
         return self
 
+    @_generative
     def vector_column(self, column_name: str):
+        """Specify the vector column to search in.
+
+        Args:
+            column_name: Name of the vector column.
+
+        Returns:
+            A new :class:`Search` instance.
+        """
         self._vector_column = check_vector_column(self._columns, column_name)
         return self
 
+    @_generative
     def text_column(self, column_name: str):
+        """Specify the text column to search in.
+
+        Args:
+            column_name: Name of the text column.
+
+        Returns:
+            A new :class:`Search` instance.
+        """
         self._text_column = check_text_column(self._columns, column_name)
         return self
 
-    def distance_metric(self, metric: Union[DistanceMetric, str]) -> "SearchQuery":
+    @_generative
+    def distance_metric(self, metric: Union[DistanceMetric, str]) -> "Search":
+        """Set the distance metric for vector search.
+
+        Args:
+            metric: The distance metric to use.
+
+        Returns:
+            A new :class:`Search` instance.
+        """
         self._distance_metric = validate_distance_metric(metric)
         return self
 
-    def distance_threshold(self, threshold: Optional[float] = None) -> "SearchQuery":
+    @_generative
+    def distance_threshold(self, threshold: Optional[float] = None) -> "Search":
+        """Set a distance threshold for filtering results.
+
+        Args:
+            threshold: The maximum distance threshold. Results with distance greater than this will be filtered out.
+
+        Returns:
+            A new :class:`Search` instance.
+        """
         self._distance_threshold = threshold
         return self
 
+    @_generative
     def distance_range(
         self, lower_bound: float = 0, upper_bound: float = 1
-    ) -> "SearchQuery":
+    ) -> "Search":
+        """Set a distance range for filtering results.
+
+        Args:
+            lower_bound: The minimum distance threshold.
+            upper_bound: The maximum distance threshold.
+
+        Returns:
+            A new :class:`Search` instance.
+        """
         self._distance_lower_bound = lower_bound
         self._distance_upper_bound = upper_bound
         return self
 
-    def num_candidate(self, num_candidate: int) -> "SearchQuery":
+    @_generative
+    def num_candidate(self, num_candidate: int) -> "Search":
+        """Set the number of candidates for vector search.
+
+        Args:
+            num_candidate: The number of candidate vectors to consider during search.
+
+        Returns:
+            A new :class:`Search` instance.
+        """
         self._num_candidate = num_candidate
         return self
 
+    @_generative
     def filter(
         self, filters: Optional[Dict[str, Any]] = None, prefilter: bool = False
-    ) -> "SearchQuery":
+    ) -> "Search":
+        """Apply filters to the search results.
+
+        Args:
+            filters: Dictionary of filter conditions.
+            prefilter: Whether to apply filters before vector search (True) or after (False).
+
+        Returns:
+            A new :class:`Search` instance.
+        """
         self._filters = filters
         # Default mode is post-filter.
         self._prefilter = prefilter
         return self
 
-    def limit(self, k: int) -> "SearchQuery":
+    @_generative
+    def limit(self, k: int) -> "Search":
+        """Set the maximum number of results to return.
+
+        Args:
+            k: The maximum number of results.
+
+        Returns:
+            A new :class:`Search` instance.
+        """
         self._limit = k
         return self
 
-    def debug(self, flag: bool = True) -> "SearchQuery":
+    @_generative
+    def debug(self, flag: bool = True) -> "Search":
+        """Enable or disable debug mode for query logging.
+
+        Args:
+            flag: Whether to enable debug mode.
+
+        Returns:
+            A new :class:`Search` instance.
+        """
         self._debug = flag
         return self
 
     @overload
-    def fusion(self, method: Literal["rrf"], k: int = 60) -> "SearchQuery": ...
+    def fusion(self, method: Literal["rrf"], k: int = 60) -> "Search": ...
 
     @overload
     def fusion(
@@ -208,15 +319,18 @@ class SearchQuery:
         method: Literal["weighted"],
         vs_weight: float = 0.5,
         fts_weight: float = 0.5,
-    ) -> "SearchQuery": ...
+    ) -> "Search": ...
 
-    def fusion(self, method: FusionMethod = "rrf", **params) -> "SearchQuery":
-        """
-        Configure the fusion method for the search results.
+    @_generative
+    def fusion(self, method: FusionMethod = "rrf", **params) -> "Search":
+        """Configure the fusion method for the search results.
 
         Args:
             method: The fusion method to use, supported methods are `rrf` and `weighted`.
             **params: The parameters for the fusion method.
+
+        Returns:
+            A new :class:`Search` instance.
         """
         if self._search_type != "hybrid":
             raise ValueError(
@@ -233,11 +347,11 @@ class SearchQuery:
         self._fusion_params = params
         return self
 
+    @_generative
     def rerank(
         self, reranker: BaseReranker, rerank_field: Optional[str] = None
-    ) -> "SearchQuery":
-        """
-        Configure the rerank method for the search results.
+    ) -> "Search":
+        """Configure the rerank method for the search results.
 
         Reranker is a component that sorts search results using a specific model to
         improve search quality and relevance.
@@ -245,6 +359,9 @@ class SearchQuery:
         Args:
             reranker: The reranker to use.
             rerank_field: The field to rerank on.
+
+        Returns:
+            A new :class:`Search` instance.
         """
         self._reranker = reranker
         self._rerank_field_name = rerank_field
@@ -303,8 +420,8 @@ class SearchQuery:
         return distance_column
 
     def _apply_distance_condition(
-        self, stmt: Select, distance_column: Column
-    ) -> Select:
+        self, stmt: SQLASelect, distance_column: Column
+    ) -> SQLASelect:
         having = []
 
         # Null vector values.
@@ -339,7 +456,7 @@ class SearchQuery:
         columns = aliased_class._aliased_insp.local_table.c
         return columns[column.name]
 
-    def _build_vector_query(self) -> Select:
+    def _build_vector_query(self) -> SQLASelect:
         # Validate parameters.
         if self._query is None and self._query_vector is None:
             raise ValueError(
@@ -369,9 +486,8 @@ class SearchQuery:
 
     def _build_vector_query_with_pre_filter(
         self, table_vector_column: Column
-    ) -> Select:
+    ) -> SQLASelect:
         table_model = self._table.table_model
-
         hit = aliased(table_model, name=HIT_LABEL)
         vector_column = self._get_aliased_column(hit, table_vector_column)
         distance_column = self._build_distance_column(vector_column)
@@ -393,7 +509,7 @@ class SearchQuery:
 
     def _build_vector_query_with_post_filter(
         self, table_vector_column: Column
-    ) -> Select:
+    ) -> SQLASelect:
         table_model = self._table.table_model
 
         # Inner query for ANN search
@@ -427,14 +543,7 @@ class SearchQuery:
 
         return stmt
 
-    def _build_fulltext_query(self) -> Select:
-        if self._query is None:
-            raise ValueError(
-                "query string is required for fulltext search, please specify it through "
-                ".text('<your query string>')"
-            )
-
-        # Determine the text column.
+    def _validate_text_column(self) -> Column:
         if self._text_column is None:
             if len(self._table.text_columns) == 0:
                 raise ValueError(
@@ -446,25 +555,32 @@ class SearchQuery:
                     ".text_column('<your text column name>')"
                 )
             else:
-                text_column = self._table.text_columns[0]
+                return self._table.text_columns[0]
         else:
-            text_column = self._text_column
+            return self._text_column
+
+    def _build_fulltext_query(self) -> SQLASelect:
+        if self._query is None:
+            raise ValueError(
+                "query string is required for fulltext search, please specify it through "
+                ".text('<your query string>')"
+            )
 
         table_model = self._table.table_model
-        columns = table_model.__table__.c
-        select_columns = list(columns)
-        if self._sa_table.primary_key is None:
-            select_columns.insert(0, text("_tidb_rowid"))
+        hit = aliased(table_model, name=HIT_LABEL)
+        table_text_column = self._validate_text_column()
+        text_column = self._get_aliased_column(hit, table_text_column)
+        match_score_column = fts_match_word(self._query, text_column)
 
-        table_name = self._table.table_name
         stmt = select(
-            *select_columns,
-            fts_match_word(self._query, text_column).label(MATCH_SCORE_LABEL),
-            fts_match_word(self._query, text_column).label(SCORE_LABEL),
-        ).filter(fts_match_word(self._query, text_column))
+            hit,
+            match_score_column.label(MATCH_SCORE_LABEL),
+            match_score_column.label(SCORE_LABEL),
+        )
 
+        stmt = stmt.filter(match_score_column)
         if self._filters is not None:
-            filter_clauses = build_filter_clauses(self._filters, self._table._sa_table)
+            filter_clauses = build_filter_clauses(self._filters, hit)
             stmt = stmt.filter(*filter_clauses)
 
         stmt = stmt.order_by(desc(MATCH_SCORE_LABEL)).limit(self._limit)
@@ -720,3 +836,65 @@ class SearchQuery:
         else:
             flatten_keys = keys
         return pd.DataFrame(flatten_rows, columns=flatten_keys)
+
+
+@overload
+def search(
+    table: "Table",
+    query: Optional[Union[VectorDataType, str, Path, QueryBundle, "Image"]] = None,
+    *,
+    search_type: Literal["vector"] = "vector",
+) -> Search: ...
+
+
+@overload
+def search(
+    table: "Table",
+    query: Optional[Union[VectorDataType, str, Path, QueryBundle, "Image"]] = None,
+    *,
+    search_type: Literal["fulltext"],
+) -> Search: ...
+
+
+@overload
+def search(
+    table: "Table",
+    query: Optional[Union[VectorDataType, str, Path, QueryBundle, "Image"]] = None,
+    *,
+    search_type: Literal["hybrid"],
+) -> Search: ...
+
+
+def search(
+    table: "Table",
+    query: Optional[Union[VectorDataType, str, Path, QueryBundle, "Image"]] = None,
+    *,
+    search_type: SearchType = "vector",
+) -> Search:
+    """Construct a new :class:`_search.Search`.
+
+    Similar functionality is also available via the
+    :meth:`_table.Table.search` method on any :class:`_table.Table`.
+
+    Args:
+        table: The table to search in.
+        query: The query data - can be a vector, text, QueryBundle, Image, or file Path.
+        search_type: Type of search to perform - "vector", "fulltext", or "hybrid".
+
+    Returns:
+        A new :class:`Search` instance.
+
+    Examples:
+        Vector search:
+
+        >>> search(my_table, [0.1, 0.2, 0.3], search_type="vector").limit(10)
+
+        Fulltext search:
+
+        >>> search(my_table, "hello world", search_type="fulltext").limit(5)
+
+        Hybrid search:
+
+        >>> search(my_table, {"query": "hello", "query_vector": [0.1, 0.2]}, search_type="hybrid").limit(10)
+    """
+    return Search(table=table, query=query, search_type=search_type)

@@ -17,27 +17,29 @@ from pytidb.search import SCORE_LABEL
 
 @pytest.fixture(scope="module")
 def vector_table(shared_client: TiDBClient):
-    class User(TableModel):
+    class UserForVectorSearch(TableModel):
         __tablename__ = "users_for_vector_search"
         id: int = Field(None, primary_key=True)
         name: str = Field(None)
 
+    User = UserForVectorSearch
     user_table = shared_client.create_table(schema=User, if_exists="overwrite")
 
-    class Chunk(TableModel):
+    class ChunkForVectorSearch(TableModel):
         __tablename__ = "chunks_for_vector_search"
         id: int = Field(None, primary_key=True)
         text: str = Field(None)
         text_vec: Any = Field(sa_column=Column(VECTOR(3)))
         user_id: int = Field(foreign_key="users_for_vector_search.id")
-        user: User = Relationship(
+        user: UserForVectorSearch = Relationship(
             sa_relationship_kwargs={
-                "primaryjoin": "Chunk.user_id == User.id",
+                "primaryjoin": "ChunkForVectorSearch.user_id == UserForVectorSearch.id",
                 "lazy": "joined",
             },
         )
         meta: dict = Field(sa_type=JSON)
 
+    Chunk = ChunkForVectorSearch
     chunk_table = shared_client.create_table(schema=Chunk, if_exists="overwrite")
 
     # Prepare test data.
@@ -71,7 +73,7 @@ def test_vector_search(vector_table: Table):
         vector_table.search([1, 2, 3])
         .distance_metric(metric=DistanceMetric.L2)
         .num_candidate(20)
-        .filter({"user_id": 2})
+        .filter({"user_id": 2}, prefilter=True)
         .limit(2)
         .to_pydantic()
     )
