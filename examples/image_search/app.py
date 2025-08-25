@@ -59,7 +59,9 @@ def connect_to_tidb() -> Optional[TiDBClient]:
 def setup_embed_fn() -> EmbeddingFunction:
     try:
         embed_fn = EmbeddingFunction(
-            model_name="jina_ai/jina-embeddings-v4", timeout=20
+            model_name="jina_ai/jina-embeddings-v4",
+            timeout=20,
+            multimodal=True,
         )
         return embed_fn
     except Exception as e:

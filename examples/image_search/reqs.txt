@@ -1,5 +1,5 @@
-pytidb==0.0.10.post1
-pytidb[models]==0.0.10.post1
+pytidb==0.0.12
+pytidb[models]==0.0.12
 streamlit
 pandas
 python-dotenv

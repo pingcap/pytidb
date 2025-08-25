@@ -48,7 +48,7 @@ TIDB_USERNAME={prefix}.root
 TIDB_PASSWORD={password}
 TIDB_DATABASE=test
 
-JINA_AI_API_KEY={your-jina-api-key}
+JINA_AI_API_KEY={your-jina-ai-api-key}
 EOF
 ```
 
