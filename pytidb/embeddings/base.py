@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Any, Literal
 
-from pydantic import BaseModel
-from sqlmodel import Field
+from pydantic import BaseModel, Field
 
 
 EmbeddingSourceType = Literal["text", "image"]

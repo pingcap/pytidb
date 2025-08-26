@@ -47,6 +47,8 @@ def hybrid_table(shared_client: TiDBClient):
         ]
     )
 
+    shared_client.execute(f"ALTER TABLE {tbl._sa_table.name} COMPACT;")
+
     if not tbl.has_fts_index("description"):
         tbl.create_fts_index("description")
 
@@ -91,7 +93,7 @@ def test_hybrid_search_to_rows(hybrid_table: Table):
 
     assert len(actual_results) == len(expected_results)
     for actual, expected in zip(actual_results, expected_results):
-        assert actual.id == expected["id"]
+        assert actual._hit.id == expected["id"]
         # FIXME: The diff between actual and expected should be less than 1e-5.
         assert abs(actual._mapping["_distance"] - expected["_distance"]) < 1e-3
         assert abs(actual._mapping["_match_score"] - expected["_match_score"]) < 1

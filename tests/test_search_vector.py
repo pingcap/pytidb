@@ -6,7 +6,8 @@ import pytest
 from pytidb import TiDBClient, Table
 from pytidb.rerankers import Reranker
 from pytidb.rerankers.base import BaseReranker
-from pytidb.schema import DistanceMetric, TableModel, Field, Column
+from pytidb.schema import DistanceMetric, TableModel, Field, Column, Relationship
+from pytidb.sql import or_
 from pytidb.datatype import VECTOR, JSON
 from pytidb.search import SCORE_LABEL
 
@@ -16,18 +17,40 @@ from pytidb.search import SCORE_LABEL
 
 @pytest.fixture(scope="module")
 def vector_table(shared_client: TiDBClient):
-    class Chunk(TableModel):
-        __tablename__ = "test_vector_search"
+    class UserForVectorSearch(TableModel):
+        __tablename__ = "users_for_vector_search"
+        id: int = Field(None, primary_key=True)
+        name: str = Field(None)
+
+    User = UserForVectorSearch
+    user_table = shared_client.create_table(schema=User, if_exists="overwrite")
+
+    class ChunkForVectorSearch(TableModel):
+        __tablename__ = "chunks_for_vector_search"
         id: int = Field(None, primary_key=True)
         text: str = Field(None)
         text_vec: Any = Field(sa_column=Column(VECTOR(3)))
-        user_id: int = Field(None)
+        user_id: int = Field(foreign_key="users_for_vector_search.id")
+        user: UserForVectorSearch = Relationship(
+            sa_relationship_kwargs={
+                "primaryjoin": "ChunkForVectorSearch.user_id == UserForVectorSearch.id",
+                "lazy": "joined",
+            },
+        )
         meta: dict = Field(sa_type=JSON)
 
-    tbl = shared_client.create_table(schema=Chunk, if_exists="overwrite")
+    Chunk = ChunkForVectorSearch
+    chunk_table = shared_client.create_table(schema=Chunk, if_exists="overwrite")
 
     # Prepare test data.
-    tbl.bulk_insert(
+    user_table.bulk_insert(
+        [
+            User(id=1, name="tom"),
+            User(id=2, name="jerry"),
+            User(id=3, name="bob"),
+        ]
+    )
+    chunk_table.bulk_insert(
         [
             Chunk(
                 id=1, text="foo", text_vec=[4, 5, 6], user_id=1, meta={"owner_id": 1}
@@ -41,7 +64,7 @@ def vector_table(shared_client: TiDBClient):
         ]
     )
 
-    return tbl
+    return chunk_table
 
 
 def test_vector_search(vector_table: Table):
@@ -50,7 +73,7 @@ def test_vector_search(vector_table: Table):
         vector_table.search([1, 2, 3])
         .distance_metric(metric=DistanceMetric.L2)
         .num_candidate(20)
-        .filter({"user_id": 2})
+        .filter({"user_id": 2}, prefilter=True)
         .limit(2)
         .to_pydantic()
     )
@@ -59,6 +82,7 @@ def test_vector_search(vector_table: Table):
     assert results[0].similarity_score == 1
     assert results[0].score == 1
     assert results[0].user_id == 2
+    assert results[0].user.name == "jerry"
 
     # to_pandas()
     results = vector_table.search([1, 2, 3]).limit(2).to_pandas()
@@ -103,7 +127,7 @@ def test_with_distance_range(vector_table: Table):
 
 
 @pytest.mark.parametrize("prefilter", [True, False], ids=["prefilter", "postfilter"])
-def test_with_filter(vector_table: Table, prefilter: bool):
+def test_with_dict_filter(vector_table: Table, prefilter: bool):
     results = (
         vector_table.search([1, 2, 3])
         .distance_metric(metric=DistanceMetric.COSINE)
@@ -128,12 +152,80 @@ def test_with_filter(vector_table: Table, prefilter: bool):
 
 
 @pytest.mark.parametrize("prefilter", [True, False], ids=["prefilter", "postfilter"])
+def test_with_expression_filter(vector_table: Table, prefilter: bool):
+    Chunk = vector_table.table_model
+
+    def assert_result(results):
+        assert len(results) == 2
+        assert results[0]["id"] == 2
+        assert results[0]["text"] == "bar"
+        assert results[0]["user_id"] == 2
+        assert results[0]["_distance"] == 0
+        assert results[0]["_score"] == 1
+
+        assert results[1]["id"] == 1
+        assert results[1]["text"] == "foo"
+        assert results[1]["user_id"] == 1
+        assert abs(results[1]["_distance"] - 0.02547) < 1e-3
+        assert abs(results[1]["_score"] - 0.97463) < 1e-3
+
+    # user_id in (1, 2)
+    results = (
+        vector_table.search([1, 2, 3])
+        .filter(
+            Chunk.user_id.in_([1, 2]),
+            prefilter=prefilter,
+        )
+        .limit(10)
+        .to_list()
+    )
+    assert_result(results)
+
+    # user_id = 1 or user_id = 2
+    results = (
+        vector_table.search([1, 2, 3])
+        .filter(
+            or_(Chunk.user_id == 1, Chunk.user_id == 2),
+            prefilter=prefilter,
+        )
+        .limit(10)
+        .to_list()
+    )
+    assert_result(results)
+
+
+@pytest.mark.parametrize("prefilter", [True, False], ids=["prefilter", "postfilter"])
 def test_with_metadata_filter(vector_table: Table, prefilter: bool):
     results = (
         vector_table.search([1, 2, 3])
         .distance_metric(metric=DistanceMetric.COSINE)
         .debug(True)
         .filter({"meta.owner_id": {"$in": [1, 2]}}, prefilter=prefilter)
+        .limit(10)
+        .to_list()
+    )
+
+    assert len(results) == 2
+    assert results[0]["id"] == 2
+    assert results[0]["text"] == "bar"
+    assert results[0]["user_id"] == 2
+    assert results[0]["_distance"] == 0
+    assert results[0]["_score"] == 1
+
+    assert results[1]["id"] == 1
+    assert results[1]["text"] == "foo"
+    assert results[1]["user_id"] == 1
+    assert abs(results[1]["_distance"] - 0.02547) < 1e-3
+    assert abs(results[1]["_score"] - 0.97463) < 1e-3
+
+
+@pytest.mark.parametrize("prefilter", [True, False], ids=["prefilter", "postfilter"])
+def test_with_text_filter(vector_table: Table, prefilter: bool):
+    results = (
+        vector_table.search([1, 2, 3])
+        .distance_metric(metric=DistanceMetric.COSINE)
+        .debug(True)
+        .filter("user_id in (1, 2)")
         .limit(10)
         .to_list()
     )
@@ -238,7 +330,7 @@ def test_with_multi_vector_fields(shared_client: TiDBClient):
         ]
     )
 
-    with pytest.raises(ValueError, match="more than two vector columns"):
+    with pytest.raises(ValueError, match="more than one vector column"):
         tbl.search([1, 2, 3], search_type="vector").limit(3).to_list()
 
     with pytest.raises(ValueError, match="Invalid vector column"):

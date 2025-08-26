@@ -2,26 +2,50 @@ import re
 from typing import Any, Dict, List, Optional, Union
 
 import sqlalchemy
-from sqlalchemy import BinaryExpression, text
+from sqlalchemy import (
+    BinaryExpression,
+    BooleanClauseList,
+    ColumnElement,
+    text,
+    FromClause,
+    Column,
+)
+from sqlalchemy.orm.util import AliasedClass
+
+from pytidb.schema import TableModel
 
 
-Filters = Union[Dict[str, Any], str, BinaryExpression]
+Filters = Union[Dict[str, Any], str, ColumnElement[bool]]
 
 
 # SQL filter operators:
 
 
-def build_filter_clauses(filters: Filters, columns: Dict) -> List[BinaryExpression]:
+def build_filter_clauses(
+    filters: Filters, target_table: FromClause
+) -> List[BinaryExpression]:
+    """
+    Build filter clauses for the given filters.
+
+    Args:
+        filters: The filters to apply
+        target_table: The table or subquery to apply filters to.
+
+    Returns:
+        List of SQLAlchemy filter expressions
+    """
     if isinstance(filters, dict):
-        filter_clauses = build_dict_filter_clauses(filters, columns)
-        return filter_clauses
+        return build_dict_filter_clauses(filters, target_table)
     elif isinstance(filters, str):
         return [text(filters)]
+    elif isinstance(filters, ColumnElement):
+        return [build_expression_filter_clauses(filters, target_table)]
     else:
-        return [filters]
+        raise ValueError(f"Unsupported filters: {type(filters)}")
 
 
-# Dict filter operators:
+# Dictionary-like filter:
+
 
 AND, OR, IN, NIN, GT, GTE, LT, LTE, EQ, NE = (
     "$and",
@@ -44,12 +68,20 @@ JSON_FIELD_PATTERN = re.compile(
 
 
 def build_dict_filter_clauses(
-    filters: Dict[str, Any] | None, columns: Dict
+    filters: Dict[str, Any] | None,
+    target: FromClause | TableModel,
 ) -> List[BinaryExpression]:
     if filters is None:
         return []
 
     filter_clauses = []
+    if isinstance(target, AliasedClass):
+        columns = target._aliased_insp.local_table.c
+    elif isinstance(target, FromClause):
+        columns = target.c
+    else:
+        raise ValueError(f"Unsupported target type for filters: {type(target)}")
+
     for key, value in filters.items():
         if key.lower() == AND:
             if not isinstance(value, list):
@@ -58,7 +90,7 @@ def build_dict_filter_clauses(
                 )
             and_clauses = []
             for item in value:
-                and_clauses.extend(build_filter_clauses(item, columns))
+                and_clauses.extend(build_dict_filter_clauses(item, target))
             if len(and_clauses) == 0:
                 continue
             filter_clauses.append(sqlalchemy.and_(*and_clauses))
@@ -69,7 +101,7 @@ def build_dict_filter_clauses(
                 )
             or_clauses = []
             for item in value:
-                or_clauses.extend(build_filter_clauses(item, columns))
+                or_clauses.extend(build_dict_filter_clauses(item, target))
             if len(or_clauses) == 0:
                 continue
             filter_clauses.append(sqlalchemy.or_(*or_clauses))
@@ -141,3 +173,37 @@ def build_dict_column_filter(
         return column_filters[0]
     else:
         return sqlalchemy.and_(*column_filters)
+
+
+def handle_binary_expression_filter(
+    filter: BinaryExpression, columns
+) -> BinaryExpression:
+    if isinstance(filter.left, Column):
+        filter.left = columns[filter.left.name]
+    if isinstance(filter.right, Column):
+        filter.right = columns[filter.right.name]
+    return filter
+
+
+def build_expression_filter_clauses(
+    filter: ColumnElement[bool], target_table: FromClause
+) -> List[BinaryExpression]:
+    if isinstance(target_table, AliasedClass):
+        columns = target_table._aliased_insp.local_table.c
+    elif isinstance(target_table, FromClause):
+        columns = target_table.c
+    else:
+        raise ValueError(f"Unsupported target table type: {type(target_table)}")
+
+    if isinstance(filter, BinaryExpression):
+        return handle_binary_expression_filter(filter, columns)
+    elif isinstance(filter, BooleanClauseList):
+        clauses = []
+        for clause in filter.clauses:
+            if isinstance(clause, BinaryExpression):
+                clause = handle_binary_expression_filter(clause, columns)
+            clauses.append(clause)
+        filter.clauses = clauses
+        return filter
+    else:
+        raise ValueError(f"Unsupported filters: {type(filter)}")

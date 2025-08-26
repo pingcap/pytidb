@@ -138,18 +138,16 @@ RowKeyType = TypeVar("RowKeyType", bound=Union[Any, Tuple[Any, ...]])
 
 def get_row_id_from_row(row: Row, table: Table) -> Optional[RowKeyType]:
     pk_constraint = table.primary_key
-    if not pk_constraint.columns:
-        # Try to get _tidb_rowid if no primary key exists
-        try:
-            return row._mapping["_tidb_rowid"]
-        except KeyError:
-            return row.__hash__()
-
     pk_column_names = [col.name for col in pk_constraint.columns]
     try:
+        row_mapping = (
+            row._mapping
+            if "_hit" not in row._mapping
+            else row._mapping["_hit"].model_dump()
+        )
         if len(pk_column_names) == 1:
-            return row._mapping[pk_column_names[0]]
-        return tuple(row._mapping[name] for name in pk_column_names)
+            return row_mapping[pk_column_names[0]]
+        return tuple(row_mapping[name] for name in pk_column_names)
     except KeyError as e:
         raise KeyError(
             f"Primary key column '{e.args[0]}' not found in Row. "
