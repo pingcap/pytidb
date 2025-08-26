@@ -554,7 +554,7 @@ class Search(Generative):
                 raise ValueError(
                     "no text column found in the table, fulltext search cannot be executed"
                 )
-            elif len(self._table.text_columns) >= 1:
+            elif len(self._table.text_columns) > 1:
                 raise ValueError(
                     "more than one text column in the table, need to specify one through "
                     ".text_column('<your text column name>')"
