@@ -330,7 +330,7 @@ def test_with_multi_vector_fields(shared_client: TiDBClient):
         ]
     )
 
-    with pytest.raises(ValueError, match="more than two vector columns"):
+    with pytest.raises(ValueError, match="more than one vector column"):
         tbl.search([1, 2, 3], search_type="vector").limit(3).to_list()
 
     with pytest.raises(ValueError, match="Invalid vector column"):

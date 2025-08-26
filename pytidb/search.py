@@ -77,7 +77,7 @@ class SearchResult(BaseModel, Generic[T]):
         )
 
     @property
-    def similarity_score(self) -> float:
+    def similarity_score(self) -> Optional[float]:
         if self.distance is not None:
             return 1 - self.distance
         else:
@@ -373,9 +373,9 @@ class Search(Generative):
                 raise ValueError(
                     "no vector column found in table, but vector column is required for vector search"
                 )
-            elif len(self._table.vector_columns) >= 1:
+            elif len(self._table.vector_columns) > 1:
                 raise ValueError(
-                    "more than two vector columns, please choice one through .vector_column()"
+                    "more than one vector column, please choose one through .vector_column()"
                 )
             else:
                 return self._table.vector_columns[0]
@@ -516,7 +516,9 @@ class Search(Generative):
         inner_hit = aliased(table_model, name=INNER_HIT_LABEL)
         inner_vector_column = self._get_aliased_column(inner_hit, table_vector_column)
         inner_distance_column = self._build_distance_column(inner_vector_column)
-        inner_limit = self._num_candidate if self._num_candidate else self._limit * 10
+        inner_limit = (
+            self._num_candidate if self._num_candidate else min(self._limit * 10, 2000)
+        )
 
         inner_stmt = select(inner_hit, inner_distance_column)
         inner_stmt = self._apply_distance_condition(inner_stmt, inner_distance_column)
@@ -551,7 +553,7 @@ class Search(Generative):
                 )
             elif len(self._table.text_columns) >= 1:
                 raise ValueError(
-                    "more than two text columns in the table, need to specify one through "
+                    "more than one text column in the table, need to specify one through "
                     ".text_column('<your text column name>')"
                 )
             else:
