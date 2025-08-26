@@ -47,7 +47,7 @@ def hybrid_table(shared_client: TiDBClient):
         ]
     )
 
-    shared_client.execute(f"ALTER TABLE {tbl.__tablename__} COMPACT;")
+    shared_client.execute(f"ALTER TABLE {tbl._sa_table.name} COMPACT;")
 
     if not tbl.has_fts_index("description"):
         tbl.create_fts_index("description")
