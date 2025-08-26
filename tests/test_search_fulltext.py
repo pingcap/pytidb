@@ -43,6 +43,8 @@ def text_table(shared_client: TiDBClient):
         ]
     )
 
+    tbl.client.execute(f"ALTER TABLE {tbl.__tablename__} COMPACT;")
+
     return tbl
 
 

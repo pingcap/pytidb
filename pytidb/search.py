@@ -630,7 +630,7 @@ class Search(Generative):
             return keys, rows
 
     def _exec_fulltext_query(self) -> Tuple[List[str], List[Row]]:
-        with self._client._db_engine.connect() as conn:
+        with self._client.session() as conn:
             query = self._build_fulltext_query()
             result = conn.execute(query)
             keys = result.keys()
@@ -818,24 +818,37 @@ class Search(Generative):
                 "Failed to import pandas, please install it with `pip install pandas`"
             )
 
-        keys, rows = self._execute_query()
+        result_columns, result_rows = self._execute_query()
         flatten_rows = []
-        for row in rows:
-            row_dict = dict(row._mapping)
-            if HIT_LABEL in row_dict:
-                hit = row_dict.pop(HIT_LABEL)
-                flatten_rows.append((*hit.model_dump().values(), *row_dict.values()))
-            else:
-                flatten_rows.append(row_dict.values())
 
-        if HIT_LABEL in keys:
-            flatten_keys = [
+        # Flatten the columns if there are a sub-model in the result.
+        if HIT_LABEL in result_columns:
+            flatten_columns = [
                 *self._table.table_model.model_fields.keys(),
-                *[key for key in keys if key != HIT_LABEL],
+                *[col for col in result_columns if col != HIT_LABEL],
             ]
         else:
-            flatten_keys = keys
-        return pd.DataFrame(flatten_rows, columns=flatten_keys)
+            flatten_columns = result_columns
+
+        # Flatten each row if there are a sub-model in the result.
+        for row in result_rows:
+            row_data = dict(row._mapping)
+            flatten_row = []
+
+            if HIT_LABEL in row_data:
+                model_values = row_data.pop(HIT_LABEL).model_dump()
+                for col in flatten_columns:
+                    if col in model_values:
+                        flatten_row.append(model_values[col])
+                    else:
+                        flatten_row.append(row_data.get(col, None))
+            else:
+                for col in flatten_columns:
+                    flatten_row.append(row_data.get(col, None))
+
+            flatten_rows.append(flatten_row)
+
+        return pd.DataFrame(flatten_rows, columns=flatten_columns)
 
 
 @overload
