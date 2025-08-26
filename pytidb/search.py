@@ -516,9 +516,12 @@ class Search(Generative):
         inner_hit = aliased(table_model, name=INNER_HIT_LABEL)
         inner_vector_column = self._get_aliased_column(inner_hit, table_vector_column)
         inner_distance_column = self._build_distance_column(inner_vector_column)
-        inner_limit = (
-            self._num_candidate if self._num_candidate else min(self._limit * 10, 2000)
-        )
+        if self._num_candidate:
+            inner_limit = self._num_candidate
+        elif self._limit is not None and self._limit < 100:
+            inner_limit = self._limit * 10
+        else:
+            inner_limit = self._limit
 
         inner_stmt = select(inner_hit, inner_distance_column)
         inner_stmt = self._apply_distance_condition(inner_stmt, inner_distance_column)
