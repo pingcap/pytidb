@@ -3,6 +3,7 @@ Utility functions for embedding processing, including base64 conversion and imag
 """
 
 import base64
+from collections.abc import Mapping
 import io
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING, Union
@@ -153,3 +154,30 @@ def encode_pil_image_to_base64(
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
     except Exception as e:
         raise ValueError(f"Failed to encode PIL Image to base64: {str(e)}")
+
+
+def deep_merge(*dicts: Optional[dict]) -> dict:
+    """
+    Deeply merge one or more dictionaries into the first one (in-place).
+    Later dictionaries override earlier ones.
+    """
+    if not dicts:
+        return {}
+
+    # Filter out None values and convert to list
+    valid_dicts = [d for d in dicts if d is not None]
+    if not valid_dicts:
+        return {}
+
+    def _deep_merge(d: dict, u: dict) -> dict:
+        for k, v in u.items():
+            if k in d and isinstance(d[k], Mapping) and isinstance(v, Mapping):
+                _deep_merge(d[k], v)
+            else:
+                d[k] = v
+        return d
+
+    result = valid_dicts[0].copy()
+    for u in valid_dicts[1:]:
+        _deep_merge(result, u)
+    return result

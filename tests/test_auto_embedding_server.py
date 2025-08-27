@@ -5,21 +5,93 @@ from pytidb import TiDBClient
 from pytidb.embeddings import EmbeddingFunction
 from pytidb.schema import TableModel, Field
 
+
 EMBEDDING_MODELS = [
     {
         "id": "openai",
         "model_name": "openai/text-embedding-3-small",
+        "expected_similarity": 0.9,
     },
-    # TODO: uncomment these after jina_ai and tidbcloud_free are released on prod.
-    # {
-    #     "id": "jina_ai",
-    #     "model_name": "jina_ai/jina-embeddings-v4",
-    # },
-    # {
-    #     "id": "tidbcloud_free",
-    #     "model_name": "tidbcloud_free/amazon/titan-embed-text-v2",
-    # },
+    {
+        "id": "jina_ai",
+        "model_name": "jina_ai/jina-embeddings-v3",
+        "expected_similarity": 0.7,
+    },
+    {
+        "id": "tidbcloud_free",
+        "model_name": "tidbcloud_free/amazon/titan-embed-text-v2",
+        "expected_similarity": 0.9,
+    },
+    {
+        "id": "cohere",
+        "model_name": "cohere/embed-v4.0",
+        "expected_similarity": 0.7,
+    },
+    {
+        "id": "gemini",
+        "model_name": "gemini/gemini-embedding-001",
+        "expected_similarity": 0.8,
+    },
+    {
+        "id": "huggingface",
+        "model_name": "huggingface/intfloat/multilingual-e5-large",
+        "expected_similarity": 0.9,
+    },
+    {
+        "id": "nvidia_nim",
+        "model_name": "nvidia_nim/baai/bge-m3",
+        "expected_similarity": 0.9,
+    },
 ]
+
+
+def _should_skip(shared_client: TiDBClient, model_id: str) -> Optional[str]:
+    # Skip auto embedding tests if not connected to TiDB Serverless
+    if not shared_client.is_serverless:
+        return "Currently, Only TiDB Serverless supports auto embedding"
+
+    # Configure embedding provider based on model
+    if model_id == "openai":
+        if not os.getenv("OPENAI_API_KEY"):
+            return "OPENAI_API_KEY is not set"
+        shared_client.configure_embedding_provider(
+            "openai", os.getenv("OPENAI_API_KEY")
+        )
+    elif model_id == "jina_ai":
+        if not os.getenv("JINA_AI_API_KEY"):
+            return "JINA_AI_API_KEY is not set"
+        shared_client.configure_embedding_provider(
+            "jina_ai", os.getenv("JINA_AI_API_KEY")
+        )
+    elif model_id == "cohere":
+        if not os.getenv("COHERE_API_KEY"):
+            return "COHERE_API_KEY is not set"
+        shared_client.configure_embedding_provider(
+            "cohere", os.getenv("COHERE_API_KEY")
+        )
+    elif model_id == "gemini":
+        if not os.getenv("GEMINI_API_KEY"):
+            return "GEMINI_API_KEY is not set"
+        shared_client.configure_embedding_provider(
+            "gemini", os.getenv("GEMINI_API_KEY")
+        )
+    elif model_id == "huggingface":
+        if not os.getenv("HUGGINGFACE_API_KEY"):
+            return "HUGGINGFACE_API_KEY is not set"
+        shared_client.configure_embedding_provider(
+            "huggingface", os.getenv("HUGGINGFACE_API_KEY")
+        )
+    elif model_id == "nvidia_nim":
+        if not os.getenv("NVIDIA_NIM_API_KEY"):
+            return "NVIDIA_NIM_API_KEY is not set"
+        shared_client.configure_embedding_provider(
+            "nvidia_nim", os.getenv("NVIDIA_NIM_API_KEY")
+        )
+    elif model_id == "tidbcloud_free":
+        # tidbcloud_free doesn't need additional API key configuration
+        pass
+
+    return None
 
 
 @pytest.fixture(
@@ -41,27 +113,15 @@ def text_embed(request):
 
 
 def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction):
-    # Skip auto embedding tests if not connected to TiDB Serverless
-    if not shared_client.is_serverless:
-        pytest.skip("Currently, Only TiDB Serverless supports auto embedding")
-
     model_id = text_embed._model_config["id"]
 
-    # Configure embedding provider based on model
-    if model_id == "openai":
-        shared_client.configure_embedding_provider(
-            "openai", os.getenv("OPENAI_API_KEY")
-        )
-    elif model_id == "jina_ai":
-        shared_client.configure_embedding_provider(
-            "jina_ai", os.getenv("JINA_AI_API_KEY")
-        )
-    elif model_id == "tidbcloud_free":
-        # tidbcloud_free doesn't need additional API key configuration
-        pass
+    # Check if test should be skipped
+    skip_reason = _should_skip(shared_client, model_id)
+    if skip_reason:
+        pytest.skip(skip_reason)
 
     class ChunkBase(TableModel, table=False):
-        __tablename__ = f"chunks_auto_embedding_with_{model_id}"
+        __tablename__ = f"chunks_with_{model_id}_auto_embedding"
         id: int = Field(primary_key=True)
         text: Optional[str] = Field()
         text_vec: Optional[list[float]] = text_embed.VectorField(
@@ -71,7 +131,7 @@ def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction
         user_id: int = Field()
 
     Chunk = type(
-        f"ChunkAutoEmbeddingWith{model_id.capitalize()}", (ChunkBase,), {}, table=True
+        f"ChunkWith{model_id.capitalize()}AutoEmbedding", (ChunkBase,), {}, table=True
     )
     tbl = shared_client.create_table(schema=Chunk, if_exists="overwrite")
 
@@ -84,15 +144,15 @@ def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction
     assert len(chunk.text_vec) == text_embed.dimensions
 
     # Test bulk_insert with auto embedding (including empty text case)
-    chunks_via_model_instance = [
+    chunk_entities = [
         Chunk(id=3, text="baz", user_id=2),
         Chunk(id=4, text=None, user_id=2),  # None will skip auto embedding.
     ]
-    chunks_via_dict = [
+    chunk_dicts = [
         {"id": 5, "text": "qux", "user_id": 3},
         {"id": 6, "text": None, "user_id": 3},  # None will skip auto embedding.
     ]
-    chunks = tbl.bulk_insert(chunks_via_model_instance + chunks_via_dict)
+    chunks = tbl.bulk_insert(chunk_entities + chunk_dicts)
     for chunk in chunks:
         if chunk.text is None:
             assert chunk.text_vec is None
@@ -104,7 +164,9 @@ def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction
     assert len(results) == 1
     assert results[0].id == 2
     assert results[0].text == "bar"
-    assert results[0].similarity_score >= 0.9
+    assert (
+        results[0].similarity_score >= text_embed._model_config["expected_similarity"]
+    )
 
     # Test update with auto embedding, from empty to non-empty string
     chunk = tbl.get(4)
