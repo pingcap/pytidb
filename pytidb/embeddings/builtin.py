@@ -5,6 +5,7 @@ from pydantic import Field
 from pytidb.embeddings.base import BaseEmbeddingFunction, EmbeddingSourceType
 from pytidb.embeddings.dimensions import get_model_dimensions
 from pytidb.embeddings.utils import (
+    deep_merge,
     encode_local_file_to_base64,
     encode_pil_image_to_base64,
     parse_url_safely,
@@ -25,18 +26,23 @@ _MAX_B64_LENGTH_PER_MODEL = {
 }
 
 
-PROVIDER_DEFAULT_EMBED_PARAMS = {
-    "jina_ai": {
-        "task": "retrieval.passage",
-        "task@search": "retrieval.query",
-    },
-}
-
-
 EmbeddingInput = Union[str, Path, "Image"]
 
 
-class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
+def _convert_dimensions_param(provider: str, dimensions: int) -> dict[str, Any]:
+    if provider == "cohere":
+        return {"dimension": dimensions}
+    elif provider == "gemini":
+        return {"output_dimensionality": dimensions}
+    elif provider == "nvidia_nim":
+        # Notice: Nvidia NIM doesn't support dimensions parameter.
+        return {}
+    else:
+        # OpenAI, Jina AI follow the same convention.
+        return {"dimensions": dimensions}
+
+
+class EmbeddingFunction(BaseEmbeddingFunction):
     api_key: Optional[str] = Field(None, description="The API key for authentication.")
     api_base: Optional[str] = Field(
         None, description="The base URL of the model provider."
@@ -78,11 +84,8 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             dimensions = get_model_dimensions(model_name)
 
         provider = model_name.split("/")[0] if "/" in model_name else "openai"
-        server_embed_params = (
-            server_embed_params
-            if server_embed_params is not None
-            else PROVIDER_DEFAULT_EMBED_PARAMS.get(provider)
-        )
+        dimensions_param = _convert_dimensions_param(provider, dimensions)
+        _server_embed_params = deep_merge(dimensions_param, server_embed_params or {})
 
         super().__init__(
             model_name=model_name,
@@ -93,7 +96,7 @@ class BuiltInEmbeddingFunction(BaseEmbeddingFunction):
             timeout=timeout,
             caching=caching,
             use_server=use_server,
-            server_embed_params=server_embed_params,
+            server_embed_params=_server_embed_params,
             multimodal=multimodal,
             **kwargs,
         )
