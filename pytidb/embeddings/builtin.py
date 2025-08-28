@@ -2,10 +2,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from pydantic import Field
+from pytidb.embeddings.aliases import normalize_model_name
 from pytidb.embeddings.base import BaseEmbeddingFunction, EmbeddingSourceType
-from pytidb.embeddings.dimensions import get_model_dimensions
+from pytidb.embeddings.dimensions import KNOWN_MODEL_DIMENSIONS
 from pytidb.embeddings.utils import (
-    deep_merge,
     encode_local_file_to_base64,
     encode_pil_image_to_base64,
     parse_url_safely,
@@ -29,17 +29,64 @@ _MAX_B64_LENGTH_PER_MODEL = {
 EmbeddingInput = Union[str, Path, "Image"]
 
 
-def _convert_dimensions_param(provider: str, dimensions: int) -> dict[str, Any]:
-    if provider == "cohere":
-        return {"dimension": dimensions}
+def _validate_model_dimensions(
+    model_name: str,
+    dimensions: Optional[int],
+) -> int:
+    if dimensions is None:
+        if model_name in KNOWN_MODEL_DIMENSIONS:
+            dimensions = KNOWN_MODEL_DIMENSIONS.get(model_name)
+        else:
+            raise ValueError(
+                f"Unknown dimensions for model {model_name}, please specify `dimensions` parameter."
+            )
+    return dimensions
+
+
+def _get_provider_default_options(
+    provider: str,
+    model_name: str,
+    dimensions: int,
+) -> dict[str, Any]:
+    if provider == "tidbcloud_free":
+        if model_name == "tidbcloud_free/amazon/titan-embed-text-v2":
+            return {"dimensions": dimensions}
+        elif model_name.startswith("tidbcloud_free/cohere/"):
+            default_dimensions = KNOWN_MODEL_DIMENSIONS.get(model_name)
+            if dimensions != default_dimensions:
+                raise ValueError(
+                    f"Model {model_name} (output dimension: {default_dimensions}) does "
+                    f"not support custom dimensions to {dimensions}."
+                )
+            return {
+                "input_type": "search_document",
+                "input_type@search": "search_query",
+            }
+        else:
+            return {}
+    elif provider == "openai":
+        # Ref: https://platform.openai.com/docs/api-reference/embeddings/create
+        return {"dimensions": dimensions}
+    elif provider == "jina_ai":
+        # Ref: https://jina.ai/embeddings/
+        return {"dimensions": dimensions}
+    elif provider == "cohere":
+        # Ref: https://docs.cohere.com/reference/embed
+        return {"output_dimension": dimensions}
     elif provider == "gemini":
+        # Ref: https://ai.google.dev/api/embeddings
         return {"output_dimensionality": dimensions}
-    elif provider == "nvidia_nim":
-        # Notice: Nvidia NIM doesn't support dimensions parameter.
+    elif provider in ("nvidia_nim", "hug"):
+        # Provider huggingface does not support dimensions parameter.
+        # Ref: https://huggingface.co/docs/inference-providers/tasks/feature-extraction
+        return {}
+    elif provider == "huggingface":
+        # Provider huggingface does not support dimensions parameter.
+        # Ref: https://huggingface.co/docs/inference-providers/tasks/feature-extraction
         return {}
     else:
-        # OpenAI, Jina AI follow the same convention.
-        return {"dimensions": dimensions}
+        # Default behavior: do not pass dimensions parameter.
+        return {}
 
 
 class EmbeddingFunction(BaseEmbeddingFunction):
@@ -72,20 +119,31 @@ class EmbeddingFunction(BaseEmbeddingFunction):
         timeout: Optional[int] = None,
         caching: bool = True,
         use_server: Optional[bool] = None,
-        server_embed_params: Optional[dict[str, Any]] = None,
+        additional_json_options: Optional[dict[str, Any]] = None,
         multimodal: bool = False,
         **kwargs,
     ):
         if use_server is None:
-            # If multimodal is True, use server-side embedding by default.
+            # If multimodal is False, use server-side embedding by default.
+            # If multimodal is True, use client-side embedding by default.
             use_server = not multimodal
 
-        if dimensions is None:
-            dimensions = get_model_dimensions(model_name)
+        model_name = normalize_model_name(model_name)
+        if "/" not in model_name:
+            raise ValueError(
+                f"Invalid model name: {model_name}, model name should be "
+                "in the format of <provider>/<model>."
+            )
+        provider = model_name.split("/")[0]
+        _additional_json_options = {}
 
-        provider = model_name.split("/")[0] if "/" in model_name else "openai"
-        dimensions_param = _convert_dimensions_param(provider, dimensions)
-        _server_embed_params = deep_merge(dimensions_param, server_embed_params or {})
+        if use_server:
+            dimensions = _validate_model_dimensions(model_name, dimensions)
+            provider_default_options = _get_provider_default_options(
+                provider, model_name, dimensions
+            )
+            _additional_json_options.update(provider_default_options)
+            _additional_json_options.update(additional_json_options or {})
 
         super().__init__(
             model_name=model_name,
@@ -96,23 +154,19 @@ class EmbeddingFunction(BaseEmbeddingFunction):
             timeout=timeout,
             caching=caching,
             use_server=use_server,
-            server_embed_params=_server_embed_params,
+            additional_json_options=_additional_json_options,
             multimodal=multimodal,
             **kwargs,
         )
-        if self.dimensions is None:
-            if use_server:
+
+        # For client-side embedding, try to infer dimensions with a test query.
+        if not self.use_server and self.dimensions is None:
+            embedding = self.get_query_embedding("test", "text")
+            if embedding is None:
                 raise ValueError(
-                    f"Missing dimensions for model {self.model_name}. Please specify dimensions."
+                    f"Cannot infer dimensions for model {self.model_name}. Please specify `dimensions` parameter."
                 )
-            else:
-                # For client-side embedding, try to infer dimensions with a test embedding.
-                embedding = self.get_query_embedding("test", "text")
-                if embedding is None:
-                    raise ValueError(
-                        f"Cannot infer dimensions for model {self.model_name}. Please specify dimensions."
-                    )
-                self.dimensions = len(embedding)
+            self.dimensions = len(embedding)
 
     def _process_input(
         self, input: EmbeddingInput, source_type: Optional[EmbeddingSourceType] = "text"

@@ -18,9 +18,14 @@ EMBEDDING_MODELS = [
         "expected_similarity": 0.7,
     },
     {
-        "id": "tidbcloud_free",
+        "id": "tidbcloud_free_titan",
         "model_name": "tidbcloud_free/amazon/titan-embed-text-v2",
         "expected_similarity": 0.9,
+    },
+    {
+        "id": "tidbcloud_free_cohere",
+        "model_name": "tidbcloud_free/cohere/embed-multilingual-v3",
+        "expected_similarity": 0.7,
     },
     {
         "id": "cohere",
@@ -103,8 +108,8 @@ def text_embed(request):
     """Create EmbeddingFunction instances for each model in EMBEDDING_MODELS."""
     model_config = request.param
     embed_fn = EmbeddingFunction(
-        model_name=model_config["model_name"],
-        server_embed_params={},
+        model_name=model_config.get("model_name"),
+        dimensions=model_config.get("dimensions"),
         timeout=30,
     )
     # Add model config for table naming

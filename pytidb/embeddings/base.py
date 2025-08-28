@@ -23,7 +23,7 @@ class BaseEmbeddingFunction(BaseModel, ABC):
             "Default is False."
         ),
     )
-    server_embed_params: Optional[dict[str, Any]] = Field(
+    additional_json_options: Optional[dict[str, Any]] = Field(
         None, description="The parameters for server-side embedding. "
     )
 

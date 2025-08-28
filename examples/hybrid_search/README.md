@@ -46,7 +46,7 @@ TIDB_HOST=localhost
 TIDB_PORT=4000
 TIDB_USERNAME=root
 TIDB_PASSWORD=
-TIDB_DATABASE=pytidb_hybrid_demo
+TIDB_DATABASE=hybrid_search_example
 OPENAI_API_KEY=<your-openai-api-key>
 EOF
 ```

@@ -1,8 +1,9 @@
 from typing import Optional, Any, TypedDict
-from sqlalchemy.sql.schema import SchemaItem, _CreateDropBind
+from sqlalchemy.sql.schema import SchemaItem
 from sqlalchemy.sql.base import DialectKWArgs
 from sqlalchemy.sql.ddl import _CreateBase
 from sqlalchemy import Connection, Engine, select, Table
+from pytidb.orm._typing import _CreateDropBind
 from .information_schema import tiflash_replica
 
 

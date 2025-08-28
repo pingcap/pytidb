@@ -84,8 +84,8 @@ def VectorField(
     if use_server:
         model_name = embed_fn.model_name
         embed_params = {
-            **(embed_fn.server_embed_params or {}),
-            **kwargs.get("server_embed_params", {}),
+            **(embed_fn.additional_json_options or {}),
+            **kwargs.get("additional_json_options", {}),
         }
 
         source_column = Column(source_field)

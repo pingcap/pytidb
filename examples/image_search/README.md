@@ -46,7 +46,7 @@ TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USERNAME={prefix}.root
 TIDB_PASSWORD={password}
-TIDB_DATABASE=test
+TIDB_DATABASE=image_search_example
 
 JINA_AI_API_KEY={your-jina-ai-api-key}
 EOF

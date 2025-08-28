@@ -7,9 +7,9 @@ import streamlit as st
 import pandas as pd
 
 from pytidb import Table, TiDBClient
-from pytidb.schema import TableModel, Field
+from pytidb.schema import TableModel, Field, Relationship
 from pytidb.embeddings import EmbeddingFunction
-from pytidb.datatype import JSON
+from pytidb.datatype import JSON, TEXT
 
 
 # Load environment variables
@@ -48,138 +48,128 @@ def connect_to_tidb() -> TiDBClient:
         st.stop()
 
 
-def setup_table(db: TiDBClient, text_embed: EmbeddingFunction) -> Table:
+def setup_graph_table(db: TiDBClient, text_embed: EmbeddingFunction) -> Table:
     try:
-        table = db.open_table("chunks")
-        if table is None:
+        entity_table = db.open_table("entities")
+        if entity_table is None:
 
-            class Chunk(TableModel):
-                __tablename__ = "chunks"
+            class Entity(TableModel):
+                __tablename__ = "entities"
                 __table_args__ = {"extend_existing": True}
 
                 id: int = Field(primary_key=True)
-                text: str = Field()
-                text_vec: list[float] = text_embed.VectorField(
-                    source_field="text",
+                name: str = Field()
+                description: str = Field()
+                embedding: list[float] = text_embed.VectorField(
+                    source_field="name",
                 )
-                meta: dict = Field(sa_type=JSON)
+                meta: dict = Field(sa_type=JSON, default_factory=dict)
 
-            table = db.create_table(schema=Chunk, if_exists="overwrite")
-        return table
+            entity_table = db.create_table(schema=Entity, if_exists="skip")
+
+        relation_table = db.open_table("relations")
+        if relation_table is None:
+
+            class Relation(TableModel):
+                __tablename__ = "relations"
+                __table_args__ = {"extend_existing": True}
+
+                id: int = Field(primary_key=True)
+                description: str = Field()
+                source_entity_id: int = Field(foreign_key="entities.id")
+                target_entity_id: int = Field(foreign_key="entities.id")
+                triple_str: str = Field(sa_type=TEXT)
+                embedding: list[float] = text_embed.VectorField(
+                    source_field="triple_str",
+                )
+                meta: dict = Field(sa_type=JSON, default_factory=dict)
+                source_entity: Entity = Relationship(
+                    sa_relationship_kwargs={
+                        "primaryjoin": "Relation.source_entity_id == Entity.id",
+                        "lazy": "joined",
+                    },
+                )
+                target_entity: Entity = Relationship(
+                    sa_relationship_kwargs={
+                        "primaryjoin": "Relation.target_entity_id == Entity.id",
+                        "lazy": "joined",
+                    },
+                )
+
+            relation_table = db.create_table(schema=Relation, if_exists="skip")
+        return entity_table, relation_table
     except Exception as e:
-        st.error(f"Failed to create table: {str(e)}")
+        st.error(f"Failed to create graph tables: {str(e)}")
         st.stop()
 
 
-def load_sample_data(table: Table, text_embed: EmbeddingFunction):
-    sample_chunks = [
+def load_sample_data(
+    entity_table: Table, relation_table: Table, text_embed: EmbeddingFunction
+):
+    Entity = entity_table.table_model
+    Relation = relation_table.table_model
+
+    sample_entities = [
         {
-            "text": "Llamas are camelids known for their soft fur and use as pack animals.",
+            "id": 1,
+            "name": "TiKV",
+            "description": "TiKV is a distributed key-value database.",
             "meta": {"language": "english"},
         },
         {
-            "text": "Python's GIL ensures only one thread executes bytecode at a time.",
+            "id": 2,
+            "name": "Python",
+            "description": "Python's GIL ensures only one thread executes bytecode at a time.",
             "meta": {"language": "english"},
         },
         {
-            "text": "TiDB is a distributed SQL database with HTAP capabilities.",
+            "id": 3,
+            "name": "TiDB",
+            "description": "TiDB is a distributed SQL database with HTAP capabilities.",
             "meta": {"language": "english"},
         },
+    ]
+
+    sample_relations = [
         {
-            "text": "TiDB是一个开源的NewSQL数据库，支持混合事务和分析处理（HTAP）工作负载。",
-            "meta": {"language": "chinese"},
+            "id": 1,
+            "description": "TiDB uses TiKV as its storage engine.",
+            "source_entity_id": 1,
+            "target_entity_id": 3,
+            "triple_str": "TiDB -> TiDB uses TiKV as its storage engine. -> TiKV",
         },
         {
-            "text": "TiDBはオープンソースの分散型HTAPデータベースで、トランザクション処理と分析処理の両方をサポートしています。",
-            "meta": {"language": "japanese"},
-        },
-        {
-            "text": "Einstein's theory of relativity revolutionized modern physics.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "The Great Wall of China stretches over 13,000 miles.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Ollama enables local deployment of large language models.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "HTTP/3 uses QUIC protocol for improved web performance.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Kubernetes orchestrates containerized applications across clusters.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Blockchain technology enables decentralized transaction systems.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "GPT-4 demonstrates remarkable few-shot learning capabilities.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Machine learning algorithms improve with more training data.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Quantum computing uses qubits instead of traditional bits.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Neural networks are inspired by the human brain's structure.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Docker containers package applications with their dependencies.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Cloud computing provides on-demand computing resources.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Artificial intelligence aims to mimic human cognitive functions.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Cybersecurity protects systems from digital attacks.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Big data analytics extracts insights from large datasets.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Internet of Things connects everyday objects to the internet.",
-            "meta": {"language": "english"},
-        },
-        {
-            "text": "Augmented reality overlays digital content on the real world.",
-            "meta": {"language": "english"},
+            "id": 2,
+            "description": "TiDB provides Python SDK for developers to use.",
+            "source_entity_id": 3,
+            "target_entity_id": 2,
+            "triple_str": "TiDB -> TiDB provides Python SDK for developers to use. -> Python",
         },
     ]
 
     try:
         with st.spinner(
-            f"Loading sample chunks (embedding with model: `{text_embed.model_name}`), "
+            f"Loading sample entities and relations (embedding with model: {text_embed.model_name}), "
             "it may take a while..."
         ):
-            Chunk = table.table_model
-            table.bulk_insert([Chunk(**chunk) for chunk in sample_chunks])
+            entity_table.bulk_insert([Entity(**entity) for entity in sample_entities])
+            relation_table.bulk_insert(
+                [Relation(**relation) for relation in sample_relations]
+            )
     except Exception as e:
         st.error(f"Failed to load sample data: {str(e)}")
         st.stop()
 
 
 def perform_search(
-    table, query_text: str, language: str, query_limit: int, distance_threshold: float
+    relation_table: Table,
+    query_text: str,
+    language: str,
+    query_limit: int,
+    distance_threshold: float,
 ) -> List[Dict[str, Any]]:
     try:
-        search_query = table.search(query_text).debug(True)
+        search_query = relation_table.search(query_text).debug(True)
         if language != "all":
             search_query = search_query.filter({"meta.language": language})
 
@@ -215,26 +205,27 @@ def setup():
     # Initialize database and table
     if st.session_state.db is None:
         with st.spinner("Connecting to TiDB..."):
-            st.session_state.db = connect_to_tidb()
+            db = connect_to_tidb()
+            st.session_state.db = db
 
     # Setup embedding function
     if st.session_state.text_embed is None:
         with st.spinner("Setting up embedding function..."):
-            st.session_state.text_embed = EmbeddingFunction(
+            text_embed = EmbeddingFunction(
                 model_name="tidbcloud_free/cohere/embed-multilingual-v3",
             )
+            st.session_state.text_embed = text_embed
 
     # Setup table
-    db = st.session_state.db
-    text_embed = st.session_state.text_embed
-    if st.session_state.table is None:
-        with st.spinner("Setting up vector table..."):
-            st.session_state.table = setup_table(db, text_embed)
+    if st.session_state.entity_table is None or st.session_state.relation_table is None:
+        with st.spinner("Setting up graph tables..."):
+            entity_table, relation_table = setup_graph_table(db, text_embed)
+            st.session_state.entity_table = entity_table
+            st.session_state.relation_table = relation_table
 
     # Load sample data if table is empty
-    table = st.session_state.table
-    if table.rows() == 0:
-        load_sample_data(table, text_embed)
+    if entity_table.rows() == 0:
+        load_sample_data(entity_table, relation_table, text_embed)
         st.rerun()
 
 
@@ -307,9 +298,9 @@ diverse data types, such as documents, images, audio, and video.
         return
 
     with st.spinner("Searching for similar chunks..."):
-        table = st.session_state.table
+        relation_table = st.session_state.relation_table
         results = perform_search(
-            table, query_text, filter_language, query_limit, distance_threshold
+            relation_table, query_text, filter_language, query_limit, distance_threshold
         )
         display_search_results(results, query_text)
 

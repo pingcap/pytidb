@@ -1,3 +1,5 @@
 pytidb==0.0.13.dev7
 pytidb[models]==0.0.13.dev7
-python-dotenv 
+FlagEmbedding
+torch
+python-dotenv

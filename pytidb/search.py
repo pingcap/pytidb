@@ -15,7 +15,7 @@ from typing import (
     overload,
 )
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, Row, Select as SQLASelect, asc, desc, and_
+from sqlalchemy import Column, Row, Select, asc, desc, and_
 from sqlalchemy.sql.base import Generative, _generative
 from sqlmodel import select
 from pytidb.orm.functions import fts_match_word
@@ -420,8 +420,8 @@ class Search(Generative):
         return distance_column
 
     def _apply_distance_condition(
-        self, stmt: SQLASelect, distance_column: Column
-    ) -> SQLASelect:
+        self, stmt: Select, distance_column: Column
+    ) -> Select:
         having = []
 
         # Null vector values.
@@ -456,7 +456,7 @@ class Search(Generative):
         columns = aliased_class._aliased_insp.local_table.c
         return columns[column.name]
 
-    def _build_vector_query(self) -> SQLASelect:
+    def _build_vector_query(self) -> Select:
         # Validate parameters.
         if self._query is None and self._query_vector is None:
             raise ValueError(
@@ -486,7 +486,7 @@ class Search(Generative):
 
     def _build_vector_query_with_pre_filter(
         self, table_vector_column: Column
-    ) -> SQLASelect:
+    ) -> Select:
         table_model = self._table.table_model
         hit = aliased(table_model, name=HIT_LABEL)
         vector_column = self._get_aliased_column(hit, table_vector_column)
@@ -509,7 +509,7 @@ class Search(Generative):
 
     def _build_vector_query_with_post_filter(
         self, table_vector_column: Column
-    ) -> SQLASelect:
+    ) -> Select:
         table_model = self._table.table_model
 
         # Inner query for ANN search
@@ -564,7 +564,7 @@ class Search(Generative):
         else:
             return self._text_column
 
-    def _build_fulltext_query(self) -> SQLASelect:
+    def _build_fulltext_query(self) -> Select:
         if self._query is None:
             raise ValueError(
                 "query string is required for fulltext search, please specify it through "
