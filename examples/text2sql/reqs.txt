@@ -1,5 +1,5 @@
 openai
-pytidb==0.0.13.dev7
-pytidb[models]==0.0.13.dev7
+pytidb==0.0.13.dev8
+pytidb[models]==0.0.13.dev8
 streamlit
 python-dotenv
