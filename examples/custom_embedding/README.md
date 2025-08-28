@@ -24,7 +24,7 @@ This example demonstrates how to create and use a custom embedding function with
 
 ```bash
 git clone https://github.com/pingcap/pytidb.git
-cd pytidb/examples/custom_embedding_function/
+cd pytidb/examples/custom_embedding/
 ```
 
 **Step 2**: Install the required packages
