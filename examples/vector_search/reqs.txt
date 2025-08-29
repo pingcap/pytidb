@@ -1,4 +1,4 @@
-pytidb==0.0.10.post1
-pytidb[models]==0.0.10.post1
-streamlit
+pytidb==0.0.13.dev8
+pytidb[models]==0.0.13.dev8
+streamlit==1.49.0
 python-dotenv

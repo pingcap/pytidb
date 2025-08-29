@@ -1,4 +1,5 @@
 pytidb==0.0.13.dev8
 pytidb[models]==0.0.13.dev8
-streamlit
+FlagEmbedding
+torch
 python-dotenv

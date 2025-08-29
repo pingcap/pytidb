@@ -14,7 +14,7 @@ tidb_client = TiDBClient.connect(
     port=int(os.getenv("TIDB_PORT", "4000")),
     username=os.getenv("TIDB_USERNAME", "root"),
     password=os.getenv("TIDB_PASSWORD", ""),
-    database=os.getenv("TIDB_DATABASE", "pytidb_auto_embedding"),
+    database=os.getenv("TIDB_DATABASE", "auto_embedding_example"),
     ensure_db=True,
 )
 
@@ -86,7 +86,7 @@ elif provider == "gemini":
 else:
     raise ValueError(f"Invalid embedding provider: {provider}")
 
-print(f"Embedding function (model id: {embed_func.model_name}) defined")
+print(f"Embedding function (model name: {embed_func.model_name}) defined")
 
 # Define table schema
 print("\n=== Define table schema ===")

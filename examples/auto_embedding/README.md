@@ -39,7 +39,7 @@ TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USERNAME={prefix}.root
 TIDB_PASSWORD={password}
-TIDB_DATABASE=test
+TIDB_DATABASE=auto_embedding_example
 
 # Using TiDB Cloud Free embedding model by default, which is no required to set up any API key
 EMBEDDING_PROVIDER=tidbcloud_free
@@ -56,7 +56,7 @@ python main.py
 
 ```plain
 === Define embedding function ===
-Embedding function (model id: tidbcloud_free/amazon/titan-embed-text-v2) defined
+Embedding function (model name: tidbcloud_free/amazon/titan-embed-text-v2) defined
 
 === Define table schema ===
 Table created

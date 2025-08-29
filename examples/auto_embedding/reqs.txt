@@ -1,3 +1,3 @@
-pytidb==0.0.12
-pytidb[models]==0.0.12
+pytidb==0.0.13.dev8
+pytidb[models]==0.0.13.dev8
 python-dotenv

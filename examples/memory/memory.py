@@ -20,7 +20,8 @@ def init_clients():
         port=int(os.getenv("TIDB_PORT", 4000)),
         username=os.getenv("TIDB_USERNAME"),
         password=os.getenv("TIDB_PASSWORD"),
-        database=os.getenv("TIDB_DATABASE"),
+        database=os.getenv("TIDB_DATABASE", "memory_example"),
+        ensure_db=True,
     )
     embedding_fn = EmbeddingFunction(
         model_name="text-embedding-3-small", api_key=os.getenv("OPENAI_API_KEY")

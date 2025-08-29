@@ -35,7 +35,7 @@ TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USERNAME={prefix}.root
 TIDB_PASSWORD={password}
-TIDB_DATABASE=pytidb_quickstart
+TIDB_DATABASE=quickstart_example
 OPENAI_API_KEY={your-openai-api-key}
 EOF
 ```

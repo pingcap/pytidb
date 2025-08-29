@@ -11,35 +11,17 @@ This example demonstrates how to build a semantic search application using TiDB 
 
 - **Python 3.10+**
 - **A TiDB Cloud Starter cluster**: Create a free cluster here: [tidbcloud.com ↗️](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme)
-- **Ollama**: You can install it from [Ollama ↗️](https://ollama.com/download)
 
 ## How to run
 
-**Step 1**: Start the embedding service with Ollama
-
-Pull the embedding model:
-
-```bash
-ollama pull mxbai-embed-large
-```
-
-Test the embedding service to make sure it is running:
-
-```bash
-curl http://localhost:11434/api/embed -d '{
-  "model": "mxbai-embed-large",
-  "input": "Llamas are members of the camelid family"
-}'
-```
-
-**Step 2**: Clone the repository to local
+**Step 1**: Clone the repository to local
 
 ```bash
 git clone https://github.com/pingcap/pytidb.git
 cd pytidb/examples/vector_search/
 ```
 
-**Step 3**: Install the required packages and set up the environment
+**Step 2**: Install the required packages and set up the environment
 
 ```bash
 python -m venv .venv
@@ -47,7 +29,7 @@ source .venv/bin/activate
 pip install -r reqs.txt
 ```
 
-**Step 4**: Set up environment to connect to TiDB
+**Step 3**: Set up environment to connect to TiDB
 
 Go to [TiDB Cloud console](https://tidbcloud.com/clusters) and get the connection parameters, then set up the environment variable like this:
 
@@ -57,11 +39,11 @@ TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USERNAME={prefix}.root
 TIDB_PASSWORD={password}
-TIDB_DATABASE=pytidb_vector_search
+TIDB_DATABASE=vector_search_example
 EOF
 ```
 
-**Step 5**: Run the Streamlit app
+**Step 4**: Run the Streamlit app
 
 ```bash
 streamlit run app.py

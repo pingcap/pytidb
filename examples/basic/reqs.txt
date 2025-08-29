@@ -1,2 +1,2 @@
-pytidb==0.0.10.post1
+pytidb==0.0.13.dev8
 python-dotenv

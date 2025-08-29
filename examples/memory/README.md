@@ -47,7 +47,7 @@ TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USERNAME={prefix}.root
 TIDB_PASSWORD={password}
-TIDB_DATABASE=test
+TIDB_DATABASE=memory_example
 
 OPENAI_API_KEY={your-openai-api-key}
 EOF

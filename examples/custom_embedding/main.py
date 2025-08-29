@@ -15,7 +15,7 @@ db = TiDBClient.connect(
     port=int(os.getenv("TIDB_PORT", "4000")),
     username=os.getenv("TIDB_USERNAME", "root"),
     password=os.getenv("TIDB_PASSWORD", ""),
-    database=os.getenv("TIDB_DATABASE", "pytidb_custom_embedding"),
+    database=os.getenv("TIDB_DATABASE", "custom_embedding_example"),
     ensure_db=True,
 )
 print("Connected to TiDB successfully")

@@ -16,7 +16,7 @@ import data_loader
 
 
 DATASET_NAME = "oxford_pets"
-DATABASE_NAME = "pet_image_search"
+DATABASE_NAME = "image_search_example"
 
 # Load environment variables
 dotenv.load_dotenv()

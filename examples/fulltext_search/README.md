@@ -39,7 +39,7 @@ TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USERNAME={prefix}.root
 TIDB_PASSWORD={password}
-TIDB_DATABASE=pytidb_fulltext_demo
+TIDB_DATABASE=fulltext_search_example
 EOF
 ```
 
