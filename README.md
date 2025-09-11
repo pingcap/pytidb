@@ -216,7 +216,8 @@ class User(TableModel):
     id: int = Field(primary_key=True)
     name: str = Field(max_length=20)
 
-with Session(engine) as session:
+# Use the db_engine from TiDBClient when creating a Session
+with Session(tidb_client.db_engine) as session:
     query = (
         select(Chunk).join(User, Chunk.user_id == User.id).where(User.name == "Alice")
     )
