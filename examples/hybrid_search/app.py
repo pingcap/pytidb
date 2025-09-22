@@ -22,6 +22,11 @@ db = TiDBClient.connect(
     ensure_db=True,
 )
 
+db.configure_embedding_provider(
+    provider="openai",
+    api_key=os.getenv("OPENAI_API_KEY"),
+)
+
 
 # Create embedding function.
 embed_fn = EmbeddingFunction(
