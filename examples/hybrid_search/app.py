@@ -151,7 +151,7 @@ with st.form("search_form"):
             label_visibility="collapsed",
         )
         st.markdown(
-            'Try searching for: <b>"HTAP database"</b>',
+            'Try searching for: <b>"MySQL"</b>',
             unsafe_allow_html=True,
         )
     with col2:
