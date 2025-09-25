@@ -300,7 +300,7 @@ diverse data types, such as documents, images, audio, and video.
     if not query_text.strip():
         st.markdown(
             '<p style="text-align: center;">Try searching for: '
-            '<b>"HTAP database"</b>, <b>"machine learning"</b>'
+            '<b>"distributed mysql"</b>, <b>"machine learning"</b>'
             "</p>",
             unsafe_allow_html=True,
         )
