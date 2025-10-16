@@ -1,4 +1,4 @@
-# Vector Search with Real-time Data
+# Real-time Product Recommendation
 
 This example demonstrates TiDB's vector search capabilities with real-time data updates, simulating an e-commerce recommendation system. It showcases how TiDB automatically embeds product descriptions and uses vector similarity search to provide personalized recommendations based on user preferences.
 
@@ -13,16 +13,24 @@ This example demonstrates TiDB's vector search capabilities with real-time data 
 
 ## UI Layout
 
-The application features a two-column layout:
+The application features two separate pages accessible via a page selector:
 
-### Left Column: Shopping App (User View)
+### Page 1: User View (Shopping App)
 
+This page contains a two-column layout:
+
+#### Left Column: Settings
+- User Profile input for personalized recommendations
+- Distance Threshold slider for controlling match precision
+- Information panel explaining how the system works
+
+#### Right Column: Shopping App
 - Mobile phone mockup showing personalized recommendations
 - Displays up to 5 products that match the user's profile
 - Results filtered by similarity threshold
 - Clean, modern design with product cards showing name, description, price, and category
 
-### Right Column: Admin Panel
+### Page 2: Product Management
 
 - **Top Section**: Product list with edit and delete functionality
   - Edit products inline with a form
@@ -65,7 +73,7 @@ With the default threshold (0.5), only the 3 sports items appear in recommendati
 
 ```bash
 git clone https://github.com/pingcap/pytidb.git
-cd pytidb/examples/vector-search-with-realtime-data/
+cd pytidb/examples/realtime_product_recommendation/
 ```
 
 ### Step 2: Install dependencies
@@ -92,7 +100,7 @@ TIDB_HOST=gateway01.ap-southeast-1.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USERNAME=your-username.root
 TIDB_PASSWORD=your-password
-TIDB_DATABASE=test
+TIDB_DATABASE=realtime_product_recommendation
 
 # OpenAI API Key (for embeddings)
 OPENAI_API_KEY=your-openai-api-key
@@ -115,13 +123,14 @@ Open your browser and visit `http://localhost:8501`
 
 ### Viewing Recommendations
 
-1. The left side shows a mobile app interface with personalized recommendations
-2. Recommendations are based on the USER_PROFILE from your `.env` file
-3. Only products within the similarity threshold are displayed
+1. Select "User View (Shopping App)" from the page selector
+2. The right side shows a mobile app interface with personalized recommendations
+3. Recommendations are based on the USER_PROFILE from your `.env` file
+4. Only products within the similarity threshold are displayed
 
 ### Adjusting Settings
 
-Click the "⚙️ Settings" expander at the top to:
+In the User View page, use the left column settings panel to:
 
 - **Change User Profile**: Modify preferences to see different recommendations
   - Try: "a user likes cooking", "someone interested in fitness", "outdoor enthusiast"
@@ -131,16 +140,18 @@ Click the "⚙️ Settings" expander at the top to:
 
 ### Managing Products
 
+Switch to the "Product Management" page to manage products:
+
 #### Adding Products
 
-1. Scroll to the bottom of the right panel
+1. Scroll to the bottom of the page
 2. Fill in the "Add New Product" form:
    - Product Name
    - Description (this will be embedded automatically)
    - Category
    - Price
 3. Click "Add Product"
-4. Watch recommendations update automatically!
+4. Switch back to User View to see recommendations update automatically!
 
 #### Editing Products
 
@@ -155,7 +166,7 @@ Click the "⚙️ Settings" expander at the top to:
 1. Find the product in the list
 2. Click the 🗑️ (delete) button
 3. Product is removed immediately
-4. Recommendations update automatically
+4. Switch to User View to see recommendations update automatically
 
 ## Example Experiments
 
