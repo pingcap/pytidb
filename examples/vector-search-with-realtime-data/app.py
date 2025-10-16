@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Real-time Product Recommendation Demo
+Vector Search with Real-time Data Demo
 
 This example demonstrates TiDB's vector search capabilities with real-time data updates,
 simulating an e-commerce recommendation system based on user preferences.
@@ -23,7 +23,7 @@ dotenv.load_dotenv()
 
 # Page configuration
 st.set_page_config(
-    page_title="Real-time Product Recommendation",
+    page_title="Vector Search with Real-time Data",
     page_icon="🛍️",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -50,7 +50,7 @@ def connect_to_tidb() -> TiDBClient:
             port=int(os.getenv("TIDB_PORT", "4000")),
             username=os.getenv("TIDB_USERNAME", "root"),
             password=os.getenv("TIDB_PASSWORD", ""),
-            database=os.getenv("TIDB_DATABASE", "realtime_product_recommendation"),
+            database=os.getenv("TIDB_DATABASE", "vector_search_realtime"),
             ensure_db=True,
         )
         return db
@@ -563,14 +563,15 @@ def setup():
             load_initial_data(table)
 
 
-def user_view_page():
-    """User View (Shopping App) page"""
+def main():
+    """Main application"""
+
     # Setup
     setup()
 
     # Title
     st.markdown(
-        '<h2 style="text-align: center;">🛍️ Real-time Product Recommendation</h2>',
+        '<h2 style="text-align: center;">🛍️ Vector Search with Real-time Data</h2>',
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -578,28 +579,27 @@ def user_view_page():
         unsafe_allow_html=True,
     )
 
-    # Main layout: Left (Settings) and Right (Shopping App)
-    left_col, right_col = st.columns([1, 1.5])
+    # Settings bar
+    with st.expander("⚙️ Settings", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            user_profile = st.text_input(
+                "User Profile",
+                value=st.session_state.user_profile,
+                help="Describe the user's preferences for personalized recommendations",
+            )
+            if user_profile != st.session_state.user_profile:
+                st.session_state.user_profile = user_profile
 
-    with left_col:
-        st.markdown("### ⚙️ Settings")
-        
-        user_profile = st.text_input(
-            "User Profile",
-            value=st.session_state.user_profile,
-            help="Describe the user's preferences for personalized recommendations",
-        )
-        if user_profile != st.session_state.user_profile:
-            st.session_state.user_profile = user_profile
-
-        distance_threshold = st.slider(
-            "Distance Threshold",
-            min_value=0.0,
-            max_value=2.0,
-            value=0.85,
-            step=0.01,
-            help="Maximum distance to consider a match. 0 = no filter. Lower values = stricter matching.",
-        )
+        with col2:
+            distance_threshold = st.slider(
+                "Distance Threshold",
+                min_value=0.0,
+                max_value=2.0,
+                value=0.85,
+                step=0.01,
+                help="Maximum distance to consider a match. 0 = no filter. Lower values = stricter matching.",
+            )
 
         st.info(
             "💡 **How it works:** The system uses vector embeddings to match products with your profile. "
@@ -607,8 +607,13 @@ def user_view_page():
             f"Current: {'No filtering' if distance_threshold == 0 else f'Only items within {distance_threshold} distance'}"
         )
 
-    with right_col:
-        st.markdown("### 📱 Shopping App")
+    st.divider()
+
+    # Main layout: Left (Mobile UI) and Right (Admin Panel)
+    left_col, right_col = st.columns([1, 1.5])
+
+    with left_col:
+        st.markdown("### 📱 User View (Shopping App)")
         # Get recommendations
         recommendations = get_recommendations(
             st.session_state.table,
@@ -618,40 +623,8 @@ def user_view_page():
         )
         render_mobile_ui(recommendations, st.session_state.user_profile)
 
-
-def product_management_page():
-    """Product Management page"""
-    # Setup
-    setup()
-
-    st.markdown(
-        '<h2 style="text-align: center;">📊 Product Management</h2>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<p style="text-align: center; color: #666;">Manage products and see real-time updates in the shopping app</p>',
-        unsafe_allow_html=True,
-    )
-
-    render_admin_panel(st.session_state.table)
-
-
-def main():
-    """Main application with page navigation"""
-    # Setup
-    setup()
-
-    # Page selection
-    page = st.selectbox(
-        "Select Page",
-        ["User View (Shopping App)", "Product Management"],
-        key="page_selector"
-    )
-
-    if page == "User View (Shopping App)":
-        user_view_page()
-    else:
-        product_management_page()
+    with right_col:
+        render_admin_panel(st.session_state.table)
 
 
 if __name__ == "__main__":
