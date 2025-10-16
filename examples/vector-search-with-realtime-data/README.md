@@ -2,6 +2,11 @@
 
 This example demonstrates TiDB's vector search capabilities with real-time data updates, simulating an e-commerce recommendation system. It showcases how TiDB automatically embeds product descriptions and uses vector similarity search to provide personalized recommendations based on user preferences.
 
+<p align="center">
+  <img width="700" alt="Vector Search with Real-time Data" src="https://github.com/user-attachments/assets/c946ec9c-73ff-4694-b8f8-a622329ff367" />
+  <p align="center"><i>Vector Search with Real-time Data</i></p>
+</p>
+
 ## Features
 
 - **🔍 Vector Search**: Semantic similarity search using auto-embedding

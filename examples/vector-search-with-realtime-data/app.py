@@ -26,7 +26,7 @@ st.set_page_config(
     page_title="Vector Search with Real-time Data",
     page_icon="🛍️",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # Initialize session state
@@ -248,10 +248,10 @@ def update_product(
         return False
 
 
-def delete_product(table: Table, db: TiDBClient, product_id: int):
+def delete_product(table: Table, product_id: int):
     """Delete a product from the database"""
     try:
-        # Use tidb_client.execute() with transaction support
+        # Use table.delete() to delete product
         table.delete(filters={"id": product_id})
         return True
     except Exception as e:
@@ -504,9 +504,7 @@ def render_admin_panel(table: Table):
                             help="Delete",
                             use_container_width=True,
                         ):
-                            if delete_product(
-                                table, st.session_state.db, product["id"]
-                            ):
+                            if delete_product(table, product["id"]):
                                 st.success("Product deleted!")
                                 st.rerun()
                 st.divider()
@@ -569,6 +567,46 @@ def main():
     # Setup
     setup()
 
+    # Sidebar with logo and settings
+    with st.sidebar:
+        st.logo(
+            "../assets/logo-full.svg",
+            size="large",
+            link="https://pingcap.github.io/ai/",
+        )
+
+        st.markdown(
+            """#### Overview
+
+**Vector search with real-time data** demonstrates TiDB's auto-embedding and semantic search capabilities.
+Products are matched based on similarity to user preferences, with instant updates when data changes.
+        """
+        )
+
+        st.markdown("#### Settings")
+
+        user_profile = st.text_input(
+            "User Profile",
+            value=st.session_state.user_profile,
+            help="Describe the user's preferences for personalized recommendations",
+        )
+        if user_profile != st.session_state.user_profile:
+            st.session_state.user_profile = user_profile
+
+        distance_threshold = st.slider(
+            "Distance Threshold",
+            min_value=0.0,
+            max_value=2.0,
+            value=0.85,
+            step=0.01,
+            help="Maximum distance to consider a match. 0 = no filter. Lower values = stricter matching.",
+        )
+
+        st.info(
+            "💡 **Lower distance = better match**\n\n"
+            f"Current: {'No filtering' if distance_threshold == 0 else f'Max distance: {distance_threshold}'}"
+        )
+
     # Title
     st.markdown(
         '<h2 style="text-align: center;">🛍️ Vector Search with Real-time Data</h2>',
@@ -579,38 +617,10 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # Settings bar
-    with st.expander("⚙️ Settings", expanded=False):
-        col1, col2 = st.columns(2)
-        with col1:
-            user_profile = st.text_input(
-                "User Profile",
-                value=st.session_state.user_profile,
-                help="Describe the user's preferences for personalized recommendations",
-            )
-            if user_profile != st.session_state.user_profile:
-                st.session_state.user_profile = user_profile
-
-        with col2:
-            distance_threshold = st.slider(
-                "Distance Threshold",
-                min_value=0.0,
-                max_value=2.0,
-                value=0.85,
-                step=0.01,
-                help="Maximum distance to consider a match. 0 = no filter. Lower values = stricter matching.",
-            )
-
-        st.info(
-            "💡 **How it works:** The system uses vector embeddings to match products with your profile. "
-            "Lower distance = better match. Set to 0 to see all results without filtering. "
-            f"Current: {'No filtering' if distance_threshold == 0 else f'Only items within {distance_threshold} distance'}"
-        )
-
     st.divider()
 
     # Main layout: Left (Mobile UI) and Right (Admin Panel)
-    left_col, right_col = st.columns([1, 1.5])
+    left_col, right_col = st.columns([1, 1], gap="large")
 
     with left_col:
         st.markdown("### 📱 User View (Shopping App)")
