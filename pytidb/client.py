@@ -56,6 +56,7 @@ class TiDBClient:
         password: Optional[str] = "",
         database: Optional[str] = "test",
         enable_ssl: Optional[bool] = None,
+        ssl_ca_path: Optional[str] = None,
         ensure_db: Optional[bool] = False,
         debug: Optional[bool] = None,
         **kwargs,
@@ -68,6 +69,7 @@ class TiDBClient:
                 password=password,
                 database=database,
                 enable_ssl=enable_ssl,
+                ssl_ca_path=ssl_ca_path,
             )
             # TODO: When URL is passed in directly, it should be validated.
 
@@ -84,6 +86,10 @@ class TiDBClient:
             kwargs.setdefault("pool_recycle", 300)
             kwargs.setdefault("pool_pre_ping", True)
             kwargs.setdefault("pool_timeout", 10)
+
+            # Add SSL CA path for PyMySQL if provided
+            if ssl_ca_path:
+                kwargs.setdefault("ssl_ca", ssl_ca_path)
 
         db_engine = create_engine(url, echo=debug, **kwargs)
         reconnect_params = {
