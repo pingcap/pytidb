@@ -38,6 +38,7 @@ class TiDBConnector:
         username: Optional[str] = None,
         password: Optional[str] = None,
         database: Optional[str] = None,
+        ssl_ca_path: Optional[str] = None,
     ):
         self.tidb_client = TiDBClient.connect(
             url=database_url,
@@ -46,6 +47,7 @@ class TiDBConnector:
             username=username,
             password=password,
             database=database,
+            ssl_ca_path=ssl_ca_path,
         )
         if database_url:
             uri = MySQLDsn(database_url)
@@ -60,6 +62,9 @@ class TiDBConnector:
             self.username = username
             self.password = password
             self.database = database
+
+        # Store SSL CA path for reconnections
+        self.ssl_ca_path = ssl_ca_path
 
     def show_databases(self) -> list[dict]:
         return self.tidb_client.query("SHOW DATABASES").to_list()
@@ -76,6 +81,7 @@ class TiDBConnector:
             username=username or self.username,
             password=password or self.password,
             database=db_name or self.database,
+            ssl_ca_path=getattr(self, 'ssl_ca_path', None),
         )
 
     def show_tables(self) -> list[str]:
@@ -153,6 +159,15 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
     tidb = None
     try:
         log.info("Starting TiDB Connector...")
+
+        # Validate CA path from environment
+        ca_path = os.getenv("TIDB_CA_PATH", None)
+        if ca_path and ca_path.strip():
+            # Basic validation for environment variable
+            if ".." in ca_path or ca_path.startswith("/dev/") or ca_path.startswith("/proc/"):
+                log.error(f"Invalid TIDB_CA_PATH: potential security risk: {ca_path}")
+                raise ValueError("Invalid TIDB_CA_PATH: potential security risk")
+
         tidb = TiDBConnector(
             database_url=os.getenv("TIDB_DATABASE_URL", None),
             host=os.getenv("TIDB_HOST", "127.0.0.1"),
@@ -160,6 +175,7 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
             username=os.getenv("TIDB_USERNAME", "root"),
             password=os.getenv("TIDB_PASSWORD", ""),
             database=os.getenv("TIDB_DATABASE", "test"),
+            ssl_ca_path=ca_path,
         )
         log.info(f"Connected to TiDB: {tidb.host}:{tidb.port}/{tidb.database}")
         yield AppContext(tidb=tidb)

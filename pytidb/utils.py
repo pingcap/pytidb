@@ -1,3 +1,4 @@
+import os
 import re
 
 from urllib.parse import quote
@@ -48,6 +49,7 @@ def build_tidb_connection_url(
     password: str = "",
     database: str = "test",
     enable_ssl: Optional[bool] = None,
+    ssl_ca_path: Optional[str] = None,
 ) -> str:
     """
     Build a TiDB Connection URL string for database connection.
@@ -62,6 +64,8 @@ def build_tidb_connection_url(
         enable_ssl (Optional[bool], optional): Whether to enable SSL for the connection.
             If None (default), SSL is automatically enabled for TiDB Serverless hosts
             and disabled for other hosts.
+        ssl_ca_path (Optional[str], optional): Path to the CA certificate file for SSL connections.
+            Only used when SSL is enabled.
 
     Returns:
         str: A Connection URL string that can be used to connect to a TiDB database.
@@ -73,6 +77,20 @@ def build_tidb_connection_url(
         else:
             enable_ssl = None
 
+    # Build SSL query parameters
+    ssl_query = None
+    if enable_ssl:
+        ssl_params = ["ssl_verify_cert=true", "ssl_verify_identity=true"]
+        if ssl_ca_path:
+            # Basic security validation for CA path
+            if not isinstance(ssl_ca_path, str) or not ssl_ca_path.strip():
+                raise ValueError("ssl_ca_path must be a non-empty string")
+            # Prevent obvious path traversal attacks
+            if ".." in ssl_ca_path or ssl_ca_path.startswith("/dev/") or ssl_ca_path.startswith("/proc/"):
+                raise ValueError("Invalid ssl_ca_path: potential security risk")
+            ssl_params.append(f"ssl_ca={quote(ssl_ca_path, safe='')}")
+        ssl_query = "&".join(ssl_params)
+
     return str(
         TiDBConnectionURL.build(
             scheme=schema,
@@ -81,11 +99,9 @@ def build_tidb_connection_url(
             username=username,
             # TODO: remove quote after following issue is fixed:
             # https://github.com/pydantic/pydantic/issues/8061
-            password=quote(password) if password else None,
+            password=quote(password, safe='') if password else None,
             path=database,
-            query=(
-                "ssl_verify_cert=true&ssl_verify_identity=true" if enable_ssl else None
-            ),
+            query=ssl_query,
         )
     )
 
