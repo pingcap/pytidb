@@ -1,5 +1,7 @@
 import pytest
-from pytidb.utils import build_tidb_connection_url
+from sqlalchemy import make_url
+
+from pytidb.utils import build_tidb_connection_url, ensure_ssl_ca_in_url
 
 
 def test_build_tidb_conn_url():
@@ -33,3 +35,24 @@ def test_build_tidb_conn_url_invalid():
     # Missing host
     with pytest.raises(ValueError):
         build_tidb_connection_url(host="")
+
+
+def test_build_tidb_conn_url_ca_path_security():
+    # Test security validation for CA path
+    with pytest.raises(ValueError, match="ssl_ca_path must be a non-empty string"):
+        build_tidb_connection_url(
+            host="gateway01.us-west-2.prod.aws.tidbcloud.com",
+            ssl_ca_path=""
+        )
+
+    with pytest.raises(ValueError, match="Invalid ssl_ca_path: potential security risk"):
+        build_tidb_connection_url(
+            host="gateway01.us-west-2.prod.aws.tidbcloud.com",
+            ssl_ca_path="../../../etc/passwd"
+        )
+
+    with pytest.raises(ValueError, match="Invalid ssl_ca_path: potential security risk"):
+        build_tidb_connection_url(
+            host="gateway01.us-west-2.prod.aws.tidbcloud.com",
+            ssl_ca_path="/dev/null"
+        )

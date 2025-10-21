@@ -76,6 +76,7 @@ class TiDBConnector:
             username=username or self.username,
             password=password or self.password,
             database=db_name or self.database,
+            ssl_ca_path=self.ssl_ca_path,
         )
 
     def show_tables(self) -> list[str]:
@@ -153,6 +154,13 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
     tidb = None
     try:
         log.info("Starting TiDB Connector...")
+
+        # Get CA path from environment
+        ca_path = os.getenv("TIDB_CA_PATH", None)
+        if ca_path is not None and not ca_path.strip():
+            # Treat empty/whitespace-only strings as None to avoid ValueError
+            ca_path = None
+
         tidb = TiDBConnector(
             database_url=os.getenv("TIDB_DATABASE_URL", None),
             host=os.getenv("TIDB_HOST", "127.0.0.1"),
