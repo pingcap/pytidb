@@ -81,7 +81,7 @@ class TiDBConnector:
             username=username or self.username,
             password=password or self.password,
             database=db_name or self.database,
-            ssl_ca_path=getattr(self, 'ssl_ca_path', None),
+            ssl_ca_path=self.ssl_ca_path,
         )
 
     def show_tables(self) -> list[str]:
@@ -160,13 +160,11 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
     try:
         log.info("Starting TiDB Connector...")
 
-        # Validate CA path from environment
+        # Get CA path from environment
         ca_path = os.getenv("TIDB_CA_PATH", None)
-        if ca_path and ca_path.strip():
-            # Basic validation for environment variable
-            if ".." in ca_path or ca_path.startswith("/dev/") or ca_path.startswith("/proc/"):
-                log.error(f"Invalid TIDB_CA_PATH: potential security risk: {ca_path}")
-                raise ValueError("Invalid TIDB_CA_PATH: potential security risk")
+        if ca_path is not None and not ca_path.strip():
+            # Treat empty/whitespace-only strings as None to avoid ValueError
+            ca_path = None
 
         tidb = TiDBConnector(
             database_url=os.getenv("TIDB_DATABASE_URL", None),

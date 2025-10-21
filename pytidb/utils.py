@@ -1,14 +1,13 @@
-import os
 import re
 
-from urllib.parse import quote
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 from typing import Dict, Optional, Any, List, TypeVar, Tuple
 
 from pydantic import AnyUrl, UrlConstraints
 from sqlalchemy import Column, Index, String, create_engine, make_url
-from sqlmodel import AutoString
-from sqlalchemy.engine import Row
+from sqlalchemy.engine import Row, URL as SQLAlchemyURL
 from sqlalchemy import Table
+from sqlmodel import AutoString
 from typing import Union
 from pytidb.orm.vector import VECTOR
 
@@ -81,13 +80,10 @@ def build_tidb_connection_url(
     ssl_query = None
     if enable_ssl:
         ssl_params = ["ssl_verify_cert=true", "ssl_verify_identity=true"]
-        if ssl_ca_path:
+        if ssl_ca_path is not None:
             # Basic security validation for CA path
             if not isinstance(ssl_ca_path, str) or not ssl_ca_path.strip():
                 raise ValueError("ssl_ca_path must be a non-empty string")
-            # Prevent obvious path traversal attacks
-            if ".." in ssl_ca_path or ssl_ca_path.startswith("/dev/") or ssl_ca_path.startswith("/proc/"):
-                raise ValueError("Invalid ssl_ca_path: potential security risk")
             ssl_params.append(f"ssl_ca={quote(ssl_ca_path, safe='')}")
         ssl_query = "&".join(ssl_params)
 
@@ -102,6 +98,77 @@ def build_tidb_connection_url(
             password=quote(password, safe='') if password else None,
             path=database,
             query=ssl_query,
+        )
+    )
+
+
+def ensure_ssl_ca_in_url(
+    url: Union[str, SQLAlchemyURL], ssl_ca_path: Optional[str]
+) -> str:
+    """Ensure the provided URL encodes SSL CA configuration.
+
+    Args:
+        url: Database connection URL (string or SQLAlchemy URL object)
+        ssl_ca_path: Path to SSL CA certificate file
+
+    Returns:
+        String URL with SSL CA parameters encoded
+
+    Raises:
+        ValueError: If ssl_ca_path is an empty string
+    """
+    # Convert SQLAlchemy URL object to string if needed
+    if isinstance(url, SQLAlchemyURL):
+        url = url.render_as_string(hide_password=False)
+    elif not isinstance(url, str):
+        url = str(url)
+
+    # If no CA path specified, return URL as-is
+    if ssl_ca_path is None:
+        return url
+
+    # Validate CA path is a non-empty string
+    if not isinstance(ssl_ca_path, str) or not ssl_ca_path.strip():
+        raise ValueError("ssl_ca_path must be a non-empty string")
+
+    split_url = urlsplit(url)
+    query_items = parse_qsl(split_url.query, keep_blank_values=True)
+
+    new_items: List[Tuple[str, str]] = []
+    ssl_ca_added = False
+    has_verify_cert = False
+    has_verify_identity = False
+
+    for key, value in query_items:
+        if key == "ssl_ca":
+            if not ssl_ca_added:
+                new_items.append(("ssl_ca", ssl_ca_path))
+                ssl_ca_added = True
+            # Drop duplicate ssl_ca entries
+            continue
+
+        if key == "ssl_verify_cert":
+            has_verify_cert = True
+        elif key == "ssl_verify_identity":
+            has_verify_identity = True
+
+        new_items.append((key, value))
+
+    if not ssl_ca_added:
+        new_items.append(("ssl_ca", ssl_ca_path))
+    if not has_verify_cert:
+        new_items.append(("ssl_verify_cert", "true"))
+    if not has_verify_identity:
+        new_items.append(("ssl_verify_identity", "true"))
+
+    new_query = urlencode(new_items, doseq=True)
+    return urlunsplit(
+        (
+            split_url.scheme,
+            split_url.netloc,
+            split_url.path,
+            new_query,
+            split_url.fragment,
         )
     )
 
