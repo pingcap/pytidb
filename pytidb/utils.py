@@ -73,6 +73,9 @@ def build_tidb_connection_url(
     if enable_ssl is None:
         if host and TIDB_SERVERLESS_HOST_PATTERN.match(host):
             enable_ssl = True
+        elif ssl_ca_path:
+            # If user provides a CA path, they obviously want SSL
+            enable_ssl = True
         else:
             enable_ssl = None
 
