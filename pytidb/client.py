@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import List, Literal, Optional, Type, Generator
+from typing import List, Literal, Optional, Type, Generator, Union
 
 from pydantic import PrivateAttr
 import sqlalchemy
@@ -10,7 +10,7 @@ from sqlalchemy import (
     text,
     Result,
 )
-from sqlalchemy.engine import Engine, create_engine
+from sqlalchemy.engine import Engine, create_engine, URL as SQLAlchemyURL
 from sqlalchemy.orm import Session, DeclarativeMeta
 
 from pytidb.orm.variables import EMBED_PROVIDER_API_KEY_VARS
@@ -22,6 +22,7 @@ from pytidb.utils import (
     TIDB_SERVERLESS_HOST_PATTERN,
     build_tidb_connection_url,
     create_engine_without_db,
+    ensure_ssl_ca_in_url,
 )
 from pytidb.logger import logger
 from pytidb.result import SQLExecuteResult, SQLQueryResult
@@ -48,7 +49,7 @@ class TiDBClient:
     @classmethod
     def connect(
         cls,
-        url: Optional[str] = None,
+        url: Optional[Union[str, SQLAlchemyURL]] = None,
         *,
         host: Optional[str] = "localhost",
         port: Optional[int] = 4000,
@@ -72,6 +73,8 @@ class TiDBClient:
                 ssl_ca_path=ssl_ca_path,
             )
             # TODO: When URL is passed in directly, it should be validated.
+        else:
+            url = ensure_ssl_ca_in_url(url, ssl_ca_path)
 
         if ensure_db:
             try:
@@ -87,14 +90,13 @@ class TiDBClient:
             kwargs.setdefault("pool_pre_ping", True)
             kwargs.setdefault("pool_timeout", 10)
 
-            # Add SSL CA path for PyMySQL if provided
-            if ssl_ca_path:
-                kwargs.setdefault("ssl_ca", ssl_ca_path)
-
         db_engine = create_engine(url, echo=debug, **kwargs)
         reconnect_params = {
-            # host, port, etc is not needed because they will be built into the URL.
+            # host, port, username, password, database are not needed because
+            # they will be built into the URL.
             # url is also not needed because it is already in `db_engine`.
+            # ssl_ca_path is not needed because SSL query parameters are
+            # preserved in the URL by SQLAlchemy's URL.set() method.
             "ensure_db": ensure_db,
             "debug": debug,
             **kwargs,
