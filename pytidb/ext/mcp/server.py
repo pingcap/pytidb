@@ -56,15 +56,17 @@ class TiDBConnector:
             self.username = uri.username
             self.password = uri.password
             self.database = uri.path.lstrip("/")
+
+            # Extract ssl_ca from URL query parameters if not explicitly provided
+            query_params = dict(uri.query_params())
+            self.ssl_ca_path = ssl_ca_path or query_params.get('ssl_ca')
         else:
             self.host = host
             self.port = port
             self.username = username
             self.password = password
             self.database = database
-
-        # Store SSL CA path for reconnections
-        self.ssl_ca_path = ssl_ca_path
+            self.ssl_ca_path = ssl_ca_path
 
     def show_databases(self) -> list[dict]:
         return self.tidb_client.query("SHOW DATABASES").to_list()
