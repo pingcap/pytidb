@@ -86,9 +86,11 @@ class TiDBClient:
             kwargs.setdefault("pool_pre_ping", True)
             kwargs.setdefault("pool_timeout", 10)
 
-        # Pass ssl_ca parameter to SQLAlchemy/PyMySQL if provided
+        # Pass ssl_ca parameter to PyMySQL via connect_args if provided
         if ssl_ca is not None:
-            kwargs["ssl_ca"] = ssl_ca
+            connect_args = kwargs.get("connect_args", {})
+            connect_args["ssl_ca"] = ssl_ca
+            kwargs["connect_args"] = connect_args
 
         db_engine = create_engine(url, echo=debug, **kwargs)
         reconnect_params = {

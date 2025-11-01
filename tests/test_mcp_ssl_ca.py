@@ -227,3 +227,123 @@ class TestMCPServerEnvironmentVariables:
         finally:
             # Clean up
             os.unlink(temp_ca_path)
+
+
+class TestSQLAlchemyIntegration:
+    """Test that ssl_ca parameter works with real SQLAlchemy engine creation."""
+
+    def test_ssl_ca_with_real_engine_creation(self):
+        """Test ssl_ca parameter with actual SQLAlchemy engine creation."""
+        from pytidb.client import TiDBClient
+        from sqlalchemy.engine import Engine
+
+        # Use in-memory SQLite for testing (doesn't require TiDB)
+        # This tests the engine creation path without needing a real database
+        with patch('pytidb.client.build_tidb_connection_url') as mock_build_url:
+            with patch('pytidb.client.TIDB_SERVERLESS_HOST_PATTERN') as mock_pattern:
+                # Return SQLite URL to avoid TiDB connection
+                mock_build_url.return_value = 'sqlite:///:memory:'
+                # Avoid serverless pattern matching to prevent host=None issues
+                mock_pattern.match.return_value = None
+
+                # This should work without error now that ssl_ca is in connect_args
+                client = TiDBClient.connect(
+                    host='localhost',
+                    port=4000,
+                    username='root',
+                    password='password',
+                    database='test',
+                    ssl_ca='/path/to/ca.pem'
+                )
+
+                # Verify we got a real SQLAlchemy engine
+                assert isinstance(client._db_engine, Engine)
+                print('✅ Real SQLAlchemy engine created successfully with ssl_ca parameter')
+
+    def test_connect_args_structure(self):
+        """Test that ssl_ca parameter is correctly placed in connect_args."""
+        from pytidb.client import TiDBClient
+        from unittest.mock import patch, call
+
+        with patch('pytidb.client.create_engine') as mock_create_engine:
+            with patch('pytidb.client.build_tidb_connection_url') as mock_build_url:
+                mock_build_url.return_value = 'mysql+pymysql://root@localhost:4000/test'
+
+                # Create a proper mock engine with required attributes
+                mock_engine = MagicMock()
+                mock_url = MagicMock()
+                mock_url.host = 'localhost'
+                mock_engine.url = mock_url
+                mock_engine.dialect = MagicMock()
+                mock_create_engine.return_value = mock_engine
+
+                # Call TiDBClient.connect with ssl_ca
+                client = TiDBClient.connect(ssl_ca='/path/to/ca.pem')
+
+                # Verify create_engine was called with connect_args containing ssl_ca
+                mock_create_engine.assert_called_once()
+                call_args = mock_create_engine.call_args
+
+                assert 'connect_args' in call_args.kwargs
+                connect_args = call_args.kwargs['connect_args']
+                assert 'ssl_ca' in connect_args
+                assert connect_args['ssl_ca'] == '/path/to/ca.pem'
+
+                # Verify ssl_ca is NOT passed as a direct kwarg
+                assert 'ssl_ca' not in call_args.kwargs or call_args.kwargs.get('ssl_ca') is None
+
+                print('✅ ssl_ca correctly structured in connect_args')
+
+    def test_connect_args_merging(self):
+        """Test that ssl_ca merges correctly with existing connect_args."""
+        from pytidb.client import TiDBClient
+        from unittest.mock import patch
+
+        with patch('pytidb.client.create_engine') as mock_create_engine:
+            with patch('pytidb.client.build_tidb_connection_url') as mock_build_url:
+                mock_build_url.return_value = 'mysql+pymysql://root@localhost:4000/test'
+
+                mock_engine = MagicMock()
+                mock_url = MagicMock()
+                mock_url.host = 'localhost'
+                mock_engine.url = mock_url
+                mock_engine.dialect = MagicMock()
+                mock_create_engine.return_value = mock_engine
+
+                # Call with both ssl_ca and existing connect_args
+                client = TiDBClient.connect(
+                    ssl_ca='/path/to/ca.pem',
+                    connect_args={'charset': 'utf8mb4'}
+                )
+
+                call_args = mock_create_engine.call_args
+                connect_args = call_args.kwargs['connect_args']
+
+                # Both parameters should be present
+                assert connect_args['ssl_ca'] == '/path/to/ca.pem'
+                assert connect_args['charset'] == 'utf8mb4'
+
+                print('✅ ssl_ca merges correctly with existing connect_args')
+
+    def test_p0_regression_fixed(self):
+        """Test that P0 regression is fixed - ssl_ca no longer passed directly to create_engine."""
+        from sqlalchemy import create_engine
+
+        # Verify the original P0 issue: direct ssl_ca parameter fails
+        try:
+            engine = create_engine('sqlite:///:memory:', ssl_ca='/path/to/ca.pem')
+            assert False, "Expected TypeError for direct ssl_ca parameter"
+        except TypeError as e:
+            # This is expected - SQLAlchemy rejects ssl_ca as direct parameter
+            assert 'ssl_ca' in str(e) or 'Invalid argument' in str(e)
+            print('✅ Confirmed: SQLAlchemy rejects direct ssl_ca parameter')
+
+        # Verify the fix: ssl_ca works via connect_args
+        try:
+            engine = create_engine(
+                'sqlite:///:memory:',
+                connect_args={'ssl_ca': '/path/to/ca.pem'}
+            )
+            print('✅ Confirmed: ssl_ca works via connect_args')
+        except Exception as e:
+            assert False, f"connect_args approach should work: {e}"
