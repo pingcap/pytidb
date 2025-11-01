@@ -56,6 +56,7 @@ class TiDBClient:
         password: Optional[str] = "",
         database: Optional[str] = "test",
         enable_ssl: Optional[bool] = None,
+        ssl_ca: Optional[str] = None,
         ensure_db: Optional[bool] = False,
         debug: Optional[bool] = None,
         **kwargs,
@@ -85,12 +86,17 @@ class TiDBClient:
             kwargs.setdefault("pool_pre_ping", True)
             kwargs.setdefault("pool_timeout", 10)
 
+        # Pass ssl_ca parameter to SQLAlchemy/PyMySQL if provided
+        if ssl_ca is not None:
+            kwargs["ssl_ca"] = ssl_ca
+
         db_engine = create_engine(url, echo=debug, **kwargs)
         reconnect_params = {
             # host, port, etc is not needed because they will be built into the URL.
             # url is also not needed because it is already in `db_engine`.
             "ensure_db": ensure_db,
             "debug": debug,
+            "ssl_ca": ssl_ca,
             **kwargs,
         }
 

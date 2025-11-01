@@ -38,6 +38,7 @@ class TiDBConnector:
         username: Optional[str] = None,
         password: Optional[str] = None,
         database: Optional[str] = None,
+        ssl_ca: Optional[str] = None,
     ):
         self.tidb_client = TiDBClient.connect(
             url=database_url,
@@ -46,6 +47,7 @@ class TiDBConnector:
             username=username,
             password=password,
             database=database,
+            ssl_ca=ssl_ca,
         )
         if database_url:
             uri = MySQLDsn(database_url)
@@ -60,6 +62,7 @@ class TiDBConnector:
             self.username = username
             self.password = password
             self.database = database
+        self.ssl_ca = ssl_ca
 
     def show_databases(self) -> list[dict]:
         return self.tidb_client.query("SHOW DATABASES").to_list()
@@ -76,6 +79,7 @@ class TiDBConnector:
             username=username or self.username,
             password=password or self.password,
             database=db_name or self.database,
+            ssl_ca=self.ssl_ca,
         )
 
     def show_tables(self) -> list[str]:
@@ -160,6 +164,7 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
             username=os.getenv("TIDB_USERNAME", "root"),
             password=os.getenv("TIDB_PASSWORD", ""),
             database=os.getenv("TIDB_DATABASE", "test"),
+            ssl_ca=os.getenv("TIDB_CA_PATH", None),
         )
         log.info(f"Connected to TiDB: {tidb.host}:{tidb.port}/{tidb.database}")
         yield AppContext(tidb=tidb)
