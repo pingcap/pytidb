@@ -10,7 +10,7 @@ from sqlalchemy import (
     text,
     Result,
 )
-from sqlalchemy.engine import Engine, create_engine
+from sqlalchemy.engine import Engine, create_engine, make_url
 from sqlalchemy.orm import Session, DeclarativeMeta
 
 from pytidb.orm.variables import EMBED_PROVIDER_API_KEY_VARS
@@ -56,6 +56,7 @@ class TiDBClient:
         password: Optional[str] = "",
         database: Optional[str] = "test",
         enable_ssl: Optional[bool] = None,
+        ca_path: Optional[str] = None,
         ensure_db: Optional[bool] = False,
         debug: Optional[bool] = None,
         **kwargs,
@@ -68,8 +69,22 @@ class TiDBClient:
                 password=password,
                 database=database,
                 enable_ssl=enable_ssl,
+                ca_path=ca_path,
             )
             # TODO: When URL is passed in directly, it should be validated.
+        else:
+            # If URL is provided but ca_path is also specified, merge ca_path into the URL
+            if ca_path:
+                parsed_url = make_url(url)
+
+                # Parse existing query parameters
+                query_dict = dict(parsed_url.query) if parsed_url.query else {}
+
+                # Add ssl_ca parameter (SQLAlchemy will handle URL encoding)
+                query_dict['ssl_ca'] = ca_path
+
+                # Reconstruct the URL with the updated query parameters
+                url = str(parsed_url._replace(query=query_dict))
 
         if ensure_db:
             try:
