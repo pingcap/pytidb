@@ -4,10 +4,21 @@ Test PyTiDB compatibility with different Pydantic versions.
 This test module verifies that PyTiDB works correctly across
 different Pydantic versions (2.0.3, 2.5.3, 2.10.6, 2.12.3).
 """
-import sys
 from typing import List, Optional, Any
 import pytest
 import pydantic
+
+
+@pytest.fixture(scope="session", autouse=True)
+def shared_client():
+    """Override the global shared_client fixture to avoid real database access."""
+    yield None
+
+
+@pytest.fixture(scope="session", autouse=True)
+def text_embed():
+    """Override the global text_embed fixture to avoid initializing remote embeddings."""
+    yield None
 
 
 class TestPydanticCompatibility:
@@ -107,7 +118,7 @@ class TestPydanticCompatibility:
                 self.id = 1
                 self.content = "test"
 
-        search_result = SearchResult(
+        search_result = SearchResult[MockTableModel](
             hit=MockTableModel(),
             distance=0.5,
             match_score=0.8,
@@ -138,7 +149,8 @@ class TestPydanticCompatibility:
         # Test that the deprecated dict() method still works (with warnings)
         # but prefer model_dump() in actual code
         try:
-            dict_data = result.dict()
+            with pytest.deprecated_call():
+                dict_data = result.dict()
             assert dict_data == expected
         except AttributeError:
             # In newer Pydantic versions, dict() might be removed
@@ -171,9 +183,15 @@ class TestPydanticCompatibility:
         assert result.success is True
         assert result.message is None  # Optional field
 
-        # Test that validation works for required fields
+        # Test that default values are applied when optional fields are omitted
+        default_result = SQLExecuteResult()
+        assert default_result.rowcount == 0
+        assert default_result.success is False
+        assert default_result.message is None
+
+        # Test that type validation still works
         with pytest.raises(ValidationError):
-            SQLExecuteResult()  # Missing required fields
+            SQLExecuteResult(rowcount="invalid", success=True)
 
     def test_generic_type_support(self):
         """Test that generic types work correctly with SearchResult."""
