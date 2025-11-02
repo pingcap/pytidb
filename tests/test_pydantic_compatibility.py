@@ -187,13 +187,12 @@ class TestPydanticCompatibility:
 
     def test_model_config_settings(self):
         """Test that ConfigDict settings are properly applied."""
-        # Test BaseEmbeddingFunction protected_namespaces setting (selective protection)
+        # Test BaseEmbeddingFunction protected_namespaces setting (full model_ protection)
         embedding_fn = MockEmbeddingFunction(model_name="test-model")
         config = embedding_fn.model_config
         protected_namespaces = config.get("protected_namespaces", ())
-        # Should protect critical methods but allow model_name
-        expected_protections = {"model_dump", "model_copy", "model_validate", "model_fields", "model_config"}
-        assert expected_protections.issubset(set(protected_namespaces))
+        # Should protect the entire model_ namespace
+        assert ("model_",) == protected_namespaces
 
         # Test SearchResult arbitrary_types_allowed setting
         mock_hit = MockTableModel(id=1, name="test")
@@ -259,9 +258,34 @@ class TestEdgeCases:
 
     def test_method_shadowing_protection(self):
         """Test that protected namespaces prevent method shadowing."""
-        with pytest.raises(ValueError, match="conflicts with member"):
+        with pytest.raises(NameError, match="conflicts with member"):
             class BadEmbedding(MockEmbeddingFunction):
                 model_dump: str = "boom"  # This should be rejected
+
+    def test_model_post_init_protection_regression(self):
+        """Regression test for P0 issue: model_post_init field should be rejected at class definition time."""
+        # This test ensures that model_post_init cannot be used as a field name,
+        # preventing runtime TypeError when pydantic tries to call it as a method
+        with pytest.raises(NameError, match="conflicts with member.*model_post_init"):
+            class BadEmbedding(MockEmbeddingFunction):
+                model_post_init: str = "boom"  # This should be rejected at class definition time
+
+    def test_critical_model_hooks_protection(self):
+        """Test that all critical model hooks are protected from field shadowing."""
+        # Test the most critical hooks that would cause runtime failures
+        critical_annotated_hooks = ["model_post_init", "model_dump", "model_copy", "model_validate"]
+
+        for hook in critical_annotated_hooks:
+            with pytest.raises(NameError, match="conflicts with member"):
+                # Create class with properly annotated field (this should still be rejected)
+                class_dict = {
+                    "__annotations__": {hook: str},
+                    hook: "boom",  # This should be rejected
+                    "get_query_embedding": lambda *a, **k: [],
+                    "get_source_embedding": lambda *a, **k: [],
+                    "get_source_embeddings": lambda *a, **k: [],
+                }
+                type(f"Bad_{hook.replace('_', '').title()}Embedding", (MockEmbeddingFunction,), class_dict)
 
     def test_sql_execute_result_defaults(self):
         """Test SQLExecuteResult with default values."""
