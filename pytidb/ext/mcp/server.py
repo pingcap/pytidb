@@ -59,7 +59,7 @@ class TiDBConnector:
 
             # Extract ssl_ca from URL query parameters if not explicitly provided
             query_params = dict(uri.query_params())
-            self.ssl_ca_path = ssl_ca_path or query_params.get('ssl_ca')
+            self.ssl_ca_path = ssl_ca_path or query_params.get("ssl_ca")
         else:
             self.host = host
             self.port = port
