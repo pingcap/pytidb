@@ -11,7 +11,7 @@ class BaseEmbeddingFunction(BaseModel, ABC):
     model_config = ConfigDict(protected_namespaces=())
 
     provider: str = Field("openai", description="The name of the embedding provider")
-    model_name: str = Field(
+    model_name: Optional[str] = Field(
         None, description="The name of embedding model used for embedding"
     )
     dimensions: Optional[int] = Field(
