@@ -9,7 +9,10 @@ EmbeddingSourceType = Literal["text", "image"]
 
 class BaseEmbeddingFunction(BaseModel, ABC):
     model_config = ConfigDict(
-        protected_namespaces=("model_",)
+        protected_namespaces=(
+            "model_dump", "model_copy", "model_validate", "model_construct",
+            "model_rebuild", "model_fields", "model_config", "model_post_init"
+        )
     )
 
     provider: str = Field("openai", description="The name of the embedding provider")

@@ -55,6 +55,26 @@ class TestPydanticCompatibility:
             assert embedding_fn.model_name == "text-embedding-3-small"
             assert embedding_fn.dimensions == 1536
 
+    def test_model_name_no_warnings_with_targeted_protection(self):
+        """Test that model_name doesn't produce warnings with targeted protection."""
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+
+            embedding_fn = MockEmbeddingFunction(
+                provider="openai",
+                model_name="text-embedding-3-small",
+                dimensions=1536
+            )
+
+            # Check specifically for model_name warnings
+            model_name_warnings = [
+                warning for warning in w
+                if "model_name" in str(warning.message) and "protected namespace" in str(warning.message)
+            ]
+
+            assert len(model_name_warnings) == 0, f"Got model_name warnings: {[str(w.message) for w in model_name_warnings]}"
+            assert embedding_fn.model_name == "text-embedding-3-small"
+
     def test_base_embedding_function_serialization(self):
         """Test BaseEmbeddingFunction serialization works correctly."""
         embedding_fn = MockEmbeddingFunction(
@@ -187,12 +207,16 @@ class TestPydanticCompatibility:
 
     def test_model_config_settings(self):
         """Test that ConfigDict settings are properly applied."""
-        # Test BaseEmbeddingFunction protected_namespaces setting (full model_ protection)
+        # Test BaseEmbeddingFunction protected_namespaces setting (targeted hook protection)
         embedding_fn = MockEmbeddingFunction(model_name="test-model")
         config = embedding_fn.model_config
         protected_namespaces = config.get("protected_namespaces", ())
-        # Should protect the entire model_ namespace
-        assert ("model_",) == protected_namespaces
+        # Should protect critical hooks but allow model_name
+        expected_protections = {
+            "model_dump", "model_copy", "model_validate", "model_construct",
+            "model_rebuild", "model_fields", "model_config", "model_post_init"
+        }
+        assert set(protected_namespaces) == expected_protections
 
         # Test SearchResult arbitrary_types_allowed setting
         mock_hit = MockTableModel(id=1, name="test")
@@ -258,7 +282,8 @@ class TestEdgeCases:
 
     def test_method_shadowing_protection(self):
         """Test that protected namespaces prevent method shadowing."""
-        with pytest.raises(NameError, match="conflicts with member"):
+        # Pydantic 2.0.3-2.10.6 raise NameError, 2.12.3+ raises ValueError
+        with pytest.raises((NameError, ValueError), match="conflicts with member"):
             class BadEmbedding(MockEmbeddingFunction):
                 model_dump: str = "boom"  # This should be rejected
 
@@ -266,7 +291,7 @@ class TestEdgeCases:
         """Regression test for P0 issue: model_post_init field should be rejected at class definition time."""
         # This test ensures that model_post_init cannot be used as a field name,
         # preventing runtime TypeError when pydantic tries to call it as a method
-        with pytest.raises(NameError, match="conflicts with member.*model_post_init"):
+        with pytest.raises((NameError, ValueError), match="conflicts with member.*model_post_init"):
             class BadEmbedding(MockEmbeddingFunction):
                 model_post_init: str = "boom"  # This should be rejected at class definition time
 
@@ -276,7 +301,7 @@ class TestEdgeCases:
         critical_annotated_hooks = ["model_post_init", "model_dump", "model_copy", "model_validate"]
 
         for hook in critical_annotated_hooks:
-            with pytest.raises(NameError, match="conflicts with member"):
+            with pytest.raises((NameError, ValueError), match="conflicts with member"):
                 # Create class with properly annotated field (this should still be rejected)
                 class_dict = {
                     "__annotations__": {hook: str},
