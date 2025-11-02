@@ -65,24 +65,19 @@ class TestPydanticCompatibility:
             additional_json_options={"param1": "value1"}
         )
 
-        # Test serialization with alias (pydantic v2 method)
-        data = embedding_fn.model_dump(by_alias=True)
+        # Test serialization (standard pydantic v2 method)
+        data = embedding_fn.model_dump()
         assert data["provider"] == "openai"
         assert data["model_name"] == "text-embedding-3-small"
         assert data["dimensions"] == 1536
         assert data["use_server"] is True
         assert data["additional_json_options"] == {"param1": "value1"}
 
-        # Test deserialization from aliased data
+        # Test deserialization
         new_fn = MockEmbeddingFunction.model_validate(data)
         assert new_fn.provider == "openai"
         assert new_fn.model_name == "text-embedding-3-small"
         assert new_fn.dimensions == 1536
-
-        # Test deserialization from internal field name
-        internal_data = embedding_fn.model_dump()  # Uses internal field names
-        new_fn2 = MockEmbeddingFunction.model_validate(internal_data)
-        assert new_fn2.model_name == "text-embedding-3-small"
 
     def test_search_result_with_generic_types(self):
         """Test SearchResult works with generic types across pydantic versions."""
@@ -192,10 +187,13 @@ class TestPydanticCompatibility:
 
     def test_model_config_settings(self):
         """Test that ConfigDict settings are properly applied."""
-        # Test BaseEmbeddingFunction populate_by_name setting (allows both field and alias)
+        # Test BaseEmbeddingFunction protected_namespaces setting (selective protection)
         embedding_fn = MockEmbeddingFunction(model_name="test-model")
         config = embedding_fn.model_config
-        assert config.get("populate_by_name") is True
+        protected_namespaces = config.get("protected_namespaces", ())
+        # Should protect critical methods but allow model_name
+        expected_protections = {"model_dump", "model_copy", "model_validate", "model_fields", "model_config"}
+        assert expected_protections.issubset(set(protected_namespaces))
 
         # Test SearchResult arbitrary_types_allowed setting
         mock_hit = MockTableModel(id=1, name="test")
@@ -235,6 +233,29 @@ class TestEdgeCases:
         assert result.match_score is None
         assert result.score is None
         assert result.similarity_score is None  # Since distance is None
+
+    def test_backward_compatibility_regression(self):
+        """Test that the critical backward compatibility regression is fixed."""
+        embedding_fn = MockEmbeddingFunction(
+            provider="openai",
+            model_name="foo/bar",
+            dimensions=1
+        )
+
+        # Test 1: model_dump() should return model_name in the output
+        data = embedding_fn.model_dump()
+        assert "model_name" in data
+        assert data["model_name"] == "foo/bar"
+        assert "embedding_model" not in data  # Should not have internal field name
+
+        # Test 2: model_copy(update={"model_name": "new"}) should work
+        updated = embedding_fn.model_copy(update={"model_name": "baz"})
+        assert updated.model_name == "baz"
+        assert updated.model_name != embedding_fn.model_name  # Should be different from original
+
+        # Test 3: Round-trip serialization should work
+        new_instance = MockEmbeddingFunction.model_validate(data)
+        assert new_instance.model_name == "foo/bar"
 
     def test_method_shadowing_protection(self):
         """Test that protected namespaces prevent method shadowing."""
