@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 EmbeddingSourceType = Literal["text", "image"]
 
 
 class BaseEmbeddingFunction(BaseModel, ABC):
+    model_config = ConfigDict(protected_namespaces=())
+
     provider: str = Field("openai", description="The name of the embedding provider")
     model_name: str = Field(
         None, description="The name of embedding model used for embedding"

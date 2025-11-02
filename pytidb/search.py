@@ -14,7 +14,7 @@ from typing import (
     Generic,
     overload,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import Column, Row, Select, asc, desc, and_
 from sqlalchemy.sql.base import Generative, _generative
 from sqlmodel import select
@@ -55,6 +55,8 @@ T = TypeVar("T", bound=TableModel)
 
 
 class SearchResult(BaseModel, Generic[T]):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     hit: T
     distance: Optional[float] = Field(
         description="The distance between the query vector and the vectors in the table.",
