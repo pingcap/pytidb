@@ -214,7 +214,8 @@ class TestPydanticCompatibility:
         # Should protect critical hooks but allow model_name
         expected_protections = {
             "model_dump", "model_copy", "model_validate", "model_construct",
-            "model_rebuild", "model_fields", "model_config", "model_post_init"
+            "model_rebuild", "model_fields", "model_config", "model_post_init",
+            "model_computed_fields"
         }
         assert set(protected_namespaces) == expected_protections
 
@@ -298,7 +299,9 @@ class TestEdgeCases:
     def test_critical_model_hooks_protection(self):
         """Test that all critical model hooks are protected from field shadowing."""
         # Test the most critical hooks that would cause runtime failures
-        critical_annotated_hooks = ["model_post_init", "model_dump", "model_copy", "model_validate"]
+        critical_annotated_hooks = [
+            "model_post_init", "model_dump", "model_copy", "model_validate", "model_computed_fields"
+        ]
 
         for hook in critical_annotated_hooks:
             with pytest.raises((NameError, ValueError), match="conflicts with member"):

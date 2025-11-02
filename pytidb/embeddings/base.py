@@ -11,7 +11,8 @@ class BaseEmbeddingFunction(BaseModel, ABC):
     model_config = ConfigDict(
         protected_namespaces=(
             "model_dump", "model_copy", "model_validate", "model_construct",
-            "model_rebuild", "model_fields", "model_config", "model_post_init"
+            "model_rebuild", "model_fields", "model_config", "model_post_init",
+            "model_computed_fields"
         )
     )
 
