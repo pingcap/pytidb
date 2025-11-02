@@ -178,10 +178,12 @@ class TestPydanticCompatibility:
             source_type="text"
         )
 
-        assert vector_field.embed_fn == embedding_fn
-        assert vector_field.dimensions == 1536
-        assert vector_field.source_field == "content"
-        assert vector_field.source_type == "text"
+        # VectorField returns sqlmodel.FieldInfo, metadata is in _attributes_set
+        attributes = vector_field._attributes_set
+        assert attributes["embed_fn"] == embedding_fn
+        assert attributes["dimensions"] == 1536
+        assert attributes["source_field"] == "content"
+        assert attributes["source_type"] == "text"
 
     def test_model_config_settings(self):
         """Test that ConfigDict settings are properly applied."""
