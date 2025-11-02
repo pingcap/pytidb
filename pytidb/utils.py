@@ -95,7 +95,7 @@ def build_tidb_connection_url(
             username=username,
             # TODO: remove quote after following issue is fixed:
             # https://github.com/pydantic/pydantic/issues/8061
-            password=quote(password) if password else None,
+            password=quote(password, safe="") if password else None,
             path=database,
             query=(
                 "ssl_verify_cert=true&ssl_verify_identity=true" if enable_ssl else None
