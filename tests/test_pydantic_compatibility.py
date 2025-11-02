@@ -65,19 +65,24 @@ class TestPydanticCompatibility:
             additional_json_options={"param1": "value1"}
         )
 
-        # Test serialization (pydantic v2 method)
-        data = embedding_fn.model_dump()
+        # Test serialization with alias (pydantic v2 method)
+        data = embedding_fn.model_dump(by_alias=True)
         assert data["provider"] == "openai"
         assert data["model_name"] == "text-embedding-3-small"
         assert data["dimensions"] == 1536
         assert data["use_server"] is True
         assert data["additional_json_options"] == {"param1": "value1"}
 
-        # Test deserialization
+        # Test deserialization from aliased data
         new_fn = MockEmbeddingFunction.model_validate(data)
         assert new_fn.provider == "openai"
         assert new_fn.model_name == "text-embedding-3-small"
         assert new_fn.dimensions == 1536
+
+        # Test deserialization from internal field name
+        internal_data = embedding_fn.model_dump()  # Uses internal field names
+        new_fn2 = MockEmbeddingFunction.model_validate(internal_data)
+        assert new_fn2.model_name == "text-embedding-3-small"
 
     def test_search_result_with_generic_types(self):
         """Test SearchResult works with generic types across pydantic versions."""
@@ -187,10 +192,10 @@ class TestPydanticCompatibility:
 
     def test_model_config_settings(self):
         """Test that ConfigDict settings are properly applied."""
-        # Test BaseEmbeddingFunction protected_namespaces setting
+        # Test BaseEmbeddingFunction populate_by_name setting (allows both field and alias)
         embedding_fn = MockEmbeddingFunction(model_name="test-model")
         config = embedding_fn.model_config
-        assert config.get("protected_namespaces") == ()
+        assert config.get("populate_by_name") is True
 
         # Test SearchResult arbitrary_types_allowed setting
         mock_hit = MockTableModel(id=1, name="test")
@@ -230,6 +235,12 @@ class TestEdgeCases:
         assert result.match_score is None
         assert result.score is None
         assert result.similarity_score is None  # Since distance is None
+
+    def test_method_shadowing_protection(self):
+        """Test that protected namespaces prevent method shadowing."""
+        with pytest.raises(ValueError, match="conflicts with member"):
+            class BadEmbedding(MockEmbeddingFunction):
+                model_dump: str = "boom"  # This should be rejected
 
     def test_sql_execute_result_defaults(self):
         """Test SQLExecuteResult with default values."""
