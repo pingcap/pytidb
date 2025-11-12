@@ -1,7 +1,6 @@
 import os
 import dotenv
 
-import litellm
 from litellm import completion
 import streamlit as st
 
@@ -10,7 +9,6 @@ from pytidb.schema import TableModel, Field
 from pytidb.embeddings import EmbeddingFunction
 
 dotenv.load_dotenv()
-litellm.drop_params = True
 
 
 # Define the embedding and LLM models
