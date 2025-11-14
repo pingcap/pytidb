@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from .client import TiDBClient
 from .table import Table
 from .utils import build_tidb_connection_url
+from .async_client import AsyncTiDBClient, AsyncTable, AsyncQueryResult
 
 
 if "LITELLM_LOCAL_MODEL_COST_MAP" not in os.environ:
@@ -18,6 +19,9 @@ if "LITELLM_LOG" not in os.environ:
 __all__ = [
     "TiDBClient",
     "Table",
+    "AsyncTiDBClient",
+    "AsyncTable",
+    "AsyncQueryResult",
     "build_tidb_connection_url",
     "Session",
     "create_engine",

@@ -2120,7 +2120,7 @@ wheels = [
 
 [[package]]
 name = "pytidb"
-version = "0.0.13.dev5"
+version = "0.0.13"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },

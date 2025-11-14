@@ -246,6 +246,117 @@ with tidb_client.session() as session:
 ```
 
 
+## Asyncio Support (Python 3.10+)
+
+PyTiDB now supports asyncio for non-blocking database operations!
+
+### Basic Async Usage
+
+```python
+import asyncio
+from pytidb import AsyncTiDBClient
+
+async def main():
+    # Connect using async context manager
+    async with AsyncTiDBClient.connect(
+        host="localhost",
+        port=4000,
+        username="root",
+        database="test"
+    ) as client:
+        # Execute queries asynchronously
+        result = await client.execute("INSERT INTO users VALUES (1, 'Alice')")
+        print(f"Rows affected: {result.rowcount}")
+
+        # Query data
+        query_result = await client.query("SELECT * FROM users")
+        users = query_result.to_list()
+        print(f"Found {len(users)} users")
+
+# Run the async function
+asyncio.run(main())
+```
+
+### Async Table Operations
+
+```python
+import asyncio
+from pytidb import AsyncTiDBClient
+from pytidb.schema import TableModel, Field
+
+class User(TableModel):
+    __tablename__ = "users"
+    id: int = Field(primary_key=True)
+    name: str = Field(max_length=100)
+
+async def main():
+    async with AsyncTiDBClient.connect(
+        host="localhost", port=4000, username="root", database="test"
+    ) as client:
+        # Create table
+        table = await client.create_table(schema=User, if_exists="skip")
+
+        # Insert records
+        user = await table.insert({"id": 1, "name": "Alice"})
+        print(f"Created user: {user.name}")
+
+        # Query records
+        result = await table.query()
+        users = result.to_list()
+        print(f"Found {len(users)} users")
+
+asyncio.run(main())
+```
+
+### Concurrent Operations
+
+The async API shines when performing concurrent operations:
+
+```python
+async def insert_many_users(client, users_data):
+    table = await client.open_table("users")
+    tasks = [table.insert(user) for user in users_data]
+    results = await asyncio.gather(*tasks)
+    return results
+
+# Insert multiple users concurrently (much faster!)
+users_data = [{"id": i, "name": f"User{i}"} for i in range(100)]
+await insert_many_users(client, users_data)
+```
+
+### Key Features
+
+- **Non-blocking operations**: All database operations run in thread pool
+- **Async context managers**: Automatic connection cleanup with `async with`
+- **Same API as sync version**: Easy to migrate existing code
+- **Concurrent operations**: Use `asyncio.gather()` for parallel database operations
+- **Full feature parity**: All TiDBClient and Table methods available
+
+### API Reference
+
+**AsyncTiDBClient Methods:**
+- `connect()` - Create async connection
+- `execute()` - Execute SQL statements
+- `query()` - Execute SQL queries
+- `create_table()` - Create tables
+- `list_tables()` - List all tables
+- `create_database()` - Create databases
+
+**AsyncTable Methods:**
+- `insert()` - Insert a record
+- `bulk_insert()` - Insert multiple records
+- `query()` - Query with filters
+- `update()` - Update records
+- `delete()` - Delete records
+- `search()` - Vector/fulltext/hybrid search
+
+### Backward Compatibility
+
+The async API is completely separate from the sync API. Existing synchronous code continues to work without any changes.
+
+See `examples/async_basic_example.py` for a complete example.
+
+
 ## Extensions
 
 
