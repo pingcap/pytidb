@@ -48,6 +48,7 @@ def build_tidb_connection_url(
     password: str = "",
     database: str = "test",
     enable_ssl: Optional[bool] = None,
+    ssl_ca: Optional[str] = None,
 ) -> str:
     """
     Build a TiDB Connection URL string for database connection.
@@ -62,6 +63,9 @@ def build_tidb_connection_url(
         enable_ssl (Optional[bool], optional): Whether to enable SSL for the connection.
             If None (default), SSL is automatically enabled for TiDB Serverless hosts
             and disabled for other hosts.
+        ssl_ca (Optional[str], optional): Path to the CA certificate file for SSL
+            connection verification. If provided, this enables SSL certificate
+            verification using the specified CA certificate.
 
     Returns:
         str: A Connection URL string that can be used to connect to a TiDB database.
@@ -73,6 +77,17 @@ def build_tidb_connection_url(
         else:
             enable_ssl = None
 
+    # Build SSL query parameters
+    ssl_params = []
+    if ssl_ca:
+        # URL-encode the ssl_ca path, including forward slashes
+        ssl_params.append(f"ssl_ca={quote(ssl_ca, safe='')}")
+    if enable_ssl:
+        ssl_params.append("ssl_verify_cert=true")
+        ssl_params.append("ssl_verify_identity=true")
+
+    query = "&".join(ssl_params) if ssl_params else None
+
     return str(
         TiDBConnectionURL.build(
             scheme=schema,
@@ -83,9 +98,7 @@ def build_tidb_connection_url(
             # https://github.com/pydantic/pydantic/issues/8061
             password=quote(password) if password else None,
             path=database,
-            query=(
-                "ssl_verify_cert=true&ssl_verify_identity=true" if enable_ssl else None
-            ),
+            query=query,
         )
     )
 

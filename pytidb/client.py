@@ -56,6 +56,7 @@ class TiDBClient:
         password: Optional[str] = "",
         database: Optional[str] = "test",
         enable_ssl: Optional[bool] = None,
+        ssl_ca: Optional[str] = None,
         ensure_db: Optional[bool] = False,
         debug: Optional[bool] = None,
         **kwargs,
@@ -68,8 +69,20 @@ class TiDBClient:
                 password=password,
                 database=database,
                 enable_ssl=enable_ssl,
+                ssl_ca=ssl_ca,
             )
             # TODO: When URL is passed in directly, it should be validated.
+
+        # Apply ssl_ca to kwargs before any engine creation (ensure_db and final engine)
+        # This ensures both preliminary and final engines have identical TLS config
+        # Normalize connect_args to dict if None, then merge ssl_ca
+        if ssl_ca:
+            connect_args = kwargs.get("connect_args")
+            if connect_args is None:
+                connect_args = {}
+                kwargs["connect_args"] = connect_args
+            ssl_dict = connect_args.setdefault("ssl", {})
+            ssl_dict["ca"] = ssl_ca
 
         if ensure_db:
             try:
@@ -91,6 +104,7 @@ class TiDBClient:
             # url is also not needed because it is already in `db_engine`.
             "ensure_db": ensure_db,
             "debug": debug,
+            "ssl_ca": ssl_ca,
             **kwargs,
         }
 
