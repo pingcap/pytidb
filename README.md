@@ -66,52 +66,6 @@ tidb_client = TiDBClient.connect(
 )
 ```
 
-## Async Usage
-
-PyTiDB now supports asyncio for non-blocking database operations:
-
-```python
-import asyncio
-from pytidb.async_client import AsyncTiDBClient
-
-async def main():
-    # Connect using async context manager (recommended)
-    async with AsyncTiDBClient.connect(
-        host=os.getenv("TIDB_HOST"),
-        port=int(os.getenv("TIDB_PORT")),
-        username=os.getenv("TIDB_USERNAME"),
-        password=os.getenv("TIDB_PASSWORD"),
-        database=os.getenv("TIDB_DATABASE"),
-        ensure_db=True,
-    ) as client:
-        # Execute queries asynchronously
-        result = await client.query("SELECT * FROM users WHERE age > :age", params={"age": 18})
-        users = await result.to_list()
-        print(f"Found {len(users)} users")
-
-        # Execute commands
-        await client.execute("INSERT INTO users (name, age) VALUES (:name, :age)",
-                            params={"name": "Alice", "age": 25})
-
-        # Run multiple queries concurrently
-        results = await asyncio.gather(
-            client.query("SELECT COUNT(*) FROM users"),
-            client.query("SELECT * FROM users LIMIT 10"),
-        )
-        count, rows = await asyncio.gather(
-            results[0].scalar(),
-            results[1].to_list()
-        )
-        print(f"Total users: {count}")
-
-asyncio.run(main())
-```
-
-The async API uses `asyncio.to_thread()` to safely wrap synchronous operations,
-making it compatible with existing sync code while providing non-blocking I/O.
-
-See [examples/async_basic_usage.py](examples/async_basic_usage.py) for a complete example.
-
 ## Highlights
 
 ### 🤖 Automatic Embedding
