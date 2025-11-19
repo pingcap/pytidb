@@ -28,6 +28,7 @@ from pytidb.utils import (
     check_text_column,
     check_vector_column,
     get_row_id_from_row,
+    run_sync,
 )
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.util import AliasedClass
@@ -854,6 +855,23 @@ class Search(Generative):
             flatten_rows.append(flatten_row)
 
         return pd.DataFrame(flatten_rows, columns=flatten_columns)
+
+    async def execute_async(self) -> Tuple[List[str], List[Any]]:
+        return await run_sync(self._execute_query)
+
+    async def to_rows_async(self) -> Sequence[Any]:
+        return await run_sync(self.to_rows)
+
+    async def to_list_async(self) -> List[dict]:
+        return await run_sync(self.to_list)
+
+    async def to_pydantic_async(
+        self, with_score: Optional[bool] = True
+    ) -> List[BaseModel]:
+        return await run_sync(self.to_pydantic, with_score)
+
+    async def to_pandas_async(self) -> "DataFrame":
+        return await run_sync(self.to_pandas)
 
 
 @overload

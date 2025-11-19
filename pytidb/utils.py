@@ -1,7 +1,8 @@
+import asyncio
 import re
 
 from urllib.parse import quote
-from typing import Dict, Optional, Any, List, TypeVar, Tuple
+from typing import Dict, Optional, Any, List, TypeVar, Tuple, Callable
 
 from pydantic import AnyUrl, UrlConstraints
 from sqlalchemy import Column, Index, String, create_engine, make_url
@@ -133,7 +134,16 @@ def check_text_column(columns: Dict, column_name: str) -> Optional[str]:
     return text_column
 
 
+SyncReturnType = TypeVar("SyncReturnType")
 RowKeyType = TypeVar("RowKeyType", bound=Union[Any, Tuple[Any, ...]])
+
+
+async def run_sync(
+    func: Callable[..., SyncReturnType], /, *args, **kwargs
+) -> SyncReturnType:
+    """Execute a sync callable in a worker thread and return the awaited result."""
+
+    return await asyncio.to_thread(func, *args, **kwargs)
 
 
 def get_row_id_from_row(row: Row, table: Table) -> Optional[RowKeyType]:

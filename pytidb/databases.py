@@ -1,6 +1,8 @@
 from sqlalchemy import Engine, text
 from typing import Optional, Literal
 
+from pytidb.utils import run_sync
+
 
 def create_database(
     db_engine: Engine,
@@ -27,3 +29,19 @@ def database_exists(db_engine: Engine, name: str) -> bool:
     with db_engine.connect() as conn:
         result = conn.execute(stmt, {"db_name": name})
         return bool(result.scalar())
+
+
+async def create_database_async(
+    db_engine: Engine,
+    name: str,
+    if_exists: Optional[Literal["raise", "skip"]] = "raise",
+):
+    """Async wrapper around :func:`create_database`."""
+
+    return await run_sync(create_database, db_engine, name, if_exists=if_exists)
+
+
+async def database_exists_async(db_engine: Engine, name: str) -> bool:
+    """Async wrapper around :func:`database_exists`."""
+
+    return await run_sync(database_exists, db_engine, name)

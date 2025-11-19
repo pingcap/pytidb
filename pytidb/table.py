@@ -38,6 +38,7 @@ from pytidb.utils import (
     filter_text_columns,
     filter_vector_columns,
     get_index_type,
+    run_sync,
 )
 
 if TYPE_CHECKING:
@@ -584,3 +585,55 @@ class Table(Generic[T]):
         index_name = name or f"fts_idx_{column_name}"
         fts_idx = FullTextIndex(index_name, self._columns[column_name])
         fts_idx.create(self.client.db_engine, checkfirst=(if_exists == "skip"))
+
+    # Async helpers
+
+    async def create_async(
+        self, if_exists: Literal["raise", "skip"] = "raise"
+    ) -> "Table":
+        return await run_sync(self.create, if_exists=if_exists)
+
+    async def drop_async(
+        self, if_not_exists: Literal["raise", "skip"] = "raise"
+    ) -> None:
+        await run_sync(self.drop, if_not_exists=if_not_exists)
+
+    async def get_async(self, id: Any) -> T:
+        return await run_sync(self.get, id)
+
+    async def insert_async(self, data: Union[T, dict]) -> T:
+        return await run_sync(self.insert, data)
+
+    async def save_async(self, data: Union[T, dict]) -> T:
+        return await run_sync(self.save, data)
+
+    async def bulk_insert_async(self, data: List[Union[T, dict]]) -> List[T]:
+        return await run_sync(self.bulk_insert, data)
+
+    async def update_async(
+        self, values: dict, filters: Optional[Filters] = None
+    ) -> object:
+        return await run_sync(self.update, values, filters)
+
+    async def delete_async(self, filters: Optional[Filters] = None) -> None:
+        await run_sync(self.delete, filters)
+
+    async def truncate_async(self) -> None:
+        await run_sync(self.truncate)
+
+    async def columns_async(self) -> List[ColumnInfo]:
+        return await run_sync(self.columns)
+
+    async def rows_async(self):
+        return await run_sync(self.rows)
+
+    async def query_async(
+        self,
+        filters: Optional[Filters] = None,
+        order_by: Optional[List[Any] | str | Dict[str, Any]] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> QueryResult:
+        return await run_sync(
+            self.query, filters, order_by, limit, offset
+        )

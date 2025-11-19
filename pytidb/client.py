@@ -22,6 +22,7 @@ from pytidb.utils import (
     TIDB_SERVERLESS_HOST_PATTERN,
     build_tidb_connection_url,
     create_engine_without_db,
+    run_sync,
 )
 from pytidb.logger import logger
 from pytidb.result import SQLExecuteResult, SQLQueryResult
@@ -320,3 +321,137 @@ class TiDBClient:
             if is_local_session:
                 session.close()
                 SESSION.set(None)
+
+
+class AsyncTiDBClient:
+    """Async wrapper around :class:`TiDBClient` using `asyncio.to_thread`."""
+
+    def __init__(self, client: TiDBClient):
+        self._client = client
+
+    @classmethod
+    async def connect(
+        cls,
+        url: Optional[str] = None,
+        *,
+        host: Optional[str] = "localhost",
+        port: Optional[int] = 4000,
+        username: Optional[str] = "root",
+        password: Optional[str] = "",
+        database: Optional[str] = "test",
+        enable_ssl: Optional[bool] = None,
+        ensure_db: Optional[bool] = False,
+        debug: Optional[bool] = None,
+        **kwargs,
+    ) -> "AsyncTiDBClient":
+        client = await run_sync(
+            TiDBClient.connect,
+            url,
+            host=host,
+            port=port,
+            username=username,
+            password=password,
+            database=database,
+            enable_ssl=enable_ssl,
+            ensure_db=ensure_db,
+            debug=debug,
+            **kwargs,
+        )
+        return cls(client)
+
+    @property
+    def sync_client(self) -> TiDBClient:
+        return self._client
+
+    @property
+    def db_engine(self) -> Engine:
+        return self._client.db_engine
+
+    @property
+    def is_serverless(self) -> bool:
+        return self._client.is_serverless
+
+    async def __aenter__(self) -> "AsyncTiDBClient":
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        await self.disconnect()
+
+    async def disconnect(self) -> None:
+        await run_sync(self._client.disconnect)
+
+    async def create_database(
+        self, name: str, if_exists: Optional[Literal["raise", "skip"]] = "raise"
+    ):
+        return await run_sync(
+            self._client.create_database, name, if_exists=if_exists
+        )
+
+    async def drop_database(self, name: str):
+        return await run_sync(self._client.drop_database, name)
+
+    async def list_databases(self) -> List[str]:
+        return await run_sync(self._client.list_databases)
+
+    async def has_database(self, name: str) -> bool:
+        return await run_sync(self._client.has_database, name)
+
+    async def current_database(self) -> Optional[str]:
+        return await run_sync(self._client.current_database)
+
+    async def use_database(
+        self, database: str, *, ensure_db: Optional[bool] = False
+    ) -> None:
+        await run_sync(self._client.use_database, database, ensure_db=ensure_db)
+
+    async def create_table(
+        self,
+        *,
+        schema: Optional[Type[TableModel]] = None,
+        if_exists: Optional[Literal["raise", "overwrite", "skip"]] = "raise",
+    ) -> Table:
+        return await run_sync(
+            self._client.create_table, schema=schema, if_exists=if_exists
+        )
+
+    async def open_table(self, table_name: str) -> Optional[Table]:
+        return await run_sync(self._client.open_table, table_name)
+
+    async def list_tables(self) -> List[str]:
+        return await run_sync(self._client.list_tables)
+
+    async def has_table(self, table_name: str) -> bool:
+        return await run_sync(self._client.has_table, table_name)
+
+    async def drop_table(
+        self,
+        table_name: str,
+        if_not_exists: Optional[Literal["raise", "skip"]] = "raise",
+    ):
+        return await run_sync(
+            self._client.drop_table, table_name, if_not_exists=if_not_exists
+        )
+
+    async def execute(
+        self,
+        sql: str | Executable,
+        params: Optional[dict] = None,
+        raise_error: Optional[bool] = False,
+    ) -> SQLExecuteResult:
+        return await run_sync(
+            self._client.execute, sql, params, raise_error=raise_error
+        )
+
+    async def query(
+        self,
+        sql: str | SelectBase,
+        params: Optional[dict] = None,
+    ) -> SQLQueryResult:
+        return await run_sync(self._client.query, sql, params)
+
+    async def configure_embedding_provider(
+        self, provider: str, api_key: str
+    ) -> SQLExecuteResult:
+        return await run_sync(
+            self._client.configure_embedding_provider, provider, api_key
+        )

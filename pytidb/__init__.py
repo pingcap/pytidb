@@ -3,7 +3,7 @@ import os
 from sqlmodel import Session
 from sqlalchemy import create_engine
 
-from .client import TiDBClient
+from .client import TiDBClient, AsyncTiDBClient
 from .table import Table
 from .utils import build_tidb_connection_url
 
@@ -17,6 +17,7 @@ if "LITELLM_LOG" not in os.environ:
 
 __all__ = [
     "TiDBClient",
+    "AsyncTiDBClient",
     "Table",
     "build_tidb_connection_url",
     "Session",
