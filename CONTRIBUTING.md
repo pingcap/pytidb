@@ -52,7 +52,7 @@ Having a mental map of the repository makes it much easier to decide where a cha
 ### Supporting project areas
 
 - `examples/*`: organized by scenario (`basic`, `rag`, `fulltext_search`, `memory`, `vector-search-with-realtime-data`, etc.). Each folder contains runnable scripts or notebooks that demonstrate how higher-level abstractions should be used. When you add new functionality, consider dropping a runnable sample here.
-- `tests/*`: mirrors the main modules-`test_databases.py`, `test_tables.py`, `test_search_vector.py`, `test_auto_embedding_*`, `test_filters.py`, and more. When you touch a feature, look for the matching test file to extend. Fixtures in `tests/fixtures/` and helpers in `tests/utils.py` keep database setup predictable.
+- `tests/*`: mirrors the main modules (`test_databases.py`, `test_tables.py`, `test_search_vector.py`, `test_auto_embedding_*`, `test_filters.py`, etc.). When you touch a feature, look for the matching test file to extend. Fixtures in `tests/fixtures/` and helpers in `tests/utils.py` keep database setup predictable.
 - `docs/`: although the public docs now live in `pingcap/pingcap.github.io`, this directory still holds the MkDocs site (with `docs/src/index.md`, shared assets, and `quickstart.ipynb`). Use it when you need to preview documentation locally or author notebooks before upstreaming them.
 
 ### How the pieces fit together
@@ -63,4 +63,4 @@ Having a mental map of the repository makes it much easier to decide where a cha
 4. **Search execution** - `Table.search()` instantiates `Search`, which can run vector, full-text, or hybrid pipelines. It pulls embeddings via `embeddings/`, applies filter clauses, pre/post-filters candidates, optionally reranks with `rerankers/`, and fuses heterogeneous result sets with `fusion.py`.
 5. **Results and integrations** - executed statements return `QueryResult`/`SQLQueryResult` wrappers that can be converted to dictionaries, lists, pandas DataFrames, or SQLModel instances. External clients (examples, the MCP server, notebooks) rely on these conversions for downstream tasks.
 
-Keep this workflow in mind when updating docs or code-changes to schemas typically cascade into table constructors, search behavior, tests, and user-facing samples.
+Keep this workflow in mind when updating docs or code; changes to schemas typically cascade into table constructors, search behavior, tests, and user-facing samples.
