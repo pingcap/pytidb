@@ -62,9 +62,14 @@ tidb_client = TiDBClient.connect(
     username=os.getenv("TIDB_USERNAME"),
     password=os.getenv("TIDB_PASSWORD"),
     database=os.getenv("TIDB_DATABASE"),
+    ca_path=os.getenv("TIDB_CA_PATH"),
     ensure_db=True,
 )
 ```
+
+> **Note:** Windows users connecting to TiDB Serverless should set `TIDB_CA_PATH`
+> to the downloaded CA bundle (e.g., [ISRG Root X1](https://letsencrypt.org/certs/isrgrootx1.pem))
+> so the driver can verify TLS connections.
 
 ## Highlights
 
