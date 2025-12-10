@@ -56,10 +56,15 @@ class TiDBClient:
         password: Optional[str] = "",
         database: Optional[str] = "test",
         enable_ssl: Optional[bool] = None,
+        ca_path: Optional[str] = None,
         ensure_db: Optional[bool] = False,
         debug: Optional[bool] = None,
         **kwargs,
     ) -> "TiDBClient":
+        auto_enable_ssl = enable_ssl
+        if auto_enable_ssl is None and ca_path:
+            auto_enable_ssl = True
+
         if url is None:
             url = build_tidb_connection_url(
                 host=host,
@@ -67,9 +72,26 @@ class TiDBClient:
                 username=username,
                 password=password,
                 database=database,
-                enable_ssl=enable_ssl,
+                enable_ssl=auto_enable_ssl,
             )
             # TODO: When URL is passed in directly, it should be validated.
+
+        if ca_path:
+            connect_args = kwargs.get("connect_args")
+            if connect_args is None:
+                connect_args = {}
+            else:
+                connect_args = dict(connect_args)
+
+            ssl_options = connect_args.get("ssl")
+            if ssl_options is None:
+                ssl_options = {}
+            else:
+                ssl_options = dict(ssl_options)
+
+            ssl_options["ca"] = ca_path
+            connect_args["ssl"] = ssl_options
+            kwargs["connect_args"] = connect_args
 
         if ensure_db:
             try:
@@ -91,6 +113,7 @@ class TiDBClient:
             # url is also not needed because it is already in `db_engine`.
             "ensure_db": ensure_db,
             "debug": debug,
+            "ca_path": ca_path,
             **kwargs,
         }
 
