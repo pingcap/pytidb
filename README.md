@@ -255,3 +255,23 @@ with tidb_client.session() as session:
 > Click the button below to install **TiDB MCP Server** in Cursor. Then, confirm by clicking **Install** when prompted.
 >
 > [![Install TiDB MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=TiDB&config=eyJjb21tYW5kIjoidXZ4IC0tZnJvbSBweXRpZGJbbWNwXSB0aWRiLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiVElEQl9IT1NUIjoibG9jYWxob3N0IiwiVElEQl9QT1JUIjoiNDAwMCIsIlRJREJfVVNFUk5BTUUiOiJyb290IiwiVElEQl9QQVNTV09SRCI6IiIsIlRJREJfREFUQUJBU0UiOiJ0ZXN0In19)
+
+### 🔐 Custom CA certificates for TiDB MCP Server
+
+Windows and some minimal Linux environments do not ship a system CA bundle, so TiDB Serverless connections need an explicit certificate. TiDB MCP Server now respects a `TIDB_CA_PATH` environment variable (also available as the `ca_path` argument on `TiDBClient.connect`) so you can point the connector to a custom CA such as the [ISRG Root X1 certificate](https://letsencrypt.org/certs/isrgrootx1.pem).
+
+```bash
+curl -o "$HOME/.tidb/isrgrootx1.pem" https://letsencrypt.org/certs/isrgrootx1.pem
+export TIDB_CA_PATH="$HOME/.tidb/isrgrootx1.pem"
+uvx --from pytidb[mcp] tidb-mcp-server
+```
+
+On Windows PowerShell you can download the same certificate and run:
+
+```powershell
+Invoke-WebRequest https://letsencrypt.org/certs/isrgrootx1.pem -OutFile $env:USERPROFILE\isrgrootx1.pem
+$env:TIDB_CA_PATH = "$env:USERPROFILE\isrgrootx1.pem"
+uvx --from pytidb[mcp] tidb-mcp-server
+```
+
+Once the variable is set, every MCP session and manual `TiDBClient.connect(ca_path=...)` call will reuse that CA without requiring system-wide certificate changes.
