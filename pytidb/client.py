@@ -56,10 +56,31 @@ class TiDBClient:
         password: Optional[str] = "",
         database: Optional[str] = "test",
         enable_ssl: Optional[bool] = None,
+        ca_path: Optional[str] = None,
         ensure_db: Optional[bool] = False,
         debug: Optional[bool] = None,
         **kwargs,
     ) -> "TiDBClient":
+        ssl_required = enable_ssl
+        if ca_path and ssl_required is None:
+            ssl_required = True
+
+        connect_args = kwargs.get("connect_args")
+        if connect_args is None:
+            connect_args = {}
+        else:
+            connect_args = dict(connect_args)
+
+        if ca_path:
+            ssl_options = dict(connect_args.get("ssl") or {})
+            ssl_options["ca"] = ca_path
+            connect_args["ssl"] = ssl_options
+
+        if connect_args:
+            kwargs["connect_args"] = connect_args
+        elif "connect_args" in kwargs:
+            kwargs.pop("connect_args")
+
         if url is None:
             url = build_tidb_connection_url(
                 host=host,
@@ -67,7 +88,7 @@ class TiDBClient:
                 username=username,
                 password=password,
                 database=database,
-                enable_ssl=enable_ssl,
+                enable_ssl=ssl_required,
             )
             # TODO: When URL is passed in directly, it should be validated.
 
