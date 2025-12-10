@@ -56,10 +56,20 @@ class TiDBClient:
         password: Optional[str] = "",
         database: Optional[str] = "test",
         enable_ssl: Optional[bool] = None,
+        ca_path: Optional[str] = None,
         ensure_db: Optional[bool] = False,
         debug: Optional[bool] = None,
         **kwargs,
     ) -> "TiDBClient":
+        connect_args_input = kwargs.pop("connect_args", None)
+        connect_args = dict(connect_args_input or {})
+
+        if ca_path:
+            # Ensure PyMySQL gets the CA certificate for TLS validation.
+            connect_args["ssl_ca"] = ca_path
+            if enable_ssl is None:
+                enable_ssl = True
+
         if url is None:
             url = build_tidb_connection_url(
                 host=host,
@@ -71,28 +81,41 @@ class TiDBClient:
             )
             # TODO: When URL is passed in directly, it should be validated.
 
+        if host and TIDB_SERVERLESS_HOST_PATTERN.match(host):
+            kwargs.setdefault("pool_recycle", 300)
+            kwargs.setdefault("pool_pre_ping", True)
+            kwargs.setdefault("pool_timeout", 10)
+
+        engine_kwargs = dict(kwargs)
+        reconnect_connect_args = dict(connect_args) if connect_args else {}
+        engine_connect_args = dict(reconnect_connect_args) if reconnect_connect_args else {}
+        if engine_connect_args:
+            engine_kwargs["connect_args"] = engine_connect_args
+
         if ensure_db:
             try:
-                temp_engine = create_engine_without_db(url, echo=debug, **kwargs)
+                temp_engine = create_engine_without_db(
+                    url,
+                    echo=debug,
+                    **engine_kwargs,
+                )
                 if not database_exists(temp_engine, database):
                     create_database(temp_engine, database)
             except Exception as e:
                 logger.error("Failed to ensure database exists: %s", str(e))
                 raise
 
-        if host and TIDB_SERVERLESS_HOST_PATTERN.match(host):
-            kwargs.setdefault("pool_recycle", 300)
-            kwargs.setdefault("pool_pre_ping", True)
-            kwargs.setdefault("pool_timeout", 10)
-
-        db_engine = create_engine(url, echo=debug, **kwargs)
+        db_engine = create_engine(url, echo=debug, **engine_kwargs)
         reconnect_params = {
             # host, port, etc is not needed because they will be built into the URL.
             # url is also not needed because it is already in `db_engine`.
             "ensure_db": ensure_db,
             "debug": debug,
+            "ca_path": ca_path,
             **kwargs,
         }
+        if reconnect_connect_args:
+            reconnect_params["connect_args"] = reconnect_connect_args
 
         return cls(db_engine, reconnect_params)
 

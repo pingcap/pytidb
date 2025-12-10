@@ -62,8 +62,15 @@ tidb_client = TiDBClient.connect(
     username=os.getenv("TIDB_USERNAME"),
     password=os.getenv("TIDB_PASSWORD"),
     database=os.getenv("TIDB_DATABASE"),
+    ca_path=os.getenv("TIDB_CA_PATH"),
     ensure_db=True,
 )
+```
+
+If you're connecting from an environment that does not ship the [ISRG Root X1](https://letsencrypt.org/certs/isrgrootx1.pem) certificate (for example, certain Windows setups), download the certificate and point `TIDB_CA_PATH` to it:
+
+```bash
+export TIDB_CA_PATH=/path/to/isrgrootx1.pem
 ```
 
 ## Highlights

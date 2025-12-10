@@ -25,6 +25,7 @@ def create_tidb_client(database: str) -> TiDBClient:
         username=os.getenv("TIDB_USERNAME", "root"),
         password=os.getenv("TIDB_PASSWORD", ""),
         database=database,
+        ca_path=os.getenv("TIDB_CA_PATH"),
         ensure_db=True,  # This will create the database if it doesn't exist
         debug=os.getenv("TIDB_CLIENT_DEBUG", "false").lower() in ("true", "1", "yes"),
     )
