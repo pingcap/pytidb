@@ -1,5 +1,7 @@
+import copy
 from contextlib import contextmanager
 from contextvars import ContextVar
+from collections.abc import Mapping
 from typing import List, Literal, Optional, Type, Generator
 
 from pydantic import PrivateAttr
@@ -58,8 +60,36 @@ class TiDBClient:
         enable_ssl: Optional[bool] = None,
         ensure_db: Optional[bool] = False,
         debug: Optional[bool] = None,
+        ca_path: Optional[str] = None,
         **kwargs,
     ) -> "TiDBClient":
+        connect_args = kwargs.get("connect_args")
+        if connect_args is not None:
+            # Shallow copy to avoid mutating caller input; deepcopy fails for objects
+            # like ssl.SSLContext embedded in the connect args.
+            connect_args = copy.copy(connect_args)
+
+        if ca_path:
+            if connect_args is None:
+                connect_args = {}
+            ssl_value = connect_args.get("ssl")
+            if ssl_value is None:
+                connect_args["ssl"] = {"ca": ca_path}
+            elif isinstance(ssl_value, Mapping):
+                ssl_options = dict(ssl_value)
+                ssl_options["ca"] = ca_path
+                connect_args["ssl"] = ssl_options
+            else:
+                logger.debug(
+                    "Skipping ca_path merge because connect_args['ssl'] is non-mapping (%s)",
+                    type(ssl_value).__name__,
+                )
+
+        if connect_args is not None:
+            kwargs["connect_args"] = connect_args
+        elif "connect_args" in kwargs:
+            kwargs.pop("connect_args")
+
         if url is None:
             url = build_tidb_connection_url(
                 host=host,
@@ -91,6 +121,7 @@ class TiDBClient:
             # url is also not needed because it is already in `db_engine`.
             "ensure_db": ensure_db,
             "debug": debug,
+            "ca_path": ca_path,
             **kwargs,
         }
 

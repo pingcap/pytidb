@@ -66,6 +66,17 @@ tidb_client = TiDBClient.connect(
 )
 ```
 
+### Configure a Custom CA Certificate
+
+When TiDB Serverless connections need a custom root certificate (for example on Windows, which ships without a default CA bundle), set the `TIDB_CA_PATH` environment variable so PyMySQL receives the correct `ssl={"ca": ...}` argument.
+
+```bash
+# Example: launch the MCP server with a downloaded ISRG Root X1 certificate
+TIDB_CA_PATH=/path/to/isrgrootx1.pem tidb-mcp-server
+```
+
+For Windows users, download the [ISRG Root X1 certificate](https://letsencrypt.org/certs/isrgrootx1.pem), save it locally (e.g., `C:\certs\isrgrootx1.pem`), and point `TIDB_CA_PATH` at that file before running your application or the MCP server.
+
 ## Highlights
 
 ### 🤖 Automatic Embedding
