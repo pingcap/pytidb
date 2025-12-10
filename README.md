@@ -66,6 +66,16 @@ tidb_client = TiDBClient.connect(
 )
 ```
 
+If you need to provide a custom Certificate Authority bundle (for example on Windows),
+set the `TIDB_CA_PATH` environment variable before running your application:
+
+```bash
+export TIDB_CA_PATH=/path/to/isrgrootx1.pem
+```
+
+Windows users can download the [ISRG Root X1 certificate](https://letsencrypt.org/certs/isrgrootx1.pem)
+from Let's Encrypt and point `TIDB_CA_PATH` at the downloaded file to avoid SSL verification errors.
+
 ## Highlights
 
 ### 🤖 Automatic Embedding
