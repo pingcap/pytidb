@@ -38,15 +38,22 @@ class TiDBConnector:
         username: Optional[str] = None,
         password: Optional[str] = None,
         database: Optional[str] = None,
+        ca_path: Optional[str] = None,
     ):
-        self.tidb_client = TiDBClient.connect(
-            url=database_url,
-            host=host,
-            port=port,
-            username=username,
-            password=password,
-            database=database,
-        )
+        self.ca_path = ca_path or None
+
+        connect_kwargs = {
+            "url": database_url,
+            "host": host,
+            "port": port,
+            "username": username,
+            "password": password,
+            "database": database,
+        }
+        if self.ca_path:
+            connect_kwargs["ca_path"] = self.ca_path
+
+        self.tidb_client = TiDBClient.connect(**connect_kwargs)
         if database_url:
             uri = MySQLDsn(database_url)
             self.host = uri.host
@@ -70,13 +77,17 @@ class TiDBConnector:
         username: Optional[str] = None,
         password: Optional[str] = None,
     ) -> None:
-        self.tidb_client = TiDBClient.connect(
-            host=self.host,
-            port=self.port,
-            username=username or self.username,
-            password=password or self.password,
-            database=db_name or self.database,
-        )
+        connect_kwargs = {
+            "host": self.host,
+            "port": self.port,
+            "username": username or self.username,
+            "password": password or self.password,
+            "database": db_name or self.database,
+        }
+        if self.ca_path:
+            connect_kwargs["ca_path"] = self.ca_path
+
+        self.tidb_client = TiDBClient.connect(**connect_kwargs)
 
     def show_tables(self) -> list[str]:
         return self.tidb_client.list_tables()
@@ -153,6 +164,7 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
     tidb = None
     try:
         log.info("Starting TiDB Connector...")
+        ca_path = os.getenv("TIDB_CA_PATH")
         tidb = TiDBConnector(
             database_url=os.getenv("TIDB_DATABASE_URL", None),
             host=os.getenv("TIDB_HOST", "127.0.0.1"),
@@ -160,6 +172,7 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
             username=os.getenv("TIDB_USERNAME", "root"),
             password=os.getenv("TIDB_PASSWORD", ""),
             database=os.getenv("TIDB_DATABASE", "test"),
+            ca_path=ca_path,
         )
         log.info(f"Connected to TiDB: {tidb.host}:{tidb.port}/{tidb.database}")
         yield AppContext(tidb=tidb)

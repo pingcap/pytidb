@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from contextvars import ContextVar
+from pathlib import Path
 from typing import List, Literal, Optional, Type, Generator
 
 from pydantic import PrivateAttr
@@ -30,6 +31,19 @@ from pytidb.result import SQLExecuteResult, SQLQueryResult
 SESSION = ContextVar[Session | None]("session", default=None)
 
 
+def _resolve_ca_path(ca_path: Optional[str]) -> Optional[str]:
+    """Expand and validate the CA certificate path before connecting."""
+
+    if not ca_path:
+        return None
+
+    resolved = Path(ca_path).expanduser()
+    if not resolved.is_file():
+        raise FileNotFoundError(f"CA certificate file '{resolved}' does not exist")
+
+    return str(resolved)
+
+
 class TiDBClient:
     _db_engine: Engine = PrivateAttr()
 
@@ -57,6 +71,7 @@ class TiDBClient:
         database: Optional[str] = "test",
         enable_ssl: Optional[bool] = None,
         ensure_db: Optional[bool] = False,
+        ca_path: Optional[str] = None,
         debug: Optional[bool] = None,
         **kwargs,
     ) -> "TiDBClient":
@@ -70,6 +85,14 @@ class TiDBClient:
                 enable_ssl=enable_ssl,
             )
             # TODO: When URL is passed in directly, it should be validated.
+
+        resolved_ca_path = _resolve_ca_path(ca_path)
+        if resolved_ca_path:
+            connect_args = dict(kwargs.get("connect_args", {}))
+            ssl_args = dict(connect_args.get("ssl", {}))
+            ssl_args["ca"] = resolved_ca_path
+            connect_args["ssl"] = ssl_args
+            kwargs["connect_args"] = connect_args
 
         if ensure_db:
             try:
@@ -91,6 +114,7 @@ class TiDBClient:
             # url is also not needed because it is already in `db_engine`.
             "ensure_db": ensure_db,
             "debug": debug,
+            "ca_path": resolved_ca_path,
             **kwargs,
         }
 
