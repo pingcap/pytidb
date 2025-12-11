@@ -48,6 +48,36 @@ def test_open_table(isolated_client: TiDBClient):
     assert table.rows() == 1
 
 
+def test_update_returns_instance(isolated_client: TiDBClient):
+    class TestUpdateReturnsInstance(TableModel):
+        __tablename__ = "test_update_returns_instance"
+        id: int = Field(primary_key=True)
+        name: str
+        score: int
+
+    table = isolated_client.create_table(
+        schema=TestUpdateReturnsInstance, if_exists="overwrite"
+    )
+    table.truncate()
+    table.insert(TestUpdateReturnsInstance(id=1, name="foo", score=1))
+
+    updated = table.update(
+        {
+            "name": "bar",
+            "score": 2,
+        },
+        {"id": 1},
+    )
+
+    assert isinstance(updated, TestUpdateReturnsInstance)
+    assert updated.id == 1
+    assert updated.name == "bar"
+    assert updated.score == 2
+
+    missing = table.update({"name": "baz"}, {"id": 999})
+    assert missing is None
+
+
 def test_list_tables(isolated_client: TiDBClient):
     """Test list_tables after creating tables."""
 
