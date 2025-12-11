@@ -11,6 +11,11 @@ from pytidb.embeddings import EmbeddingFunction
 
 logger = logging.getLogger(__name__)
 
+SKIP_SHARED_CLIENT = os.getenv("PYTIDB_SKIP_SHARED_CLIENT", "").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 
 @pytest.fixture(scope="session", autouse=True)
 def env():
@@ -35,13 +40,17 @@ def generate_dynamic_name(prefix: str = "test_pytidb") -> str:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def shared_client(env) -> Generator[TiDBClient, None, None]:
+def shared_client(env) -> Generator[TiDBClient | None, None, None]:
     """
     Create a shared TiDBClient instance that persists across multiple test functions.
 
     A test database will be created before the tests start and dropped
     after all tests complete.
     """
+    if SKIP_SHARED_CLIENT:
+        yield None
+        return
+
     db_name = generate_dynamic_name()
     tidb_client = create_tidb_client(db_name)
     print(f"Shared client created for database {db_name}")

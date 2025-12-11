@@ -8,6 +8,7 @@ from typing import (
     TypeVar,
     Type,
     Union,
+    Tuple,
     TYPE_CHECKING,
 )
 import warnings
@@ -21,7 +22,7 @@ from typing_extensions import Generic
 from pytidb.filters import Filters, build_filter_clauses
 from pytidb.orm.indexes import FullTextIndex, VectorIndex, format_distance_expression
 from pytidb.orm.sql import ddl
-from pytidb.sql import select, update, delete
+from pytidb.sql import select, update, delete, and_, or_
 from pytidb.schema import (
     QueryBundle,
     TableModelMeta,
@@ -382,6 +383,36 @@ class Table(Generic[T]):
                 db_session.refresh(item)
             return data
 
+    def _build_pk_filter_clause(
+        self,
+        pk_columns: List[Any],
+        pk_values: List[Tuple[Any, ...]],
+    ):
+        if not pk_columns or not pk_values:
+            return None
+
+        if len(pk_columns) == 1:
+            column = pk_columns[0]
+            values = [value[0] for value in pk_values]
+            return column.in_(values)
+
+        clauses = []
+        for value in pk_values:
+            clauses.append(
+                and_(
+                    *(
+                        pk_column == value[idx]
+                        for idx, pk_column in enumerate(pk_columns)
+                    )
+                )
+            )
+
+        if not clauses:
+            return None
+        if len(clauses) == 1:
+            return clauses[0]
+        return or_(*clauses)
+
     def update(self, values: dict, filters: Optional[Filters] = None) -> object:
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
@@ -413,8 +444,29 @@ class Table(Generic[T]):
 
         with self._client.session() as db_session:
             filter_clauses = build_filter_clauses(filters, self._sa_table)
+
+            pk_columns = list(self._sa_table.primary_key.columns)
+            pk_select = select(*pk_columns).select_from(self._table_model)
+            if filter_clauses:
+                pk_select = pk_select.filter(*filter_clauses)
+            # Capture primary keys before running UPDATE so we can reload fresh values afterward.
+            pk_values = [tuple(row) for row in db_session.execute(pk_select).all()]
+
             stmt = update(self._table_model).filter(*filter_clauses).values(values)
             db_session.execute(stmt)
+            db_session.flush()
+
+            pk_filter = self._build_pk_filter_clause(pk_columns, pk_values)
+            if pk_filter is None:
+                return None
+
+            refreshed_stmt = select(self._table_model).filter(pk_filter)
+            refreshed_rows = db_session.execute(refreshed_stmt).scalars().all()
+            if not refreshed_rows:
+                return None
+            if len(refreshed_rows) == 1:
+                return refreshed_rows[0]
+            return refreshed_rows
 
     def delete(self, filters: Optional[Filters] = None):
         """
