@@ -1,3 +1,4 @@
+import ssl
 from types import SimpleNamespace
 
 import pytest
@@ -101,3 +102,27 @@ def test_tidb_connector_without_ca_env(monkeypatch):
     )
 
     assert "ca_path" not in captured_kwargs
+
+
+def test_tidb_client_connect_preserves_ssl_context(monkeypatch, tmp_path):
+    ca_file = tmp_path / "ca.pem"
+    ca_file.write_text("dummy")
+    ssl_context = ssl.create_default_context()
+    captured_kwargs: dict = {}
+
+    def fake_create_engine(url, echo=None, **kwargs):
+        captured_kwargs.update(kwargs)
+        return DummyEngine(url)
+
+    monkeypatch.setattr("pytidb.client.create_engine", fake_create_engine)
+
+    TiDBClient.connect(
+        host="gateway01.us-west-2.prod.aws.tidbcloud.com",
+        username="user.root",
+        password="secret",
+        database="test",
+        ca_path=str(ca_file),
+        connect_args={"ssl": ssl_context},
+    )
+
+    assert captured_kwargs["connect_args"]["ssl"] is ssl_context

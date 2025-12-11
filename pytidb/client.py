@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path
@@ -89,9 +90,24 @@ class TiDBClient:
         resolved_ca_path = _resolve_ca_path(ca_path)
         if resolved_ca_path:
             connect_args = dict(kwargs.get("connect_args", {}))
-            ssl_args = dict(connect_args.get("ssl", {}))
-            ssl_args["ca"] = resolved_ca_path
-            connect_args["ssl"] = ssl_args
+            ssl_value = connect_args.get("ssl")
+
+            ssl_args: Optional[dict]
+            if ssl_value is None:
+                ssl_args = {}
+            elif isinstance(ssl_value, Mapping):
+                ssl_args = dict(ssl_value)
+            else:
+                ssl_args = None
+                logger.debug(
+                    "Skipping CA injection because connect_args['ssl'] is %s",
+                    type(ssl_value).__name__,
+                )
+
+            if ssl_args is not None:
+                ssl_args["ca"] = resolved_ca_path
+                connect_args["ssl"] = ssl_args
+
             kwargs["connect_args"] = connect_args
 
         if ensure_db:
