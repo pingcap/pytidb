@@ -122,3 +122,63 @@ def test_drop_table(isolated_client: TiDBClient):
     # Test invalid if_not_exists value
     with pytest.raises(ValueError):
         isolated_client.drop_table(test_table_name, if_not_exists="invalid")
+
+
+def test_table_update_returns_instance_single_field(isolated_client: TiDBClient):
+    class UpdateSingleField(TableModel):
+        __tablename__ = "test_update_single_field"
+        id: int = Field(primary_key=True)
+        name: str
+        balance: int
+
+    table = isolated_client.create_table(schema=UpdateSingleField, if_exists="overwrite")
+    table.truncate()
+    table.insert(UpdateSingleField(id=1, name="Alice", balance=100))
+
+    updated = table.update({"name": "Bob"}, {"id": 1})
+
+    assert isinstance(updated, UpdateSingleField)
+    assert updated.id == 1
+    assert updated.name == "Bob"
+    assert updated.balance == 100
+    assert table.get(1).name == "Bob"
+
+
+def test_table_update_returns_instance_multiple_fields(isolated_client: TiDBClient):
+    class UpdateMultipleFields(TableModel):
+        __tablename__ = "test_update_multiple_fields"
+        id: int = Field(primary_key=True)
+        name: str
+        balance: int
+
+    table = isolated_client.create_table(
+        schema=UpdateMultipleFields, if_exists="overwrite"
+    )
+    table.truncate()
+    table.insert(UpdateMultipleFields(id=1, name="Alice", balance=100))
+
+    updated = table.update({"name": "Charlie", "balance": 250}, {"id": 1})
+
+    assert isinstance(updated, UpdateMultipleFields)
+    assert updated.id == 1
+    assert updated.name == "Charlie"
+    assert updated.balance == 250
+    reloaded = table.get(1)
+    assert reloaded.name == "Charlie"
+    assert reloaded.balance == 250
+
+
+def test_table_update_returns_none_when_no_rows_match(isolated_client: TiDBClient):
+    class UpdateNoMatch(TableModel):
+        __tablename__ = "test_update_no_match"
+        id: int = Field(primary_key=True)
+        name: str
+
+    table = isolated_client.create_table(schema=UpdateNoMatch, if_exists="overwrite")
+    table.truncate()
+    table.insert(UpdateNoMatch(id=1, name="Alice"))
+
+    updated = table.update({"name": "Bob"}, {"id": 999})
+
+    assert updated is None
+    assert table.get(1).name == "Alice"
