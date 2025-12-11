@@ -59,6 +59,30 @@ def test_table_crud(shared_client):
     assert tbl.rows() == 0
 
 
+def test_table_update_returns_instance(shared_client):
+    class Task(TableModel, table=True):
+        __tablename__ = "test_table_update_returns_instance"
+        id: int = Field(primary_key=True)
+        title: str = Field(max_length=20)
+        status: str = Field(max_length=20)
+
+    tbl = shared_client.create_table(schema=Task, if_exists="overwrite")
+    tbl.insert(Task(id=1, title="foo", status="pending"))
+
+    updated_task = tbl.update(
+        values={"status": "complete"}, filters={"status": "pending"}
+    )
+    assert isinstance(updated_task, Task)
+    assert updated_task.id == 1
+    assert updated_task.status == "complete"
+
+    chained_status = tbl.update(
+        values={"status": "archived"}, filters={"id": 1}
+    ).model_dump()["status"]
+    assert chained_status == "archived"
+    assert tbl.get(1).status == "archived"
+
+
 def test_table_query(shared_client):
     class Chunk(TableModel):
         __tablename__ = "test_table_query"
