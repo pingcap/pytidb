@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+from pathlib import Path
 
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
@@ -27,6 +28,23 @@ load_dotenv()
 TIDB_SERVERLESS_USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+$")
 
 
+def resolve_ca_path(raw_path: Optional[str]) -> Optional[str]:
+    """Normalize and validate the optional CA certificate path."""
+
+    if not raw_path:
+        return None
+
+    ca_path = Path(raw_path).expanduser().resolve()
+    if not ca_path.exists():
+        raise ValueError(f"TIDB_CA_PATH '{raw_path}' does not exist")
+    if not ca_path.is_file():
+        raise ValueError(f"TIDB_CA_PATH '{raw_path}' must point to a file")
+    if not os.access(ca_path, os.R_OK):
+        raise ValueError(f"TIDB_CA_PATH '{raw_path}' is not readable")
+
+    return str(ca_path)
+
+
 # TiDB Connector
 class TiDBConnector:
     def __init__(
@@ -38,7 +56,9 @@ class TiDBConnector:
         username: Optional[str] = None,
         password: Optional[str] = None,
         database: Optional[str] = None,
+        ca_cert_path: Optional[str] = None,
     ):
+        self.ca_cert_path = ca_cert_path
         self.tidb_client = TiDBClient.connect(
             url=database_url,
             host=host,
@@ -46,6 +66,7 @@ class TiDBConnector:
             username=username,
             password=password,
             database=database,
+            **self._ssl_connect_kwargs(),
         )
         if database_url:
             uri = MySQLDsn(database_url)
@@ -76,6 +97,7 @@ class TiDBConnector:
             username=username or self.username,
             password=password or self.password,
             database=db_name or self.database,
+            **self._ssl_connect_kwargs(),
         )
 
     def show_tables(self) -> list[str]:
@@ -141,6 +163,11 @@ class TiDBConnector:
     def disconnect(self) -> None:
         self.tidb_client.disconnect()
 
+    def _ssl_connect_kwargs(self) -> dict:
+        if not self.ca_cert_path:
+            return {}
+        return {"connect_args": {"ssl": {"ca": self.ca_cert_path}}}
+
 
 # App Context
 @dataclass
@@ -153,6 +180,7 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
     tidb = None
     try:
         log.info("Starting TiDB Connector...")
+        ca_cert_path = resolve_ca_path(os.getenv("TIDB_CA_PATH"))
         tidb = TiDBConnector(
             database_url=os.getenv("TIDB_DATABASE_URL", None),
             host=os.getenv("TIDB_HOST", "127.0.0.1"),
@@ -160,6 +188,7 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
             username=os.getenv("TIDB_USERNAME", "root"),
             password=os.getenv("TIDB_PASSWORD", ""),
             database=os.getenv("TIDB_DATABASE", "test"),
+            ca_cert_path=ca_cert_path,
         )
         log.info(f"Connected to TiDB: {tidb.host}:{tidb.port}/{tidb.database}")
         yield AppContext(tidb=tidb)

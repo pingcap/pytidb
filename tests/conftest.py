@@ -10,6 +10,61 @@ from pytidb import TiDBClient
 from pytidb.embeddings import EmbeddingFunction
 
 logger = logging.getLogger(__name__)
+SKIP_TIDB_TESTS = os.getenv("PYTIDB_SKIP_TIDB_TESTS", "").lower() in (
+    "1",
+    "true",
+    "yes",
+)
+
+
+class _StubTiDBClient:
+    """
+    Test double that eagerly skips any TiDB-dependent test code when the
+    PYTIDB_SKIP_TIDB_TESTS flag is enabled. This ensures fixtures can still
+    be requested without raising AttributeError on missing client methods.
+    """
+
+    _reason = (
+        "PYTIDB_SKIP_TIDB_TESTS is set; TiDB integration tests are disabled "
+        "in this environment."
+    )
+
+    def __init__(self, reason: str | None = None) -> None:
+        self._skip_reason = reason or self._reason
+
+    @property
+    def skip_reason(self) -> str:
+        return self._skip_reason
+
+    def _skip(self, *_args, **_kwargs):
+        pytest.skip(self._skip_reason)
+
+    def __getattr__(self, _name):
+        self._skip()
+
+    def __call__(self, *_args, **_kwargs):
+        self._skip()
+
+    def __bool__(self):
+        self._skip()
+
+    def __iter__(self):
+        self._skip()
+
+    def __enter__(self):
+        self._skip()
+
+    def __exit__(self, *_exc):
+        self._skip()
+
+    def drop_database(self, *_args, **_kwargs):
+        self._skip()
+
+    def disconnect(self):
+        self._skip()
+
+    def __repr__(self) -> str:
+        return f"<_StubTiDBClient skip_reason='{self._skip_reason}'>"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -42,6 +97,10 @@ def shared_client(env) -> Generator[TiDBClient, None, None]:
     A test database will be created before the tests start and dropped
     after all tests complete.
     """
+    if SKIP_TIDB_TESTS:
+        yield _StubTiDBClient()
+        return
+
     db_name = generate_dynamic_name()
     tidb_client = create_tidb_client(db_name)
     print(f"Shared client created for database {db_name}")
@@ -63,6 +122,10 @@ def isolated_client(env) -> Generator[TiDBClient, None, None]:
     A test database will be created before the test function starts and dropped
     after the test function completes.
     """
+    if SKIP_TIDB_TESTS:
+        yield _StubTiDBClient()
+        return
+
     db_name = generate_dynamic_name()
     client = create_tidb_client(db_name)
 
@@ -77,4 +140,7 @@ def isolated_client(env) -> Generator[TiDBClient, None, None]:
 
 @pytest.fixture(scope="session", autouse=True)
 def text_embed():
+    if SKIP_TIDB_TESTS:
+        return None
+
     return EmbeddingFunction("openai/text-embedding-3-small", timeout=20)

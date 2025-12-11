@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Optional
 import pytest
@@ -6,6 +7,16 @@ from pytidb import TiDBClient
 from pytidb.schema import TableModel, Field
 from pytidb.table import Table
 from pytidb.embeddings import EmbeddingFunction
+
+SKIP_TIDB_TESTS = os.getenv("PYTIDB_SKIP_TIDB_TESTS", "").lower() in (
+    "1",
+    "true",
+    "yes",
+)
+pytestmark = pytest.mark.skipif(
+    SKIP_TIDB_TESTS,
+    reason="PYTIDB_SKIP_TIDB_TESTS is set; image embedding tests require TiDB",
+)
 
 
 pet_images_dir = Path("./tests/fixtures/pet_images")
