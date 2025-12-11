@@ -382,7 +382,7 @@ class Table(Generic[T]):
                 db_session.refresh(item)
             return data
 
-    def update(self, values: dict, filters: Optional[Filters] = None) -> object:
+    def update(self, values: dict, filters: Optional[Filters] = None) -> Optional[T]:
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
@@ -413,8 +413,15 @@ class Table(Generic[T]):
 
         with self._client.session() as db_session:
             filter_clauses = build_filter_clauses(filters, self._sa_table)
+            # Grab the first matching instance before issuing the UPDATE so it can be refreshed afterward.
+            select_stmt = select(self._table_model).filter(*filter_clauses).limit(1)
+            updated_instance = db_session.execute(select_stmt).scalars().first()
             stmt = update(self._table_model).filter(*filter_clauses).values(values)
             db_session.execute(stmt)
+            db_session.flush()
+            if updated_instance is not None:
+                db_session.refresh(updated_instance)
+            return updated_instance
 
     def delete(self, filters: Optional[Filters] = None):
         """
