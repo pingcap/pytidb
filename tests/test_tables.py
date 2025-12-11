@@ -122,3 +122,18 @@ def test_drop_table(isolated_client: TiDBClient):
     # Test invalid if_not_exists value
     with pytest.raises(ValueError):
         isolated_client.drop_table(test_table_name, if_not_exists="invalid")
+
+
+def test_table_update_returns_self(isolated_client: TiDBClient):
+    class UpdateTable(TableModel):
+        __tablename__ = "test_table_update_returns_self"
+        id: int = Field(primary_key=True)
+        name: str
+
+    table = isolated_client.create_table(schema=UpdateTable, if_exists="overwrite")
+    table.insert(UpdateTable(id=1, name="foo"))
+
+    updated_table = table.update(values={"name": "bar"}, filters={"id": 1})
+
+    assert updated_table is table
+    assert table.get(1).name == "bar"

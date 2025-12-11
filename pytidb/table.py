@@ -382,7 +382,7 @@ class Table(Generic[T]):
                 db_session.refresh(item)
             return data
 
-    def update(self, values: dict, filters: Optional[Filters] = None) -> object:
+    def update(self, values: dict, filters: Optional[Filters] = None) -> "Table[T]":
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
@@ -415,6 +415,7 @@ class Table(Generic[T]):
             filter_clauses = build_filter_clauses(filters, self._sa_table)
             stmt = update(self._table_model).filter(*filter_clauses).values(values)
             db_session.execute(stmt)
+            return self
 
     def delete(self, filters: Optional[Filters] = None):
         """
