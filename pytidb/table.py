@@ -382,7 +382,12 @@ class Table(Generic[T]):
                 db_session.refresh(item)
             return data
 
-    def update(self, values: dict, filters: Optional[Filters] = None) -> object:
+    def update(
+        self, values: dict, filters: Optional[Filters] = None
+    ) -> Optional[Union[T, List[T]]]:
+        if filters is None:
+            raise ValueError("table.update() requires filters to be provided.")
+
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
@@ -415,6 +420,15 @@ class Table(Generic[T]):
             filter_clauses = build_filter_clauses(filters, self._sa_table)
             stmt = update(self._table_model).filter(*filter_clauses).values(values)
             db_session.execute(stmt)
+            db_session.flush()
+
+            refreshed_stmt = select(self._table_model).filter(*filter_clauses)
+            updated_rows = db_session.exec(refreshed_stmt).all()
+            if not updated_rows:
+                return None
+            if len(updated_rows) == 1:
+                return updated_rows[0]
+            return updated_rows
 
     def delete(self, filters: Optional[Filters] = None):
         """

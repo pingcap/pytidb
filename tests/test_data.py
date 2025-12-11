@@ -32,13 +32,17 @@ def test_table_crud(shared_client):
     assert np.array_equal(c.text_vec, [1, 2, 3])
 
     # UPDATE
-    tbl.update(
+    updated_chunk = tbl.update(
         values={
             "text": "fooooooo",
             "text_vec": [3, 6, 9],
         },
         filters={"text": "foo"},
     )
+    assert isinstance(updated_chunk, Chunk)
+    assert updated_chunk.id == 1
+    assert updated_chunk.text == "fooooooo"
+    assert np.array_equal(updated_chunk.text_vec, [3, 6, 9])
     c = tbl.get(1)
     assert c.text == "fooooooo"
     assert np.array_equal(c.text_vec, [3, 6, 9])
@@ -155,3 +159,30 @@ def test_table_save(shared_client: TiDBClient):
     saved_dict = tbl.save(dict_update)
     assert saved_dict.id == 2
     assert saved_dict.text == "dict updated"
+
+
+def test_table_update_returns_multiple_instances(shared_client):
+    class MultiChunk(TableModel):
+        __tablename__ = "test_table_update_returns_multiple_instances"
+        id: int = Field(primary_key=True)
+        text: str = Field(max_length=20)
+        group_id: int = Field()
+
+    tbl = shared_client.create_table(schema=MultiChunk, if_exists="overwrite")
+
+    tbl.bulk_insert(
+        [
+            MultiChunk(id=1, text="foo", group_id=1),
+            MultiChunk(id=2, text="bar", group_id=1),
+            MultiChunk(id=3, text="baz", group_id=2),
+        ]
+    )
+
+    updated_rows = tbl.update(
+        values={"text": "updated"},
+        filters={"group_id": {"$in": [1, 2]}},
+    )
+
+    assert isinstance(updated_rows, list)
+    assert {row.id for row in updated_rows} == {1, 2, 3}
+    assert all(row.text == "updated" for row in updated_rows)
