@@ -1,3 +1,4 @@
+import os
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import List, Literal, Optional, Type, Generator
@@ -56,6 +57,7 @@ class TiDBClient:
         password: Optional[str] = "",
         database: Optional[str] = "test",
         enable_ssl: Optional[bool] = None,
+        ca_path: Optional[str] = None,
         ensure_db: Optional[bool] = False,
         debug: Optional[bool] = None,
         **kwargs,
@@ -70,6 +72,24 @@ class TiDBClient:
                 enable_ssl=enable_ssl,
             )
             # TODO: When URL is passed in directly, it should be validated.
+
+        ca_path = ca_path or os.getenv("TIDB_CA_PATH")
+        if ca_path:
+            existing_connect_args = kwargs.get("connect_args")
+            if existing_connect_args is None:
+                connect_args = {}
+            else:
+                connect_args = {**existing_connect_args}
+
+            existing_ssl_args = connect_args.get("ssl")
+            if existing_ssl_args is None:
+                ssl_args = {}
+            else:
+                ssl_args = {**existing_ssl_args}
+
+            ssl_args["ca"] = ca_path
+            connect_args["ssl"] = ssl_args
+            kwargs["connect_args"] = connect_args
 
         if ensure_db:
             try:

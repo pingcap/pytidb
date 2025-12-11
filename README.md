@@ -66,6 +66,21 @@ tidb_client = TiDBClient.connect(
 )
 ```
 
+> [!NOTE]
+> **Custom CA bundles (Windows / manual installs)** — Some environments (notably Windows) do not ship the ISRG Root X1 certificate that TiDB Serverless relies on. Download the [ISRG Root X1 PEM](https://letsencrypt.org/certs/isrgrootx1.pem) and point the `TIDB_CA_PATH` environment variable at the downloaded file:
+>
+> ```powershell
+> setx TIDB_CA_PATH C:\path\to\isrgrootx1.pem
+> ```
+>
+> or in Python:
+>
+> ```python
+> os.environ["TIDB_CA_PATH"] = r"C:\path\to\isrgrootx1.pem"
+> ```
+>
+> PyTiDB automatically injects this CA into every `TiDBClient.connect` call (including the TiDB MCP server), so pymysql uses the provided certificate for TLS verification.
+
 ## Highlights
 
 ### 🤖 Automatic Embedding
