@@ -10,6 +10,7 @@ from pytidb import TiDBClient
 from pytidb.embeddings import EmbeddingFunction
 
 logger = logging.getLogger(__name__)
+SKIP_DB_TESTS = os.getenv("PYTIDB_SKIP_DB_TESTS", "").lower() in ("1", "true", "yes")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -42,6 +43,9 @@ def shared_client(env) -> Generator[TiDBClient, None, None]:
     A test database will be created before the tests start and dropped
     after all tests complete.
     """
+    if SKIP_DB_TESTS:
+        pytest.skip("database-backed tests disabled via PYTIDB_SKIP_DB_TESTS")
+
     db_name = generate_dynamic_name()
     tidb_client = create_tidb_client(db_name)
     print(f"Shared client created for database {db_name}")
@@ -63,6 +67,9 @@ def isolated_client(env) -> Generator[TiDBClient, None, None]:
     A test database will be created before the test function starts and dropped
     after the test function completes.
     """
+    if SKIP_DB_TESTS:
+        pytest.skip("database-backed tests disabled via PYTIDB_SKIP_DB_TESTS")
+
     db_name = generate_dynamic_name()
     client = create_tidb_client(db_name)
 

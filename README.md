@@ -66,6 +66,14 @@ tidb_client = TiDBClient.connect(
 )
 ```
 
+If your operating system does not provide a default CA bundle (for example, Windows), download the [ISRG Root X1 certificate](https://letsencrypt.org/certs/isrgrootx1.pem) and set `TIDB_CA_PATH` to its location before starting your app:
+
+```bash
+export TIDB_CA_PATH=/path/to/isrgrootx1.pem
+```
+
+PyTiDB forwards this path to PyMySQL so TiDB Serverless TLS connections continue to verify certificates correctly.
+
 ## Highlights
 
 ### 🤖 Automatic Embedding
@@ -255,3 +263,5 @@ with tidb_client.session() as session:
 > Click the button below to install **TiDB MCP Server** in Cursor. Then, confirm by clicking **Install** when prompted.
 >
 > [![Install TiDB MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=TiDB&config=eyJjb21tYW5kIjoidXZ4IC0tZnJvbSBweXRpZGJbbWNwXSB0aWRiLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiVElEQl9IT1NUIjoibG9jYWxob3N0IiwiVElEQl9QT1JUIjoiNDAwMCIsIlRJREJfVVNFUk5BTUUiOiJyb290IiwiVElEQl9QQVNTV09SRCI6IiIsIlRJREJfREFUQUJBU0UiOiJ0ZXN0In19)
+
+When running the MCP server on Windows (or anywhere without system CAs), set `TIDB_CA_PATH=/path/to/isrgrootx1.pem` to supply the TLS root certificate to PyMySQL.
