@@ -382,7 +382,16 @@ class Table(Generic[T]):
                 db_session.refresh(item)
             return data
 
-    def update(self, values: dict, filters: Optional[Filters] = None) -> object:
+    def update(
+        self, values: dict, filters: Optional[Filters] = None
+    ) -> Optional[Union[T, List[T]]]:
+        """
+        Update rows in the TiDB table and return the updated instance(s).
+
+        Returns:
+            The updated table model instance if a single row was affected, a list
+            of instances if multiple rows were updated, or None if no rows matched.
+        """
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
@@ -413,8 +422,25 @@ class Table(Generic[T]):
 
         with self._client.session() as db_session:
             filter_clauses = build_filter_clauses(filters, self._sa_table)
+            select_stmt = select(self._table_model)
+            if filter_clauses:
+                select_stmt = select_stmt.filter(*filter_clauses)
+
+            matched_instances = db_session.exec(select_stmt).all()
+
             stmt = update(self._table_model).filter(*filter_clauses).values(values)
             db_session.execute(stmt)
+
+            for instance in matched_instances:
+                db_session.refresh(instance)
+
+            if not matched_instances:
+                return None
+
+            if len(matched_instances) == 1:
+                return matched_instances[0]
+
+            return matched_instances
 
     def delete(self, filters: Optional[Filters] = None):
         """

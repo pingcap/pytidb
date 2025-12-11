@@ -10,6 +10,11 @@ from pytidb import TiDBClient
 from pytidb.embeddings import EmbeddingFunction
 
 logger = logging.getLogger(__name__)
+SKIP_TIDB_FIXTURES = os.getenv("PYTIDB_SKIP_TIDB_TESTS", "0").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -35,13 +40,17 @@ def generate_dynamic_name(prefix: str = "test_pytidb") -> str:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def shared_client(env) -> Generator[TiDBClient, None, None]:
+def shared_client(env) -> Generator[TiDBClient | None, None, None]:
     """
     Create a shared TiDBClient instance that persists across multiple test functions.
 
     A test database will be created before the tests start and dropped
     after all tests complete.
     """
+    if SKIP_TIDB_FIXTURES:
+        yield None
+        return
+
     db_name = generate_dynamic_name()
     tidb_client = create_tidb_client(db_name)
     print(f"Shared client created for database {db_name}")
@@ -56,13 +65,17 @@ def shared_client(env) -> Generator[TiDBClient, None, None]:
 
 
 @pytest.fixture()
-def isolated_client(env) -> Generator[TiDBClient, None, None]:
+def isolated_client(env) -> Generator[TiDBClient | None, None, None]:
     """
     Create an isolated TiDBClient instance that exists only for the lifetime of a single test function.
 
     A test database will be created before the test function starts and dropped
     after the test function completes.
     """
+    if SKIP_TIDB_FIXTURES:
+        yield None
+        return
+
     db_name = generate_dynamic_name()
     client = create_tidb_client(db_name)
 
