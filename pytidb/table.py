@@ -21,7 +21,7 @@ from typing_extensions import Generic
 from pytidb.filters import Filters, build_filter_clauses
 from pytidb.orm.indexes import FullTextIndex, VectorIndex, format_distance_expression
 from pytidb.orm.sql import ddl
-from pytidb.sql import select, update, delete
+from pytidb.sql import select, update, delete, tuple_
 from pytidb.schema import (
     QueryBundle,
     TableModelMeta,
@@ -382,7 +382,9 @@ class Table(Generic[T]):
                 db_session.refresh(item)
             return data
 
-    def update(self, values: dict, filters: Optional[Filters] = None) -> object:
+    def update(
+        self, values: dict, filters: Optional[Filters] = None
+    ) -> Union[T, List[T], None]:
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
@@ -413,8 +415,62 @@ class Table(Generic[T]):
 
         with self._client.session() as db_session:
             filter_clauses = build_filter_clauses(filters, self._sa_table)
+            primary_key_columns = list(self._sa_table.primary_key.columns)
+            if not primary_key_columns:
+                raise ValueError(
+                    "table.update() requires a primary key to identify updated rows"
+                )
+
+            pk_select_stmt = select(*primary_key_columns).filter(*filter_clauses)
+            matched_primary_keys = [
+                tuple(row[column.key] for column in primary_key_columns)
+                for row in db_session.execute(pk_select_stmt).all()
+            ]
+
+            if not matched_primary_keys:
+                return None
+
+            post_update_primary_keys = []
+            for original_pk in matched_primary_keys:
+                updated_pk = tuple(
+                    values.get(column.key, original_value)
+                    for column, original_value in zip(primary_key_columns, original_pk)
+                )
+                post_update_primary_keys.append(updated_pk)
+
             stmt = update(self._table_model).filter(*filter_clauses).values(values)
             db_session.execute(stmt)
+
+            if len(primary_key_columns) == 1:
+                pk_column = primary_key_columns[0]
+                pk_values = [pk[0] for pk in post_update_primary_keys]
+                select_stmt = select(self._table_model).filter(pk_column.in_(pk_values))
+            else:
+                pk_tuple_column = tuple_(*primary_key_columns)
+                select_stmt = select(self._table_model).filter(
+                    pk_tuple_column.in_(post_update_primary_keys)
+                )
+
+            refreshed_instances = db_session.execute(select_stmt).scalars().all()
+
+            if not refreshed_instances:
+                return None
+
+            pk_to_instance = {
+                tuple(
+                    getattr(instance, column.key) for column in primary_key_columns
+                ): instance
+                for instance in refreshed_instances
+            }
+            ordered_instances = [
+                pk_to_instance[pk]
+                for pk in post_update_primary_keys
+                if pk in pk_to_instance
+            ]
+
+            if len(ordered_instances) == 1:
+                return ordered_instances[0]
+            return ordered_instances
 
     def delete(self, filters: Optional[Filters] = None):
         """

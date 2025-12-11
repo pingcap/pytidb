@@ -32,13 +32,17 @@ def test_table_crud(shared_client):
     assert np.array_equal(c.text_vec, [1, 2, 3])
 
     # UPDATE
-    tbl.update(
+    updated_chunk = tbl.update(
         values={
             "text": "fooooooo",
             "text_vec": [3, 6, 9],
         },
         filters={"text": "foo"},
     )
+    assert isinstance(updated_chunk, Chunk)
+    assert updated_chunk.id == 1
+    assert updated_chunk.text == "fooooooo"
+    assert np.array_equal(updated_chunk.text_vec, [3, 6, 9])
     c = tbl.get(1)
     assert c.text == "fooooooo"
     assert np.array_equal(c.text_vec, [3, 6, 9])
@@ -57,6 +61,81 @@ def test_table_crud(shared_client):
     # Truncate
     tbl.truncate()
     assert tbl.rows() == 0
+
+
+def test_table_update_returns_list_for_multiple_rows(shared_client):
+    class Note(TableModel, table=True):
+        __tablename__ = "test_table_update_returns_list"
+        id: int = Field(primary_key=True)
+        text: str = Field()
+
+    tbl = shared_client.create_table(schema=Note, if_exists="overwrite")
+    tbl.bulk_insert(
+        [
+            Note(id=1, text="a"),
+            Note(id=2, text="b"),
+        ]
+    )
+
+    updated_notes = tbl.update(
+        values={"text": "updated"},
+        filters={"id": {"$in": [1, 2]}},
+    )
+
+    assert isinstance(updated_notes, list)
+    assert sorted(note.id for note in updated_notes) == [1, 2]
+    assert {note.text for note in updated_notes} == {"updated"}
+
+
+def test_table_update_returns_none_when_no_rows_match(shared_client):
+    class Record(TableModel, table=True):
+        __tablename__ = "test_table_update_returns_none"
+        id: int = Field(primary_key=True)
+        text: str = Field()
+
+    tbl = shared_client.create_table(schema=Record, if_exists="overwrite")
+    tbl.insert(Record(id=1, text="original"))
+
+    result = tbl.update(values={"text": "updated"}, filters={"id": 2})
+    assert result is None
+    assert tbl.get(1).text == "original"
+
+
+def test_table_update_returns_updated_instance_even_when_filter_field_changes(shared_client):
+    class Message(TableModel, table=True):
+        __tablename__ = "test_table_update_filter_field_change"
+        id: int = Field(primary_key=True)
+        text: str = Field()
+
+    tbl = shared_client.create_table(schema=Message, if_exists="overwrite")
+    tbl.insert(Message(id=1, text="old"))
+
+    updated_message = tbl.update(values={"text": "new"}, filters={"text": "old"})
+
+    assert isinstance(updated_message, Message)
+    assert updated_message.id == 1
+    assert updated_message.text == "new"
+
+
+def test_table_update_returns_instance_when_primary_key_changes(shared_client):
+    class Item(TableModel, table=True):
+        __tablename__ = "test_table_update_pk_change"
+        id: int = Field(primary_key=True)
+        text: str = Field()
+
+    tbl = shared_client.create_table(schema=Item, if_exists="overwrite")
+    tbl.insert(Item(id=1, text="original"))
+
+    updated_item = tbl.update(
+        values={"id": 2, "text": "updated"},
+        filters={"id": 1},
+    )
+
+    assert isinstance(updated_item, Item)
+    assert updated_item.id == 2
+    assert updated_item.text == "updated"
+    assert tbl.get(1) is None
+    assert tbl.get(2).text == "updated"
 
 
 def test_table_query(shared_client):
