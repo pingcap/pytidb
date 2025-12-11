@@ -32,16 +32,27 @@ def test_table_crud(shared_client):
     assert np.array_equal(c.text_vec, [1, 2, 3])
 
     # UPDATE
-    tbl.update(
+    updated_tbl = tbl.update(
         values={
             "text": "fooooooo",
             "text_vec": [3, 6, 9],
         },
         filters={"text": "foo"},
     )
-    c = tbl.get(1)
+    assert updated_tbl is tbl
+
+    c = updated_tbl.get(1)
     assert c.text == "fooooooo"
     assert np.array_equal(c.text_vec, [3, 6, 9])
+
+    chained_record = tbl.update(
+        values={
+            "text": "fooooooo chained",
+        },
+        filters={"id": 1},
+    ).get(1)
+    assert chained_record.text == "fooooooo chained"
+    assert np.array_equal(chained_record.text_vec, [3, 6, 9])
 
     # DELETE
     tbl.delete(filters={"id": {"$in": [1, 2]}})
