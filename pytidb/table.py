@@ -382,7 +382,12 @@ class Table(Generic[T]):
                 db_session.refresh(item)
             return data
 
-    def update(self, values: dict, filters: Optional[Filters] = None) -> object:
+    def update(self, values: dict, filters: Optional[Filters] = None) -> List[T]:
+        if not isinstance(values, dict):
+            raise ValueError(f"Invalid values type: {type(values)}, expected dict")
+        if len(values) == 0:
+            raise ValueError("update() requires at least one field in values")
+
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
@@ -413,8 +418,22 @@ class Table(Generic[T]):
 
         with self._client.session() as db_session:
             filter_clauses = build_filter_clauses(filters, self._sa_table)
+
+            # Load affected instances before applying the update so we can return them
+            # even if the update changes filter fields.
+            select_stmt = select(self._table_model).filter(*filter_clauses)
+            instances = db_session.execute(select_stmt).scalars().all()
+            if len(instances) == 0:
+                return []
+
             stmt = update(self._table_model).filter(*filter_clauses).values(values)
             db_session.execute(stmt)
+            db_session.flush()
+
+            for item in instances:
+                db_session.refresh(item)
+
+            return instances
 
     def delete(self, filters: Optional[Filters] = None):
         """

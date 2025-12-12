@@ -32,13 +32,18 @@ def test_table_crud(shared_client):
     assert np.array_equal(c.text_vec, [1, 2, 3])
 
     # UPDATE
-    tbl.update(
+    updated = tbl.update(
         values={
             "text": "fooooooo",
             "text_vec": [3, 6, 9],
         },
         filters={"text": "foo"},
     )
+    assert isinstance(updated, list)
+    assert len(updated) == 1
+    assert updated[0].id == 1
+    assert updated[0].text == "fooooooo"
+    assert np.array_equal(updated[0].text_vec, [3, 6, 9])
     c = tbl.get(1)
     assert c.text == "fooooooo"
     assert np.array_equal(c.text_vec, [3, 6, 9])
