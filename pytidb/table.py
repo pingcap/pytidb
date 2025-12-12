@@ -382,7 +382,16 @@ class Table(Generic[T]):
                 db_session.refresh(item)
             return data
 
-    def update(self, values: dict, filters: Optional[Filters] = None) -> object:
+    def update(
+        self, values: dict, filters: Optional[Filters] = None
+    ) -> Optional[Union[T, List[T]]]:
+        """Update rows matching filters and return the updated instance(s).
+
+        Return contract:
+        - 0 matches -> None
+        - 1 match -> the single updated instance
+        - >1 matches -> list of updated instances
+        """
         # Auto embedding.
         for field_name, config in self._auto_embedding_configs.items():
             # Skip if auto embedding in SQL is enabled, it will be handled in the database side.
@@ -412,9 +421,33 @@ class Table(Generic[T]):
             values[field_name] = vector_embedding
 
         with self._client.session() as db_session:
-            filter_clauses = build_filter_clauses(filters, self._sa_table)
-            stmt = update(self._table_model).filter(*filter_clauses).values(values)
-            db_session.execute(stmt)
+            # Fetch affected instances before applying the UPDATE so we can
+            # return them even if the update changes filter columns.
+            stmt_select = select(self._table_model)
+            filter_clauses = []
+            if filters is not None:
+                filter_clauses = build_filter_clauses(filters, self._sa_table)
+                stmt_select = stmt_select.filter(*filter_clauses)
+
+            instances: List[T] = db_session.exec(stmt_select).all()
+
+            # No-op update still returns matching instances.
+            if values:
+                stmt_update = update(self._table_model)
+                if filter_clauses:
+                    stmt_update = stmt_update.filter(*filter_clauses)
+                stmt_update = stmt_update.values(values)
+                db_session.execute(stmt_update)
+                db_session.flush()
+
+                for item in instances:
+                    db_session.refresh(item)
+
+            if len(instances) == 0:
+                return None
+            if len(instances) == 1:
+                return instances[0]
+            return instances
 
     def delete(self, filters: Optional[Filters] = None):
         """
