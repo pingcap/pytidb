@@ -12,7 +12,7 @@ from pytidb.embeddings import EmbeddingFunction
 from sqlalchemy import select, text, update, desc
 import PyPDF2
 
-from src.models import Chunk, Document, ChatHistory, ChatMessage, Users 
+from src.models import Chunk, Document, Chat, ChatMessage, User
 
 # prepare environment
 dotenv.load_dotenv(override=True)
@@ -36,9 +36,9 @@ llm_model = "gpt-4o-mini"
 chunk_table = db.create_table(schema=Chunk, if_exists='skip')
 
 doc_table = db.create_table(schema=Document, if_exists='skip')
-ch_table = db.create_table(schema=ChatHistory, if_exists='skip')
-cm_table = db.create_table(schema=ChatMessage, if_exists='skip')
-user_table = db.create_table(schema=Users, if_exists='skip')
+chat_table = db.create_table(schema=Chat, if_exists='skip')
+message_table = db.create_table(schema=ChatMessage, if_exists='skip')
+user_table = db.create_table(schema=User, if_exists='skip')
 
 
 sample_chunks = [
@@ -157,7 +157,7 @@ def chat(user_id: int, MAX_CONTEXT_CHUNKS: int, str: str) -> str:
 def create_session(user_id: int) -> int:
     with _session() as s:
         # Add & commit the new row
-        row = ChatHistory(user_id=user_id)
+        row = Chat(user_id=user_id)
         s.add(row)
         s.commit()
         s.refresh(row)
@@ -169,9 +169,9 @@ def show_all_sessions (user_id: int) -> List[int]:
         s.connection().exec_driver_sql("")
         # Run our own query and read *this* cursor
         result = s.execute(
-            select(ChatHistory.id)
-            .where(ChatHistory.user_id == user_id)
-            .order_by(desc(ChatHistory.updated_at), desc(ChatHistory.id))
+            select(Chat.id)
+            .where(Chat.user_id == user_id)
+            .order_by(desc(Chat.updated_at), desc(Chat.id))
         )
         # each r is a Row, r[0] = id
         ids = [int(r[0]) for r in result]
@@ -192,11 +192,11 @@ def add_message(session_id: int, messages: str)->None:
         )
     
     speaker_id = 0 if role == "user" else 1
-    cm_table.insert(ChatMessage(chat_history_id=session_id,speaker_id=speaker_id,text=content))
+    message_table.insert(ChatMessage(chat_history_id=session_id,speaker_id=speaker_id,text=content))
     
     with _session() as s:
         s.execute(
-            update(ChatHistory).where(ChatHistory.id==session_id).values(updated_at=text("CURRENT_TIMESTAMP"))
+            update(Chat).where(Chat.id==session_id).values(updated_at=text("CURRENT_TIMESTAMP"))
         )
         s.commit()
 
@@ -230,7 +230,7 @@ def show_history(user_id: int, session_id: int) -> str:
 # API that deletes all chat history of a specific session
 def delete_session(session_id: int) -> None:
     with _session() as s:
-        ch = s.get(ChatHistory, session_id)
+        ch = s.get(Chat, session_id)
         s.delete(ch)
 
 # API that reads email and creates a new user. It returns the user_id of that user
@@ -238,7 +238,7 @@ def create_user(email: str) -> int:
     if (show_user(email)==-1):
         with _session() as s:
             # Add & commit the new row
-            row = Users(email=email)
+            row = User(email=email)
             s.add(row)
             s.commit()
             s.refresh(row)
@@ -253,12 +253,12 @@ def show_user(email: str) -> int:
         s.connection().exec_driver_sql("")
 
         user_id = s.execute(
-            select(Users.id).where(Users.email == email)
+            select(User.id).where(User.email == email)
         ).scalar_one_or_none()
     return user_id if user_id is not None else -1
 
 # API that deletes a user from the table
 def delete_user(user_id: int) -> None:
     with _session() as s:
-        ch = s.get(Users, user_id)
+        ch = s.get(User, user_id)
         s.delete(ch)

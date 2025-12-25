@@ -33,7 +33,7 @@ class Document(TableModel, table=True):
     document_name: str = Field(sa_type=Text)
 
 # table chat_history that stores the references to chat sessions of all users. Each row stores info of a session that chat_message represents
-class ChatHistory(TableModel, table=True):
+class Chat(TableModel, table=True):
     __tablename__ = "chat_history"
 
     id: int = Field(primary_key=True)
@@ -65,7 +65,7 @@ class ChatMessage(TableModel, table=True):
     text: str = Field(sa_type=Text)
 
 # table user_chart stores info of users
-class Users(TableModel, table=True):
+class User(TableModel, table=True):
     __tablename__ = "users"
 
     id: int = Field(primary_key=True)
