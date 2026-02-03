@@ -79,21 +79,20 @@ def connect_to_tidb() -> TiDBClient:
 
 def setup_table(db: TiDBClient, text_embed: EmbeddingFunction) -> Table:
     try:
-        # table = db.open_table("chunks")
-        # if table is None:
+        table = db.open_table("chunks")
+        if table is None:
+            class Chunk(TableModel):
+                __tablename__ = "chunks"
+                __table_args__ = {"extend_existing": True}
 
-        class Chunk(TableModel):
-            __tablename__ = "chunks"
-            __table_args__ = {"extend_existing": True}
+                id: int = Field(primary_key=True)
+                text: str = Field()
+                text_vec: list[float] = text_embed.VectorField(
+                    source_field="text",
+                )
+                meta: dict = Field(sa_type=JSON)
 
-            id: int = Field(primary_key=True)
-            text: str = Field()
-            text_vec: list[float] = text_embed.VectorField(
-                source_field="text",
-            )
-            meta: dict = Field(sa_type=JSON)
-
-        table = db.create_table(schema=Chunk, if_exists="overwrite")
+            table = db.create_table(schema=Chunk, if_exists="overwrite")
         return table
     except Exception as e:
         st.error(f"Failed to create table: {str(e)}")
