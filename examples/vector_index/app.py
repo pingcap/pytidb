@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import random
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, Tuple
 
 import dotenv
@@ -15,9 +16,10 @@ from pytidb.datatype import JSON
 
 dotenv.load_dotenv()
 
-# Initial data: 3000 rows, batch insert size (auto embedding from text)
+# Initial data: 3000 rows, batch size 100, 6 concurrent insert workers
 NUM_ROWS = 3000
-BATCH_SIZE = 300
+BATCH_SIZE = 100
+INSERT_WORKERS = 6
 
 LANGUAGES = ["english", "chinese", "japanese"]
 WORD_POOL = [
@@ -126,24 +128,36 @@ def _generate_chunks(n: int, start_id: int = 1) -> List[Dict[str, Any]]:
     return chunks
 
 
-def load_initial_data(table: Table) -> None:
-    """Load NUM_ROWS random chunks in batches with progress bar."""
+def _insert_batch(table: Table, start: int, count: int) -> None:
+    """Generate one batch of chunks and bulk_insert (for concurrent workers)."""
     Chunk = table.table_model
+    batch_chunks = _generate_chunks(count, start_id=start)
+    rows = [Chunk(**c) for c in batch_chunks]
+    table.bulk_insert(rows)
+
+
+def load_initial_data(table: Table) -> None:
+    """Load NUM_ROWS random chunks in batches with 6 concurrent insert workers."""
     total_batches = (NUM_ROWS + BATCH_SIZE - 1) // BATCH_SIZE
     progress_bar = st.progress(
-        0.0, text="Generating and embedding data (this may take a while)..."
+        0.0, text="Embedding and saving (6 workers)…"
     )
     try:
-        for batch_idx in range(total_batches):
-            start = batch_idx * BATCH_SIZE
-            end = min(start + BATCH_SIZE, NUM_ROWS)
-            batch_chunks = _generate_chunks(end - start, start_id=start + 1)
-            rows = [Chunk(**c) for c in batch_chunks]
-            table.bulk_insert(rows)
-            progress_bar.progress(
-                (batch_idx + 1) / total_batches,
-                text=f"Embedding and saving rows {start + 1}–{end} of {NUM_ROWS}…",
-            )
+        done = 0
+        with ThreadPoolExecutor(max_workers=INSERT_WORKERS) as executor:
+            futures = {}
+            for batch_idx in range(total_batches):
+                start = batch_idx * BATCH_SIZE
+                count = min(BATCH_SIZE, NUM_ROWS - start)
+                future = executor.submit(_insert_batch, table, start + 1, count)
+                futures[future] = (start, count)
+            for future in as_completed(futures):
+                future.result()
+                done += 1
+                progress_bar.progress(
+                    done / total_batches,
+                    text=f"Embedding and saving… {min(done * BATCH_SIZE, NUM_ROWS)} / {NUM_ROWS}",
+                )
         progress_bar.empty()
     except Exception as e:
         progress_bar.empty()
@@ -305,11 +319,11 @@ After each search you can see the **executed SQL** and **EXPLAIN ANALYZE** plan.
             vec_col = table.vector_columns[0]
             try:
                 has_idx = table.has_vector_index(vec_col.name)
-                st.markdown("#### Index status")
+                st.markdown(f"#### Index status (Column: {vec_col.name})")
                 if has_idx:
-                    st.success(f"Vector index on `{vec_col.name}`: built")
+                    st.success("✓ Ready")
                 else:
-                    st.warning(f"Vector index on `{vec_col.name}`: not built yet")
+                    st.warning("○ Not built yet")
             except Exception:
                 st.caption("Index status: unknown")
 
@@ -348,7 +362,6 @@ After each search you can see the **executed SQL** and **EXPLAIN ANALYZE** plan.
     display_search_results(results, query_text)
 
     if compiled_sql:
-        st.markdown("---")
         display_sql_and_plan(db, compiled_sql)
 
 
