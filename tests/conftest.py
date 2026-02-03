@@ -1,7 +1,13 @@
 import os
+import sys
 import uuid
 import logging
+from pathlib import Path
 from typing import Generator
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 import pytest
 from dotenv import load_dotenv

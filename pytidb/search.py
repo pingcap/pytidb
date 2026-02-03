@@ -15,7 +15,7 @@ from typing import (
     overload,
 )
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, Row, Select, asc, desc, and_
+from sqlalchemy import Column, Row, Select, asc, desc, and_, literal_column
 from sqlalchemy.sql.base import Generative, _generative
 from sqlmodel import select
 from pytidb.orm.functions import fts_match_word
@@ -144,6 +144,7 @@ class Search(Generative):
         self._distance_threshold = None
         self._distance_lower_bound = None
         self._distance_upper_bound = None
+        self._skip_null_vectors = False
         self._filters = None
         self._prefilter = False
         self._num_candidate = None
@@ -251,6 +252,25 @@ class Search(Generative):
         """
         self._distance_lower_bound = lower_bound
         self._distance_upper_bound = upper_bound
+        return self
+
+    @_generative
+    def skip_null_vectors(self, flag: bool = True) -> "Search":
+        """Control whether to skip rows with NULL vector values.
+
+        Args:
+            flag: If True, exclude rows with NULL vector distances. Default is False.
+
+        Returns:
+            A new :class:`Search` instance.
+        """
+        self._skip_null_vectors = flag
+        return self
+
+    @_generative
+    def filter_null_vectors(self, flag: bool = True) -> "Search":
+        """Deprecated: use .skip_null_vectors()."""
+        self._skip_null_vectors = flag
         return self
 
     @_generative
@@ -419,10 +439,8 @@ class Search(Generative):
         )
         return distance_column
 
-    def _apply_distance_condition(
-        self, stmt: Select, distance_column: Column
-    ) -> Select:
-        having = []
+    def _build_distance_conditions(self, distance_column: Column) -> list:
+        conditions = []
 
         # Null vector values.
         #
@@ -431,24 +449,32 @@ class Search(Generative):
         #         MySQL's default behavior of sorting NULL values to the head.
         #
         # TODO: Remove this workaround after TiDB return MAX_DISTANCE for NULL vector values.
-        having.append(distance_column.isnot(None))
+        if self._skip_null_vectors:
+            conditions.append(distance_column.isnot(None))
 
         # Distance range.
         if (
             self._distance_lower_bound is not None
             and self._distance_upper_bound is not None
         ):
-            having.append(distance_column >= self._distance_lower_bound)
-            having.append(distance_column <= self._distance_upper_bound)
+            conditions.append(distance_column >= self._distance_lower_bound)
+            conditions.append(distance_column <= self._distance_upper_bound)
 
         # Distance threshold.
         if self._distance_threshold:
-            having.append(distance_column <= self._distance_threshold)
+            conditions.append(distance_column <= self._distance_threshold)
 
-        if len(having) > 0:
-            return stmt.having(and_(*having))
-        else:
+        return conditions
+
+    def _apply_distance_condition(
+        self, stmt: Select, distance_column: Column, *, use_having: bool = False
+    ) -> Select:
+        conditions = self._build_distance_conditions(distance_column)
+        if len(conditions) == 0:
             return stmt
+        if use_having:
+            return stmt.having(and_(*conditions))
+        return stmt.where(and_(*conditions))
 
     def _get_aliased_column(
         self, aliased_class: AliasedClass, column: Column
@@ -502,7 +528,10 @@ class Search(Generative):
             filter_clauses = build_filter_clauses(self._filters, hit)
             stmt = stmt.filter(*filter_clauses)
 
-        stmt = self._apply_distance_condition(stmt, distance_column)
+        distance_filter_column = literal_column(DISTANCE_LABEL)
+        stmt = self._apply_distance_condition(
+            stmt, distance_filter_column, use_having=True
+        )
         stmt = stmt.order_by(asc(DISTANCE_LABEL)).limit(self._limit)
 
         return stmt
@@ -524,14 +553,12 @@ class Search(Generative):
             inner_limit = self._limit
 
         inner_stmt = select(inner_hit, inner_distance_column)
-        inner_stmt = self._apply_distance_condition(inner_stmt, inner_distance_column)
         inner_stmt = inner_stmt.order_by(asc(DISTANCE_LABEL)).limit(inner_limit)
         inner_query = inner_stmt.subquery("candidates")
 
         # Outer query for post-filter.
         hit = aliased(table_model, inner_query, name=HIT_LABEL)
-        vector_column = self._get_aliased_column(hit, table_vector_column)
-        distance_column = self._build_distance_column(vector_column)
+        distance_column = inner_query.c[DISTANCE_LABEL]
 
         stmt = select(
             hit,
@@ -544,6 +571,9 @@ class Search(Generative):
             filter_clauses = build_filter_clauses(self._filters, hit)
             stmt = stmt.filter(*filter_clauses)
 
+        # Apply distance conditions only in the outer query to avoid disabling
+        # vector index usage in the inner ANN search.
+        stmt = self._apply_distance_condition(stmt, distance_column)
         stmt = stmt.order_by(asc(DISTANCE_LABEL)).limit(self._limit)
 
         return stmt
