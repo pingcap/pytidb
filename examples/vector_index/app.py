@@ -15,9 +15,9 @@ from pytidb.datatype import JSON
 
 dotenv.load_dotenv()
 
-# Initial data: 1000 rows, batch insert size (auto embedding from text)
-NUM_ROWS = 1000
-BATCH_SIZE = 100
+# Initial data: 3000 rows, batch insert size (auto embedding from text)
+NUM_ROWS = 3000
+BATCH_SIZE = 300
 
 LANGUAGES = ["english", "chinese", "japanese"]
 WORD_POOL = [
@@ -70,6 +70,10 @@ def connect_to_tidb() -> TiDBClient:
             database=os.getenv("TIDB_DATABASE", "vector_index_example"),
             ensure_db=True,
         )
+        if db.is_serverless:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if api_key:
+                db.configure_embedding_provider("openai", api_key)
         return db
     except Exception as e:
         st.error(f"Failed to connect to TiDB: {str(e)}")
@@ -233,7 +237,9 @@ def setup() -> None:
     if st.session_state.text_embed is None:
         with st.spinner("Setting up embedding function..."):
             st.session_state.text_embed = EmbeddingFunction(
-                model_name="tidbcloud_free/cohere/embed-multilingual-v3",
+                model_name="openai/text-embedding-3-small",
+                use_server=st.session_state.db.is_serverless,
+                api_key=os.getenv("OPENAI_API_KEY") if not st.session_state.db.is_serverless else None,
             )
 
     db = st.session_state.db
@@ -254,6 +260,8 @@ def setup() -> None:
 
 
 def main() -> None:
+    setup()
+
     with st.sidebar:
         st.logo(
             "../assets/logo-full.svg",
@@ -264,7 +272,7 @@ def main() -> None:
         st.markdown(
             """#### Overview
 
-This demo runs **vector search** on **1,000** randomly generated text chunks.
+This demo runs **vector search** on **3,000** randomly generated text chunks.
 After each search you can see the **executed SQL** and **EXPLAIN ANALYZE** plan.
             """
         )
@@ -292,7 +300,18 @@ After each search you can see the **executed SQL** and **EXPLAIN ANALYZE** plan.
             help="Set the maximum distance for similarity",
         )
 
-    setup()
+        table = st.session_state.table
+        if table is not None and table.vector_columns:
+            vec_col = table.vector_columns[0]
+            try:
+                has_idx = table.has_vector_index(vec_col.name)
+                st.markdown("#### Index status")
+                if has_idx:
+                    st.success(f"Vector index on `{vec_col.name}`: built")
+                else:
+                    st.warning(f"Vector index on `{vec_col.name}`: not built yet")
+            except Exception:
+                st.caption("Index status: unknown")
 
     st.markdown(
         '<h3 style="text-align: center; padding-top: 40px;">🔍 Vector Index Demo</h3>',
