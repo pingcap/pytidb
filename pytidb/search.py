@@ -268,12 +268,6 @@ class Search(Generative):
         return self
 
     @_generative
-    def filter_null_vectors(self, flag: bool = True) -> "Search":
-        """Deprecated: use .skip_null_vectors()."""
-        self._skip_null_vectors = flag
-        return self
-
-    @_generative
     def num_candidate(self, num_candidate: int) -> "Search":
         """Set the number of candidates for vector search.
 
