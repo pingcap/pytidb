@@ -5,6 +5,7 @@ import pytest
 from pydantic import BaseModel
 
 from pytidb import TiDBClient, Table
+from pytidb.orm.indexes import VectorIndex
 from pytidb.rerankers import Reranker
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, TableModel, Field, Column, Relationship
@@ -30,6 +31,7 @@ def vector_table(shared_client: TiDBClient):
 
     class ChunkForVectorSearch(TableModel):
         __tablename__ = "chunks_for_vector_search"
+        __table_args__ = (VectorIndex("vec_idx_text_vec_cosine", "text_vec"),)
         id: int = Field(None, primary_key=True)
         text: str = Field(None)
         text_vec: Any = Field(sa_column=Column(VECTOR(3)))
@@ -503,3 +505,13 @@ def test_skip_null_vectors_sql(vector_table: Table, case: SkipNullVectorsSqlTest
     )
     actual_sql = normalize_sql(str(compiled))
     assert actual_sql == normalize_sql(case.expected_sql)
+
+    # For postfilter, inner query is KNN-first so TiDB can use vector index.
+    # Prefilter (WHERE before ORDER BY) cannot use vector index per TiDB semantics.
+    if not case.prefilter:
+        explain_sql = f"EXPLAIN ANALYZE {actual_sql}"
+        plan_result = vector_table.client.query(explain_sql).to_list()
+        plan_text = " ".join(str(v) for row in plan_result for v in row.values())
+        assert "annIndex" in plan_text and "COSINE" in plan_text, (
+            f"Expected execution plan to use vector index (annIndex:COSINE), got: {plan_text}"
+        )
