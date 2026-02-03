@@ -1,4 +1,4 @@
-pytidb==0.0.13
-pytidb[models]==0.0.13
+pytidb==0.0.14.dev1
+pytidb[models]==0.0.14.dev1
 streamlit==1.49.0
 python-dotenv
