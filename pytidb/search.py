@@ -324,6 +324,38 @@ class Search(Generative):
         self._debug = flag
         return self
 
+    def compiled_vector_query_sql(self) -> Optional[str]:
+        """Return the compiled SQL string for the current vector search query.
+
+        Valid for vector search and hybrid search (returns the vector part).
+        Returns None for fulltext-only search.
+        Call after configuring search (filter, limit, etc.) and before to_list().
+        """
+        if self._search_type not in ("vector", "hybrid"):
+            return None
+        stmt = self._build_vector_query()
+        db_engine = self._table.db_engine
+        compiled = stmt.compile(
+            dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
+        )
+        return str(compiled)
+
+    def compiled_fulltext_query_sql(self) -> Optional[str]:
+        """Return the compiled SQL string for the current fulltext search query.
+
+        Valid for fulltext search and hybrid search (returns the fulltext part).
+        Returns None for vector-only search.
+        Call after configuring search (filter, limit, etc.) and before to_list().
+        """
+        if self._search_type not in ("fulltext", "hybrid"):
+            return None
+        stmt = self._build_fulltext_query()
+        db_engine = self._table.db_engine
+        compiled = stmt.compile(
+            dialect=db_engine.dialect, compile_kwargs={"literal_binds": True}
+        )
+        return str(compiled)
+
     @overload
     def fusion(self, method: Literal["rrf"], k: int = 60) -> "Search": ...
 
