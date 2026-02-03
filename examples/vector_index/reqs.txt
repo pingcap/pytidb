@@ -1,4 +1,5 @@
-pytidb[models]==0.0.14.dev2
+pytidb==0.0.14
+pytidb[models]==0.0.14
 streamlit>=1.49.0
 python-dotenv
 pandas

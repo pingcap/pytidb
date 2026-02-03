@@ -12,6 +12,7 @@ import pandas as pd
 from pytidb import Table, TiDBClient
 from pytidb.schema import TableModel, Field, Column
 from pytidb.orm.indexes import VectorIndex
+from pytidb.orm.tiflash_replica import TiFlashReplica
 from pytidb.datatype import VECTOR
 
 dotenv.load_dotenv()
@@ -334,6 +335,31 @@ After each search you can see the **executed SQL** and **EXPLAIN ANALYZE** plan.
                     )
             except Exception:
                 st.badge("Unknown", color="gray")
+
+        if table is not None:
+            try:
+                db = st.session_state.db
+                replica = TiFlashReplica(table._sa_table, replica_count=1)
+                progress = replica.get_replication_progress(db.db_engine)
+                st.markdown("#### TiFlash replica")
+                if progress["replica_count"] == 0:
+                    st.caption("No TiFlash replica configured")
+                else:
+                    if progress["available"]:
+                        st.badge(
+                            f"Ready ({progress['progress']:.0%})",
+                            icon=":material/check:",
+                            color="green",
+                        )
+                    else:
+                        st.badge(
+                            f"Syncing ({progress['progress']:.0%})",
+                            icon=":material/schedule:",
+                            color="orange",
+                        )
+            except Exception:
+                st.markdown("#### TiFlash replica")
+                st.caption("Unknown")
 
     st.markdown(
         '<h3 style="text-align: center; padding-top: 40px;">🔍 Vector Index Demo</h3>',
