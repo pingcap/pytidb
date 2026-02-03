@@ -46,7 +46,7 @@ WORD_POOL = [
 st.set_page_config(
     page_title="Vector Index Demo",
     page_icon="🔍",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="expanded",
 )
 
@@ -79,21 +79,21 @@ def connect_to_tidb() -> TiDBClient:
 
 def setup_table(db: TiDBClient, text_embed: EmbeddingFunction) -> Table:
     try:
-        table = db.open_table("chunks")
-        if table is None:
+        # table = db.open_table("chunks")
+        # if table is None:
 
-            class Chunk(TableModel):
-                __tablename__ = "chunks"
-                __table_args__ = {"extend_existing": True}
+        class Chunk(TableModel):
+            __tablename__ = "chunks"
+            __table_args__ = {"extend_existing": True}
 
-                id: int = Field(primary_key=True)
-                text: str = Field()
-                text_vec: list[float] = text_embed.VectorField(
-                    source_field="text",
-                )
-                meta: dict = Field(sa_type=JSON)
+            id: int = Field(primary_key=True)
+            text: str = Field()
+            text_vec: list[float] = text_embed.VectorField(
+                source_field="text",
+            )
+            meta: dict = Field(sa_type=JSON)
 
-            table = db.create_table(schema=Chunk, if_exists="overwrite")
+        table = db.create_table(schema=Chunk, if_exists="overwrite")
         return table
     except Exception as e:
         st.error(f"Failed to create table: {str(e)}")
@@ -140,7 +140,7 @@ def load_initial_data(table: Table) -> None:
             table.bulk_insert(rows)
             progress_bar.progress(
                 (batch_idx + 1) / total_batches,
-                text=f"Embedding + inserting {start + 1}–{end} / {NUM_ROWS}",
+                text=f"Embedding and saving rows {start + 1}–{end} of {NUM_ROWS}…",
             )
         progress_bar.empty()
     except Exception as e:
@@ -246,7 +246,7 @@ def setup() -> None:
     db = st.session_state.db
     text_embed = st.session_state.text_embed
     if st.session_state.table is None:
-        with st.spinner("Setting up vector table..."):
+        with st.spinner("Setting up vector table and building vector index..."):
             st.session_state.table = setup_table(db, text_embed)
 
     table = st.session_state.table
