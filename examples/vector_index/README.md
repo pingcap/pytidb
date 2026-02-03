@@ -1,6 +1,6 @@
 # Vector Index Example
 
-This example demonstrates semantic search with TiDB vector index: a Streamlit app that loads 3000 randomly generated documents on first run, then lets you run vector search and inspect the executed SQL and TiDB execution plan (EXPLAIN ANALYZE).
+This example demonstrates semantic search with TiDB vector index: a Streamlit app that loads 6000 randomly generated documents on first run, then lets you run vector search and inspect the executed SQL and TiDB execution plan (EXPLAIN ANALYZE).
 
 <p align="center">
   <img width="700" alt="Semantic search with vector embeddings" src="https://github.com/user-attachments/assets/6d7783a5-ce9c-4dcc-8b95-49d5f0ca735a" />
@@ -50,4 +50,4 @@ streamlit run app.py
 
 **Step 5**: Open your browser at `http://localhost:8501`
 
-On first load, the app will insert 3000 rows (with a progress bar). Then you can search, filter by language, and view the executed SQL and EXPLAIN ANALYZE result below the results.
+On first load, the app will insert 6000 rows (with a progress bar). Then you can search, filter by language, and view the executed SQL and EXPLAIN ANALYZE result below the results.

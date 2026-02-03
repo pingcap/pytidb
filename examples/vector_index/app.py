@@ -19,8 +19,8 @@ dotenv.load_dotenv()
 
 # 3-dim random vectors, no auto embedding
 VECTOR_DIM = 3
-NUM_ROWS = 3000
-BATCH_SIZE = 100
+NUM_ROWS = 6000
+BATCH_SIZE = 300
 INSERT_WORKERS = 6
 
 WORD_POOL = [
@@ -250,7 +250,7 @@ def display_sql_and_plan(db: TiDBClient, compiled_sql: Optional[str]) -> None:
                 plan_df = pd.DataFrame(plan_rows)
                 column_config = {
                     col: st.column_config.Column(
-                        width="medium" if col == "access object" else None
+                        width=360 if col == "access object" else None
                     )
                     for col in plan_df.columns
                 }
@@ -297,9 +297,9 @@ def main() -> None:
         )
 
         st.markdown(
-            """#### Overview
+            f"""#### Overview
 
-This demo runs **vector search** on **3,000** chunks with **3-dim random vectors** (no embedding API).
+This demo runs **vector search** on **{NUM_ROWS:,}** chunks with **3-dim random vectors** (no embedding API).
 After each search you can see the **executed SQL** and **EXPLAIN ANALYZE** plan.
             """
         )
@@ -361,17 +361,12 @@ After each search you can see the **executed SQL** and **EXPLAIN ANALYZE** plan.
                 st.markdown("#### TiFlash replica")
                 st.caption("Unknown")
 
-    st.markdown(
-        '<h3 style="text-align: center; padding-top: 40px;">🔍 Vector Index Demo</h3>',
-        unsafe_allow_html=True,
-    )
-
     default_vec = "[0.1, 0.2, 0.3]"
     with st.form("search_form", clear_on_submit=False):
-        col_label, col_input, col_btn = st.columns([1, 5, 1])
+        col_label, col_input, col_btn = st.columns([2, 5, 2])
         with col_label:
             st.markdown(
-                '<div style="display: flex; align-items: center; min-height: 38px;"><strong>Query vector:</strong></div>',
+                '<div style="display: flex; align-items: center; min-height: 38px; justify-content: flex-end;"><strong>Query vector:</strong></div>',
                 unsafe_allow_html=True,
             )
         with col_input:
@@ -383,11 +378,11 @@ After each search you can see the **executed SQL** and **EXPLAIN ANALYZE** plan.
                 label_visibility="collapsed",
             )
         with col_btn:
-            search_clicked = st.form_submit_button("Search")
+            search_clicked = st.form_submit_button("Generate & Search")
 
     if not search_clicked:
         st.markdown(
-            '<p style="text-align: center;">Click <b>Search</b> to generate a random vector and run search.</p>',
+            '<p style="text-align: center;">Click <b>Generate & Search</b> to generate a random vector and run search.</p>',
             unsafe_allow_html=True,
         )
         return
