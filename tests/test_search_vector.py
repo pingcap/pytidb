@@ -378,6 +378,7 @@ def test_with_multi_vector_fields(shared_client: TiDBClient):
 # Skip Null Vectors SQL Test Cases
 # ================================
 
+
 class SkipNullVectorsSqlTestCase(BaseModel):
     """Test case for vector search SQL with skip_null_vectors and prefilter/postfilter."""
 
@@ -487,7 +488,9 @@ SKIP_NULL_VECTORS_SQL_TEST_CASES = [
     SKIP_NULL_VECTORS_SQL_TEST_CASES,
     ids=[c.id for c in SKIP_NULL_VECTORS_SQL_TEST_CASES],
 )
-def test_skip_null_vectors_sql(vector_table: Table, case: SkipNullVectorsSqlTestCase) -> None:
+def test_skip_null_vectors_sql(
+    vector_table: Table, case: SkipNullVectorsSqlTestCase
+) -> None:
     """Assert the full compiled SQL for vector search with skip_null_vectors and prefilter/postfilter."""
     if case.prefilter or case.skip_null_vectors_flag:
         search = (
