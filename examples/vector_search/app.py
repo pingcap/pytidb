@@ -76,28 +76,116 @@ def setup_table(db: TiDBClient, text_embed: EmbeddingFunction) -> Table:
 def load_sample_data(table: Table, text_embed: EmbeddingFunction) -> None:
     """Load sample chunks with explicit ids to avoid duplicate inserts across tabs/reruns."""
     sample_chunks = [
-        {"id": 1, "text": "Llamas are camelids known for their soft fur and use as pack animals.", "meta": {"language": "english"}},
-        {"id": 2, "text": "Python's GIL ensures only one thread executes bytecode at a time.", "meta": {"language": "english"}},
-        {"id": 3, "text": "TiDB is a distributed SQL database with HTAP capabilities.", "meta": {"language": "english"}},
-        {"id": 4, "text": "TiDB是一个开源的NewSQL数据库，支持混合事务和分析处理（HTAP）工作负载。", "meta": {"language": "chinese"}},
-        {"id": 5, "text": "TiDBはオープンソースの分散型HTAPデータベースで、トランザクション処理と分析処理の両方をサポートしています。", "meta": {"language": "japanese"}},
-        {"id": 6, "text": "Einstein's theory of relativity revolutionized modern physics.", "meta": {"language": "english"}},
-        {"id": 7, "text": "The Great Wall of China stretches over 13,000 miles.", "meta": {"language": "english"}},
-        {"id": 8, "text": "Ollama enables local deployment of large language models.", "meta": {"language": "english"}},
-        {"id": 9, "text": "HTTP/3 uses QUIC protocol for improved web performance.", "meta": {"language": "english"}},
-        {"id": 10, "text": "Kubernetes orchestrates containerized applications across clusters.", "meta": {"language": "english"}},
-        {"id": 11, "text": "Blockchain technology enables decentralized transaction systems.", "meta": {"language": "english"}},
-        {"id": 12, "text": "GPT-4 demonstrates remarkable few-shot learning capabilities.", "meta": {"language": "english"}},
-        {"id": 13, "text": "Machine learning algorithms improve with more training data.", "meta": {"language": "english"}},
-        {"id": 14, "text": "Quantum computing uses qubits instead of traditional bits.", "meta": {"language": "english"}},
-        {"id": 15, "text": "Neural networks are inspired by the human brain's structure.", "meta": {"language": "english"}},
-        {"id": 16, "text": "Docker containers package applications with their dependencies.", "meta": {"language": "english"}},
-        {"id": 17, "text": "Cloud computing provides on-demand computing resources.", "meta": {"language": "english"}},
-        {"id": 18, "text": "Artificial intelligence aims to mimic human cognitive functions.", "meta": {"language": "english"}},
-        {"id": 19, "text": "Cybersecurity protects systems from digital attacks.", "meta": {"language": "english"}},
-        {"id": 20, "text": "Big data analytics extracts insights from large datasets.", "meta": {"language": "english"}},
-        {"id": 21, "text": "Internet of Things connects everyday objects to the internet.", "meta": {"language": "english"}},
-        {"id": 22, "text": "Augmented reality overlays digital content on the real world.", "meta": {"language": "english"}},
+        {
+            "id": 1,
+            "text": "Llamas are camelids known for their soft fur and use as pack animals.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 2,
+            "text": "Python's GIL ensures only one thread executes bytecode at a time.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 3,
+            "text": "TiDB is a distributed SQL database with HTAP capabilities.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 4,
+            "text": "TiDB是一个开源的NewSQL数据库，支持混合事务和分析处理（HTAP）工作负载。",
+            "meta": {"language": "chinese"},
+        },
+        {
+            "id": 5,
+            "text": "TiDBはオープンソースの分散型HTAPデータベースで、トランザクション処理と分析処理の両方をサポートしています。",
+            "meta": {"language": "japanese"},
+        },
+        {
+            "id": 6,
+            "text": "Einstein's theory of relativity revolutionized modern physics.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 7,
+            "text": "The Great Wall of China stretches over 13,000 miles.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 8,
+            "text": "Ollama enables local deployment of large language models.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 9,
+            "text": "HTTP/3 uses QUIC protocol for improved web performance.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 10,
+            "text": "Kubernetes orchestrates containerized applications across clusters.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 11,
+            "text": "Blockchain technology enables decentralized transaction systems.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 12,
+            "text": "GPT-4 demonstrates remarkable few-shot learning capabilities.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 13,
+            "text": "Machine learning algorithms improve with more training data.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 14,
+            "text": "Quantum computing uses qubits instead of traditional bits.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 15,
+            "text": "Neural networks are inspired by the human brain's structure.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 16,
+            "text": "Docker containers package applications with their dependencies.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 17,
+            "text": "Cloud computing provides on-demand computing resources.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 18,
+            "text": "Artificial intelligence aims to mimic human cognitive functions.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 19,
+            "text": "Cybersecurity protects systems from digital attacks.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 20,
+            "text": "Big data analytics extracts insights from large datasets.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 21,
+            "text": "Internet of Things connects everyday objects to the internet.",
+            "meta": {"language": "english"},
+        },
+        {
+            "id": 22,
+            "text": "Augmented reality overlays digital content on the real world.",
+            "meta": {"language": "english"},
+        },
     ]
 
     try:
