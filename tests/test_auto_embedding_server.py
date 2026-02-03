@@ -164,8 +164,10 @@ def test_auto_embedding(shared_client: TiDBClient, text_embed: EmbeddingFunction
         else:
             assert len(chunk.text_vec) == text_embed.dimensions
 
-    # Test vector search with auto embedding
-    results = tbl.search("bar").limit(1).to_pydantic(with_score=True)
+    # Test vector search with auto embedding (skip null vectors so id=2 is returned)
+    results = (
+        tbl.search("bar").skip_null_vectors(True).limit(1).to_pydantic(with_score=True)
+    )
     assert len(results) == 1
     assert results[0].id == 2
     assert results[0].text == "bar"

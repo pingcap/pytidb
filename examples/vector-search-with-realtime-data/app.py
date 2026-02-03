@@ -355,10 +355,10 @@ def render_mobile_ui(recommendations: List[Dict[str, Any]], user_profile: str):
 
             product_html = f"""
                 <div class="product-card">
-                    <div class="product-name">{product['name']}</div>
+                    <div class="product-name">{product["name"]}</div>
                     <div>
-                        <span class="product-price">${product['price']:.2f}</span>
-                        <span class="product-category">{product['category']}</span>
+                        <span class="product-price">${product["price"]:.2f}</span>
+                        <span class="product-category">{product["category"]}</span>
                     </div>
                     <div class="product-desc">{desc}</div>
                     <div class="product-distance">📏 Distance: {distance:.4f}</div>

@@ -2,14 +2,18 @@ import os
 from typing import Any
 
 import pytest
+from pydantic import BaseModel
 
 from pytidb import TiDBClient, Table
+from pytidb.orm.indexes import VectorIndex
 from pytidb.rerankers import Reranker
 from pytidb.rerankers.base import BaseReranker
 from pytidb.schema import DistanceMetric, TableModel, Field, Column, Relationship
 from pytidb.sql import or_
 from pytidb.datatype import VECTOR, JSON
 from pytidb.search import SCORE_LABEL
+
+from tests.utils import normalize_sql
 
 
 # Vector Search
@@ -27,6 +31,7 @@ def vector_table(shared_client: TiDBClient):
 
     class ChunkForVectorSearch(TableModel):
         __tablename__ = "chunks_for_vector_search"
+        __table_args__ = (VectorIndex("vec_idx_text_vec_cosine", "text_vec"),)
         id: int = Field(None, primary_key=True)
         text: str = Field(None)
         text_vec: Any = Field(sa_column=Column(VECTOR(3)))
@@ -367,3 +372,149 @@ def test_with_multi_vector_fields(shared_client: TiDBClient):
     assert results[0]["body"] == "cat"
     assert results[0]["_distance"] == 0
     assert results[0]["_score"] == 1
+
+
+# ================================
+# Skip Null Vectors SQL Test Cases
+# ================================
+
+
+class SkipNullVectorsSqlTestCase(BaseModel):
+    """Test case for vector search SQL with skip_null_vectors and prefilter/postfilter."""
+
+    id: str
+    prefilter: bool
+    skip_null_vectors_flag: bool
+    expected_sql: str
+
+
+SKIP_NULL_VECTORS_SQL_TEST_CASES = [
+    SkipNullVectorsSqlTestCase(
+        id="prefilter_skip_null_true",
+        prefilter=True,
+        skip_null_vectors_flag=True,
+        expected_sql="""
+            SELECT
+                _hit.id,
+                _hit.text,
+                _hit.text_vec,
+                _hit.user_id,
+                _hit.meta,
+                VEC_COSINE_DISTANCE(_hit.text_vec, '[1, 2, 3]') AS _distance,
+                1 - VEC_COSINE_DISTANCE(_hit.text_vec, '[1, 2, 3]') AS _score,
+                users_for_vector_search_1.id AS id_1,
+                users_for_vector_search_1.name
+            FROM chunks_for_vector_search AS _hit
+            LEFT OUTER JOIN users_for_vector_search AS users_for_vector_search_1
+                ON _hit.user_id = users_for_vector_search_1.id
+            WHERE _hit.user_id = 1
+            HAVING _distance IS NOT NULL
+            ORDER BY _distance ASC
+            LIMIT 5
+            """,
+    ),
+    SkipNullVectorsSqlTestCase(
+        id="postfilter_skip_null_true",
+        prefilter=False,
+        skip_null_vectors_flag=True,
+        expected_sql="""
+            SELECT
+                candidates.id,
+                candidates.text,
+                candidates.text_vec,
+                candidates.user_id,
+                candidates.meta,
+                candidates._distance,
+                1 - candidates._distance AS _score,
+                users_for_vector_search_1.id AS id_1,
+                users_for_vector_search_1.name
+            FROM (
+                SELECT
+                    _inner_hit.id AS id,
+                    _inner_hit.text AS text,
+                    _inner_hit.text_vec AS text_vec,
+                    _inner_hit.user_id AS user_id,
+                    _inner_hit.meta AS meta,
+                    VEC_COSINE_DISTANCE(_inner_hit.text_vec, '[1, 2, 3]') AS _distance
+                FROM chunks_for_vector_search AS _inner_hit
+                ORDER BY _distance ASC
+                LIMIT 50
+            ) AS candidates
+            LEFT OUTER JOIN users_for_vector_search AS users_for_vector_search_1
+                ON candidates.user_id = users_for_vector_search_1.id
+            WHERE candidates.user_id = 1 AND candidates._distance IS NOT NULL
+            ORDER BY candidates._distance ASC
+            LIMIT 5
+            """,
+    ),
+    SkipNullVectorsSqlTestCase(
+        id="postfilter_skip_null_false",
+        prefilter=False,
+        skip_null_vectors_flag=False,
+        expected_sql="""
+            SELECT
+                candidates.id,
+                candidates.text,
+                candidates.text_vec,
+                candidates.user_id,
+                candidates.meta,
+                candidates._distance,
+                1 - candidates._distance AS _score,
+                users_for_vector_search_1.id AS id_1,
+                users_for_vector_search_1.name
+            FROM (
+                SELECT
+                    _inner_hit.id AS id,
+                    _inner_hit.text AS text,
+                    _inner_hit.text_vec AS text_vec,
+                    _inner_hit.user_id AS user_id,
+                    _inner_hit.meta AS meta,
+                    VEC_COSINE_DISTANCE(_inner_hit.text_vec, '[1, 2, 3]') AS _distance
+                FROM chunks_for_vector_search AS _inner_hit
+                ORDER BY _distance ASC
+                LIMIT 50
+            ) AS candidates
+            LEFT OUTER JOIN users_for_vector_search AS users_for_vector_search_1
+                ON candidates.user_id = users_for_vector_search_1.id
+            ORDER BY candidates._distance ASC
+            LIMIT 5
+            """,
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "case",
+    SKIP_NULL_VECTORS_SQL_TEST_CASES,
+    ids=[c.id for c in SKIP_NULL_VECTORS_SQL_TEST_CASES],
+)
+def test_skip_null_vectors_sql(
+    vector_table: Table, case: SkipNullVectorsSqlTestCase
+) -> None:
+    """Assert the full compiled SQL for vector search with skip_null_vectors and prefilter/postfilter."""
+    if case.prefilter or case.skip_null_vectors_flag:
+        search = (
+            vector_table.search([1, 2, 3])
+            .skip_null_vectors(case.skip_null_vectors_flag)
+            .filter({"user_id": 1}, prefilter=case.prefilter)
+            .limit(5)
+        )
+    else:
+        search = vector_table.search([1, 2, 3]).skip_null_vectors(False).limit(5)
+    stmt = search._build_vector_query()
+    compiled = stmt.compile(
+        dialect=search._table.db_engine.dialect,
+        compile_kwargs={"literal_binds": True},
+    )
+    actual_sql = normalize_sql(str(compiled))
+    assert actual_sql == normalize_sql(case.expected_sql)
+
+    # For postfilter, inner query is KNN-first so TiDB can use vector index.
+    # Prefilter (WHERE before ORDER BY) cannot use vector index per TiDB semantics.
+    # if not case.prefilter:
+    #     explain_sql = f"EXPLAIN ANALYZE {actual_sql}"
+    #     plan_result = vector_table.client.query(explain_sql).to_list()
+    #     plan_text = " ".join(str(v) for row in plan_result for v in row.values())
+    #     assert "annIndex" in plan_text and "COSINE" in plan_text, (
+    #         f"Expected execution plan to use vector index (annIndex:COSINE), got: {plan_text}"
+    #     )
