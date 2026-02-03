@@ -736,6 +736,9 @@ class Search(Generative):
         Returns:
             The reranked rows.
         """
+        if not rows:
+            return []
+
         rerank_field_name = self._get_rerank_field_name()
 
         if self._query is None:
