@@ -139,9 +139,7 @@ def _insert_batch(table: Table, start: int, count: int) -> None:
 def load_initial_data(table: Table) -> None:
     """Load NUM_ROWS random chunks in batches with 6 concurrent insert workers."""
     total_batches = (NUM_ROWS + BATCH_SIZE - 1) // BATCH_SIZE
-    progress_bar = st.progress(
-        0.0, text="Embedding and saving (6 workers)…"
-    )
+    progress_bar = st.progress(0.0, text="Embedding and saving (6 workers)…")
     try:
         done = 0
         with ThreadPoolExecutor(max_workers=INSERT_WORKERS) as executor:
@@ -253,7 +251,9 @@ def setup() -> None:
             st.session_state.text_embed = EmbeddingFunction(
                 model_name="openai/text-embedding-3-small",
                 use_server=st.session_state.db.is_serverless,
-                api_key=os.getenv("OPENAI_API_KEY") if not st.session_state.db.is_serverless else None,
+                api_key=os.getenv("OPENAI_API_KEY")
+                if not st.session_state.db.is_serverless
+                else None,
             )
 
     db = st.session_state.db
