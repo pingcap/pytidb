@@ -1,5 +1,5 @@
 import os
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 from pydantic import BaseModel
@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from pytidb import TiDBClient, Table
 from pytidb.rerankers import Reranker
 from pytidb.rerankers.base import BaseReranker
-from pytidb.schema import DistanceMetric, TableModel, Field, Column, Relationship, VectorField
+from pytidb.schema import DistanceMetric, TableModel, Field, Column, Relationship
 from pytidb.sql import or_
 from pytidb.datatype import VECTOR, JSON
 from pytidb.search import SCORE_LABEL
