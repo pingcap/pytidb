@@ -81,6 +81,7 @@ def setup_table(db: TiDBClient, text_embed: EmbeddingFunction) -> Table:
     try:
         table = db.open_table("chunks")
         if table is None:
+
             class Chunk(TableModel):
                 __tablename__ = "chunks"
                 __table_args__ = {"extend_existing": True}
@@ -106,9 +107,7 @@ def _random_text(doc_id: int) -> str:
     return f"Document {doc_id}: " + " ".join(words) + "."
 
 
-def _generate_chunks(
-    n: int, start_id: int = 1
-) -> List[Dict[str, Any]]:
+def _generate_chunks(n: int, start_id: int = 1) -> List[Dict[str, Any]]:
     """Generate chunk dicts (id, text, meta). text_vec is filled by auto embedding."""
     chunks = []
     for i in range(n):
@@ -174,9 +173,7 @@ def perform_search(
         return [], None
 
 
-def display_search_results(
-    results: List[Dict[str, Any]], query_text: str
-) -> None:
+def display_search_results(results: List[Dict[str, Any]], query_text: str) -> None:
     if not results:
         st.info("No results found for your query.")
         return
@@ -200,9 +197,7 @@ def _format_sql(sql: str) -> str:
     return sqlparse.format(sql.strip(), reindent=True, keyword_case="upper")
 
 
-def display_sql_and_plan(
-    db: TiDBClient, compiled_sql: Optional[str]
-) -> None:
+def display_sql_and_plan(db: TiDBClient, compiled_sql: Optional[str]) -> None:
     if not compiled_sql or not compiled_sql.strip():
         return
 
@@ -217,8 +212,7 @@ def display_sql_and_plan(
         if plan_rows:
             plan_df = pd.DataFrame(plan_rows)
             column_config = {
-                col: st.column_config.Column(width=None)
-                for col in plan_df.columns
+                col: st.column_config.Column(width=None) for col in plan_df.columns
             }
             st.dataframe(
                 plan_df,
@@ -319,8 +313,8 @@ After each search you can see the **executed SQL** and **EXPLAIN ANALYZE** plan.
     if not query_text.strip():
         st.markdown(
             '<p style="text-align: center;">Try: '
-            '<b>vector search</b>, <b>distributed database</b>, <b>machine learning</b>, '
-            '<b>cloud storage</b></p>',
+            "<b>vector search</b>, <b>distributed database</b>, <b>machine learning</b>, "
+            "<b>cloud storage</b></p>",
             unsafe_allow_html=True,
         )
         return
