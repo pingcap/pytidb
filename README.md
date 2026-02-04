@@ -35,7 +35,7 @@
 ## Installation
 
 > [!NOTE]
-> This Python package is under rapid development and its API may change. It is recommended to use a **fixed version** when installing, e.g., `pytidb==0.0.12`.
+> This Python package is under rapid development and its API may change. It is recommended to use a **fixed version** when installing, e.g., `pytidb==0.0.14`.
 
 ```bash
 pip install pytidb
