@@ -11,7 +11,6 @@ This example demonstrates semantic search with TiDB vector index: a Streamlit ap
 
 - **Python 3.10+**
 - **TiDB**: A TiDB Cloud Starter cluster or self-hosted TiDB ([tidbcloud.com](https://tidbcloud.com/?utm_source=github&utm_medium=referral&utm_campaign=pytidb_readme))
-- **OpenAI API key**: Used for embedding (e.g. `openai/text-embedding-3-small`)
 
 ## How to run
 
@@ -35,11 +34,10 @@ pip install -r reqs.txt
 Copy `.env.example` to `.env` and fill in:
 
 - **TiDB**: Host, port, username, password, database (from [TiDB Cloud console](https://tidbcloud.com/clusters))
-- **OpenAI**: `OPENAI_API_KEY` for embedding (from [OpenAI API keys](https://platform.openai.com/api-keys))
 
 ```bash
 cp .env.example .env
-# Edit .env with TIDB_* and OPENAI_API_KEY
+# Edit .env with TIDB_*
 ```
 
 **Step 4**: Run the Streamlit app
