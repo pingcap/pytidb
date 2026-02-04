@@ -3,7 +3,7 @@
 This example demonstrates semantic search with TiDB vector index: a Streamlit app that loads 6000 randomly generated documents on first run, then lets you run vector search and inspect the executed SQL and TiDB execution plan (EXPLAIN ANALYZE).
 
 <p align="center">
-  <img width="700" alt="Semantic search with vector embeddings" src="https://github.com/user-attachments/assets/6d7783a5-ce9c-4dcc-8b95-49d5f0ca735a" />
+  <img width="700" alt="Semantic search with vector embeddings" src="https://github.com/user-attachments/assets/62bbe3d0-e031-4ba3-b1ca-ac0f9d1e628c" />
   <p align="center"><i>Semantic search with vector embeddings</i></p>
 </p>
 
