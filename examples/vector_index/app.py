@@ -59,6 +59,8 @@ if "table" not in st.session_state:
     st.session_state.table = None
 if "initial_data_loaded" not in st.session_state:
     st.session_state.initial_data_loaded = False
+if "pending_search_vector" not in st.session_state:
+    st.session_state.pending_search_vector = None
 
 
 def connect_to_tidb() -> TiDBClient:
@@ -380,18 +382,23 @@ After each search you can see the **executed SQL** and **EXPLAIN ANALYZE** plan.
         with col_btn:
             search_clicked = st.form_submit_button("Generate & Search")
 
-    if not search_clicked:
+    if search_clicked:
+        new_vec = _random_vector(VECTOR_DIM)
+        st.session_state["query_vector_str"] = (
+            "[" + ",".join(str(round(x, 6)) for x in new_vec) + "]"
+        )
+        st.session_state.pending_search_vector = new_vec
+        st.rerun()
+
+    if st.session_state.pending_search_vector is None:
         st.markdown(
             '<p style="text-align: center;">Click <b>Generate & Search</b> to generate a random vector and run search.</p>',
             unsafe_allow_html=True,
         )
         return
 
-    new_vec = _random_vector(VECTOR_DIM)
-    st.session_state["query_vector_str"] = (
-        "[" + ",".join(str(round(x, 6)) for x in new_vec) + "]"
-    )
-    query_vector = new_vec
+    query_vector = st.session_state.pending_search_vector
+    st.session_state.pending_search_vector = None
 
     with st.spinner("Searching for similar chunks..."):
         table = st.session_state.table
