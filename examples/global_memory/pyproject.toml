@@ -1,0 +1,15 @@
+[project]
+name = "tidb-memory"
+version = "0.1.0"
+description = "Streamlit chatbot with memory functionality using LiteLLM and AWS Bedrock"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "streamlit>=1.28.0",
+    "boto3>=1.29.0",
+    "litellm>=1.10.0",
+    "python-dotenv>=1.0.0",
+    "typing-extensions>=4.8.0",
+    "httpx[socks]>=0.28.1",
+    "pytidb>=0.0.13",
+]
