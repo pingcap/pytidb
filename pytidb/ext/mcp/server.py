@@ -247,7 +247,7 @@ def db_remove_user(ctx: Context, username: str):
 
 
 def create_mcp_server(
-    host: str = "0.0.0.0",
+    host: str = "127.0.0.1",
     port: int = 8000,
     stateless_http: bool = True,
 ) -> FastMCP:

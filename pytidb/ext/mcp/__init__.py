@@ -17,7 +17,7 @@ from pytidb.ext.mcp.server import create_mcp_server, log
 )
 @click.option(
     "--host",
-    default="0.0.0.0",
+    default="127.0.0.1",
     envvar="TIDB_MCP_HOST",
     show_default=True,
     help="Host to bind for network transports",
@@ -32,7 +32,7 @@ from pytidb.ext.mcp.server import create_mcp_server, log
 )
 def main(
     transport: Literal["stdio", "sse", "streamable-http"] = "stdio",
-    host: str = "0.0.0.0",
+    host: str = "127.0.0.1",
     port: int = 8000,
 ):
     logging.basicConfig(
