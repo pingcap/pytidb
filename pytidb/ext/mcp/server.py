@@ -101,7 +101,8 @@ class TiDBConnector:
         return TIDB_SERVERLESS_HOST_PATTERN.match(self.host)
 
     def current_username(self) -> str:
-        return self.tidb_client.query("SELECT CURRENT_USER()").scalar()
+        current_user = self.tidb_client.query("SELECT CURRENT_USER()").scalar() or ""
+        return current_user.rsplit("@", 1)[0]
 
     def current_username_prefix(self) -> str:
         current_username = self.current_username()
