@@ -20,8 +20,8 @@ tidb-mcp-server = "pytidb.ext.mcp:main"
 
 [project.optional-dependencies]
 mcp = [
-    "mcp[cli]>=1.6.0",
-    "mcp",
+    "mcp[cli]>=1.26.0",
+    "mcp>=1.26.0",
 ]
 pandas = [
     "pandas"
@@ -46,8 +46,8 @@ dev = [
     "notebook>=7.3.3",
     "pip>=25.0.1",
     "mypy>=1.15.0",
-    "mcp[cli]>=1.6.0",
-    "mcp",
+    "mcp[cli]>=1.26.0",
+    "mcp>=1.26.0",
     "pillow",
     "boto3>=1.39.9",
 ]

@@ -101,7 +101,8 @@ class TiDBConnector:
         return TIDB_SERVERLESS_HOST_PATTERN.match(self.host)
 
     def current_username(self) -> str:
-        return self.tidb_client.query("SELECT CURRENT_USER()").scalar()
+        current_user = self.tidb_client.query("SELECT CURRENT_USER()").scalar() or ""
+        return current_user.rsplit("@", 1)[0]
 
     def current_username_prefix(self) -> str:
         current_username = self.current_username()
@@ -171,10 +172,89 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
             tidb.disconnect()
 
 
-# MCP Server
-mcp = FastMCP(
-    "tidb",
-    instructions="""You are a tidb database expert, you can help me query, create, and execute sql
+# Tool functions (defined outside for clarity)
+
+
+def show_databases(ctx: Context) -> list[dict]:
+    tidb = ctx.request_context.lifespan_context.tidb
+    try:
+        return tidb.show_databases()
+    except Exception as e:
+        log.error(f"Failed to show databases: {e}")
+        raise e
+
+
+def switch_database(
+    ctx: Context,
+    db_name: str,
+    username: Optional[str] = None,
+    password: Optional[str] = None,
+) -> None:
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
+    try:
+        tidb.switch_database(db_name, username, password)
+    except Exception as e:
+        log.error(f"Failed to switch database to {db_name}: {e}")
+        raise e
+
+
+def show_tables(ctx: Context) -> list[str]:
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
+    try:
+        return tidb.show_tables()
+    except Exception as e:
+        log.error(f"Failed to show tables for database {tidb.database}: {e}")
+        raise e
+
+
+def db_query(ctx: Context, sql_stmt: str) -> list[dict]:
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
+    try:
+        return tidb.query(sql_stmt)
+    except Exception as e:
+        log.error(f"Failed to execute query sql: {sql_stmt}, error: {e}")
+        raise e
+
+
+def db_execute(ctx: Context, sql_stmts) -> list[dict]:
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
+    try:
+        results = tidb.execute(sql_stmts)
+        return results
+    except Exception as e:
+        log.error(f"Failed to execute operation sqls: sqls: {sql_stmts}, error: {e}")
+        raise e
+
+
+def db_create_user(ctx: Context, username: str, password: str) -> str:
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
+    try:
+        fullname = tidb.create_user(username, password)
+        return f"success, username: {fullname}"
+    except Exception as e:
+        log.error(f"Failed to create database user {username}: {e}")
+        raise e
+
+
+def db_remove_user(ctx: Context, username: str):
+    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
+    try:
+        tidb.remove_user(username)
+        return f"success, deleted user with username {username}"
+    except Exception as e:
+        log.error(f"Failed to remove database user {username}: {e}")
+        raise e
+
+
+def create_mcp_server(
+    host: str = "127.0.0.1",
+    port: int = 8000,
+    stateless_http: bool = True,
+) -> FastMCP:
+    """Create and configure the TiDB MCP server."""
+    mcp = FastMCP(
+        "tidb",
+        instructions="""You are a tidb database expert, you can help me query, create, and execute sql
 statements on the tidb database.
 
 Notice:
@@ -204,115 +284,53 @@ via the `<db_name>.<table_name>` syntax.
     ```
 
     """,
-    lifespan=app_lifespan,
-)
+        lifespan=app_lifespan,
+        host=host,
+        port=port,
+        stateless_http=stateless_http,
+    )
+
+    # Register tools
+    mcp.tool(description="Show all databases in the tidb cluster")(show_databases)
+    mcp.tool(
+        description="""
+        Switch to a specific database.
+
+        Note:
+        - The user has already specified the database in the configuration, so you don't need to switch
+        database before you execute the sql statements.
+        """
+    )(switch_database)
+    mcp.tool(description="Show all tables in the database")(show_tables)
+    mcp.tool(
+        description="""
+        Query data from TiDB database via SQL, best practices:
+        - using LIMIT for SELECT statements to avoid too many rows returned
+        - using db_query to execute SELECT / SHOW / DESCRIBE / EXPLAIN ... read-only statements
+        """
+    )(db_query)
+    mcp.tool(
+        description="""
+        Execute operations on TiDB database via SQL, best practices:
+        - sql_stmts can be a sql statement string or a array of sql statement strings
+        - using db_execute to execute INSERT / UPDATE / DELETE / CREATE / DROP ... statements
+        - the sql statements will be executed in the same transaction
+        """
+    )(db_execute)
+    mcp.tool(
+        description="""
+        Create a new database user, will return the username with prefix
+        """
+    )(db_create_user)
+    mcp.tool(
+        description="""
+        Remove a database user in TiDB cluster.
+        """
+    )(db_remove_user)
+
+    return mcp
 
 
-# Tools
-
-
-@mcp.tool(description="Show all databases in the tidb cluster")
-def show_databases(ctx: Context) -> list[dict]:
-    tidb = ctx.request_context.lifespan_context.tidb
-    try:
-        return tidb.show_databases()
-    except Exception as e:
-        log.error(f"Failed to show databases: {e}")
-        raise e
-
-
-@mcp.tool(
-    description="""
-    Switch to a specific database.
-
-    Note:
-    - The user has already specified the database in the configuration, so you don't need to switch
-    database before you execute the sql statements.
-    """
-)
-def switch_database(
-    ctx: Context,
-    db_name: str,
-    username: Optional[str] = None,
-    password: Optional[str] = None,
-) -> None:
-    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
-    try:
-        tidb.switch_database(db_name, username, password)
-    except Exception as e:
-        log.error(f"Failed to switch database to {db_name}: {e}")
-        raise e
-
-
-@mcp.tool(description="Show all tables in the database")
-def show_tables(ctx: Context) -> list[str]:
-    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
-    try:
-        return tidb.show_tables()
-    except Exception as e:
-        log.error(f"Failed to show tables for database {tidb.database}: {e}")
-        raise e
-
-
-@mcp.tool(
-    description="""
-    Query data from TiDB database via SQL, best practices:
-    - using LIMIT for SELECT statements to avoid too many rows returned
-    - using db_query to execute SELECT / SHOW / DESCRIBE / EXPLAIN ... read-only statements
-    """
-)
-def db_query(ctx: Context, sql_stmt: str) -> list[dict]:
-    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
-    try:
-        return tidb.query(sql_stmt)
-    except Exception as e:
-        log.error(f"Failed to execute query sql: {sql_stmt}, error: {e}")
-        raise e
-
-
-@mcp.tool(
-    description="""
-    Execute operations on TiDB database via SQL, best practices:
-    - sql_stmts can be a sql statement string or a array of sql statement strings
-    - using db_execute to execute INSERT / UPDATE / DELETE / CREATE / DROP ... statements
-    - the sql statements will be executed in the same transaction
-    """
-)
-def db_execute(ctx: Context, sql_stmts) -> list[dict]:
-    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
-    try:
-        results = tidb.execute(sql_stmts)
-        return results
-    except Exception as e:
-        log.error(f"Failed to execute operation sqls: sqls: {sql_stmts}, error: {e}")
-        raise e
-
-
-@mcp.tool(
-    description="""
-    Create a new database user, will return the username with prefix
-    """
-)
-def db_create_user(ctx: Context, username: str, password: str) -> str:
-    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
-    try:
-        fullname = tidb.create_user(username, password)
-        return f"success, username: {fullname}"
-    except Exception as e:
-        log.error(f"Failed to create database user {username}: {e}")
-        raise e
-
-
-@mcp.tool(
-    description="""
-    Remove a database user in TiDB cluster.
-    """
-)
-def db_remove_user(ctx: Context, username: str):
-    tidb: TiDBConnector = ctx.request_context.lifespan_context.tidb
-    try:
-        tidb.remove_user(username)
-        return f"success, deleted user with username {username}"
-    except Exception as e:
-        log.error(f"Failed to remove database user {username}: {e}")
-        raise e
+# Default server instance (for backward compatibility)
+# Use create_mcp_server() for custom configuration
+mcp = create_mcp_server()

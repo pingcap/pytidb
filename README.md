@@ -250,6 +250,7 @@ with tidb_client.session() as session:
 
 
 - 🔌 [Built-in MCP support](https://pingcap.github.io/ai/integrations/mcp)
+- ☁️ [Publish as an AWS Marketplace AI tool](deploy/aws-marketplace/README.md)
 
 > [!TIP]
 > Click the button below to install **TiDB MCP Server** in Cursor. Then, confirm by clicking **Install** when prompted.
