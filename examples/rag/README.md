@@ -70,7 +70,7 @@ TIDB_HOST={gateway-region}.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USERNAME={prefix}.root
 TIDB_PASSWORD={password}
-TIDB_DATABASE=rag_example
+TIDB_DATABASE=test
 EOF
 ```
 
