@@ -8,7 +8,7 @@ import pytidb.ext.mcp as mcp_cli
 import pytidb.ext.mcp.server as mcp_server
 
 
-def test_mcp_cli_forwards_query_timeout(monkeypatch):
+def test_mcp_cli_option_forwards_query_timeout(monkeypatch):
     captured = {}
 
     class DummyServer:
@@ -21,14 +21,10 @@ def test_mcp_cli_forwards_query_timeout(monkeypatch):
 
     monkeypatch.setattr(mcp_cli, "create_mcp_server", fake_create_mcp_server)
 
-    callback = mcp_cli.main.callback
-    assert callback is not None
-
-    callback(
-        transport="streamable-http",
-        host="127.0.0.1",
-        port=8000,
-        query_timeout=12,
+    mcp_cli.main.main(
+        args=["--transport", "streamable-http", "--query-timeout", "12"],
+        prog_name="tidb-mcp-server",
+        standalone_mode=False,
     )
 
     assert captured == {
@@ -37,6 +33,35 @@ def test_mcp_cli_forwards_query_timeout(monkeypatch):
         "stateless_http": True,
         "query_timeout": 12,
         "transport": "streamable-http",
+    }
+
+
+def test_mcp_cli_env_var_forwards_query_timeout(monkeypatch):
+    captured = {}
+
+    class DummyServer:
+        def run(self, transport):
+            captured["transport"] = transport
+
+    def fake_create_mcp_server(**kwargs):
+        captured.update(kwargs)
+        return DummyServer()
+
+    monkeypatch.setattr(mcp_cli, "create_mcp_server", fake_create_mcp_server)
+    monkeypatch.setenv("TIDB_MCP_QUERY_TIMEOUT", "15")
+
+    mcp_cli.main.main(
+        args=[],
+        prog_name="tidb-mcp-server",
+        standalone_mode=False,
+    )
+
+    assert captured == {
+        "host": "127.0.0.1",
+        "port": 8000,
+        "stateless_http": False,
+        "query_timeout": 15,
+        "transport": "stdio",
     }
 
 

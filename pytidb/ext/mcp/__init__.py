@@ -35,7 +35,7 @@ from pytidb.ext.mcp.server import create_mcp_server, log
     type=click.IntRange(min=1),
     envvar="TIDB_MCP_QUERY_TIMEOUT",
     default=None,
-    help="Maximum execution time for each SQL statement in seconds",
+    help="Maximum execution time for TiDB queries in seconds",
 )
 def main(
     transport: Literal["stdio", "sse", "streamable-http"] = "stdio",
