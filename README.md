@@ -256,3 +256,5 @@ with tidb_client.session() as session:
 > Click the button below to install **TiDB MCP Server** in Cursor. Then, confirm by clicking **Install** when prompted.
 >
 > [![Install TiDB MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=TiDB&config=eyJjb21tYW5kIjoidXZ4IC0tZnJvbSBweXRpZGJbbWNwXSB0aWRiLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiVElEQl9IT1NUIjoibG9jYWxob3N0IiwiVElEQl9QT1JUIjoiNDAwMCIsIlRJREJfVVNFUk5BTUUiOiJyb290IiwiVElEQl9QQVNTV09SRCI6IiIsIlRJREJfREFUQUJBU0UiOiJ0ZXN0In19)
+>
+> To limit long-running MCP queries, set `TIDB_MCP_QUERY_TIMEOUT` to the maximum execution time in seconds.

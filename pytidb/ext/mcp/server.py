@@ -25,6 +25,7 @@ load_dotenv()
 
 # Constants
 TIDB_SERVERLESS_USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+$")
+MCP_QUERY_TIMEOUT: Optional[int] = None
 
 
 # TiDB Connector
@@ -38,14 +39,23 @@ class TiDBConnector:
         username: Optional[str] = None,
         password: Optional[str] = None,
         database: Optional[str] = None,
+        query_timeout: Optional[int] = None,
     ):
+        self.query_timeout = query_timeout
+        connect_kwargs = {}
+        if query_timeout is not None:
+            connect_kwargs["connect_args"] = {
+                "init_command": f"SET SESSION max_execution_time = {query_timeout * 1000}"
+            }
+
         self.tidb_client = TiDBClient.connect(
-            url=database_url,
+            database_url=database_url,
             host=host,
             port=port,
             username=username,
             password=password,
             database=database,
+            **connect_kwargs,
         )
         if database_url:
             uri = MySQLDsn(database_url)
@@ -53,7 +63,7 @@ class TiDBConnector:
             self.port = uri.port
             self.username = uri.username
             self.password = uri.password
-            self.database = uri.path.lstrip("/")
+            self.database = (uri.path or "").lstrip("/") or None
         else:
             self.host = host
             self.port = port
@@ -70,12 +80,21 @@ class TiDBConnector:
         username: Optional[str] = None,
         password: Optional[str] = None,
     ) -> None:
+        connect_kwargs = {}
+        if self.query_timeout is not None:
+            connect_kwargs["connect_args"] = {
+                "init_command": (
+                    f"SET SESSION max_execution_time = {self.query_timeout * 1000}"
+                )
+            }
+
         self.tidb_client = TiDBClient.connect(
             host=self.host,
             port=self.port,
             username=username or self.username,
             password=password or self.password,
             database=db_name or self.database,
+            **connect_kwargs,
         )
 
     def show_tables(self) -> list[str]:
@@ -98,7 +117,7 @@ class TiDBConnector:
 
     @property
     def is_tidb_serverless(self) -> bool:
-        return TIDB_SERVERLESS_HOST_PATTERN.match(self.host)
+        return bool(self.host) and bool(TIDB_SERVERLESS_HOST_PATTERN.match(self.host))
 
     def current_username(self) -> str:
         current_user = self.tidb_client.query("SELECT CURRENT_USER()").scalar() or ""
@@ -161,6 +180,7 @@ async def app_lifespan(app: FastMCP) -> AsyncIterator[AppContext]:
             username=os.getenv("TIDB_USERNAME", "root"),
             password=os.getenv("TIDB_PASSWORD", ""),
             database=os.getenv("TIDB_DATABASE", "test"),
+            query_timeout=MCP_QUERY_TIMEOUT,
         )
         log.info(f"Connected to TiDB: {tidb.host}:{tidb.port}/{tidb.database}")
         yield AppContext(tidb=tidb)
@@ -250,8 +270,12 @@ def create_mcp_server(
     host: str = "127.0.0.1",
     port: int = 8000,
     stateless_http: bool = True,
+    query_timeout: Optional[int] = None,
 ) -> FastMCP:
     """Create and configure the TiDB MCP server."""
+    global MCP_QUERY_TIMEOUT
+    MCP_QUERY_TIMEOUT = query_timeout
+
     mcp = FastMCP(
         "tidb",
         instructions="""You are a tidb database expert, you can help me query, create, and execute sql
