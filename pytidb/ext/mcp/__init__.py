@@ -30,10 +30,18 @@ from pytidb.ext.mcp.server import create_mcp_server, log
     show_default=True,
     help="Port to bind for network transports",
 )
+@click.option(
+    "--query-timeout",
+    type=click.IntRange(min=1),
+    envvar="TIDB_MCP_QUERY_TIMEOUT",
+    default=None,
+    help="Maximum execution time for TiDB queries in seconds",
+)
 def main(
     transport: Literal["stdio", "sse", "streamable-http"] = "stdio",
     host: str = "127.0.0.1",
     port: int = 8000,
+    query_timeout: int | None = None,
 ):
     logging.basicConfig(
         level=logging.INFO,
@@ -47,5 +55,6 @@ def main(
         host=host,
         port=port,
         stateless_http=stateless,
+        query_timeout=query_timeout,
     )
     mcp.run(transport=transport)
